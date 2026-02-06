@@ -137,10 +137,10 @@ The energy price per hour is composed of two parts:
 Energy per hour = kWh × (spot price + supplier margin)
 ```
 
-In Xellent this is pre-calculated:
-- `PowerExchangePrice` = pure Nordpool spot price
-- `CalculatedPrice` = spot price + supplier margin (already combined)
-- `TimeValue` = kWh consumed in the hour
+In the settlement engine, the relevant values per hour are:
+- **Spot price** = pure Nordpool spot price (DKK/kWh)
+- **Calculated price** = spot price + supplier margin (combined)
+- **Quantity** = kWh consumed in the hour (from RSM-012)
 
 The supplier margin is the profit the supplier charges per kWh on top of the purchase price from Nordpool. The amount depends on the customer's product plan (e.g. a fixed markup of X øre/kWh).
 
@@ -152,9 +152,8 @@ Grid tariffs are charged by the grid company (netvirksomhed) for transporting el
 Grid tariff per hour = kWh × tariff_rate_for_the_hour
 ```
 
-- Rates from `PriceElementRates` (columns Price, Price2..Price24 for hours 1-24)
-- Association via `PriceElementCheckData` (date interval for when the tariff applies)
-- Only entries with `ChargeTypeCode = 3` are tariffs
+- Rates stored per hour (hours 1-24) with validity dates
+- Tariff type determines which rate applies (grid tariff, system tariff, transmission tariff)
 - Grid area (from RSM-007) determines which grid company's tariffs apply
 
 ### Product Margin
@@ -165,8 +164,8 @@ Additional per-kWh charge defined in the customer's product plan (e.g. green ene
 Product margin per hour = kWh × product_rate
 ```
 
-- Rates from `ExuRateTable` based on product type
-- Product association via `ProductExtentTable`
+- Rates from the product plan based on product type
+- Product association via the contract
 
 ### Fixed Charges (Subscription / Abonnement)
 
@@ -201,7 +200,7 @@ Invoice total  = sum of all lines + VAT
 
 1. Retrieve RSM-012 metering data for the period (kWh per hour)
 2. Retrieve Nordpool spot prices for the same hours
-3. Confirm that `CalculatedPrice ≈ spot price + agreed supplier margin` for each hour
+3. Confirm that the calculated price ≈ spot price + agreed supplier margin for each hour
 4. Retrieve applicable tariff rates from the grid company for the period
 5. Calculate each component per hour and sum
 6. Compare with wholesale settlement (RSM-014 / BRS-027) for reconciliation
@@ -215,12 +214,18 @@ Invoice total  = sum of all lines + VAT
 ### Internal Steps
 
 1. Sales creates customer record (name, CPR/CVR, contact details, contract terms)
-2. Sales registers the metering point's GSRN (18-digit number from the customer's current bill or via Eloverblik)
-3. The system determines the correct process:
+2. Sales registers the metering point's GSRN (18-digit number from the customer's current bill or via [Eloverblik](datahub3-cis-and-external-systems.md#8-eloverblik-onboarding-data))
+3. The system looks up the GSRN via the **Eloverblik API** to collect onboarding data:
+   - Validate that the GSRN exists and matches the customer's address
+   - Retrieve metering point type (E17/E18), grid area, settlement method
+   - Retrieve historical consumption (12 months) for aconto estimation
+   - Identify current supplier (who we are switching from)
+4. The system determines the correct process:
    - **New customer on existing metering point** -> supplier switch (leverandørskifte) (BRS-001 or BRS-043)
    - **Customer moving into a new address** -> move-in (tilflytning) (BRS-009)
-4. The system selects product/tariff plan based on contract terms
-5. Onboarding record is created with status `awaiting_datahub`
+5. The system selects product/tariff plan based on contract terms and metering point data from Eloverblik
+6. For aconto customers: calculate initial aconto estimate based on Eloverblik historical consumption
+7. Onboarding record is created with status `awaiting_datahub`
 
 ### DataHub Communication
 
@@ -244,6 +249,20 @@ Invoice total  = sum of all lines + VAT
 
 - **Rejection:** DataHub rejects the request (incorrect GSRN, conflicting process, CPR mismatch) -> correct data and resubmit
 - **Customer cancellation:** The customer changes their mind -> send **BRS-003** to cancel before the effective date
+
+### Cancelling a Supplier Switch (BRS-003)
+
+If the customer withdraws **before** the effective date:
+
+| Step | Action |
+|------|--------|
+| 1 | DDQ -> DataHub: **BRS-003** cancellation request |
+| 2 | DataHub -> DDQ: Receipt (accepted/rejected) |
+| 3 | DataHub -> old DDQ: Notification of cancellation |
+| 4 | Internal: Mark ProcessRequest as `cancelled` |
+| 5 | Internal: Remove prepared billing plans, aconto estimates, etc. |
+
+Cannot be cancelled after the effective date — use BRS-042 (erroneous switch) instead. See [Edge Cases](datahub3-edge-cases.md#2-erroneous-processes).
 
 ---
 
@@ -446,6 +465,19 @@ If the customer also **moves into** a new address where we supply, the move-out 
 
 **Cancellation option:** If the customer pays before the effective date, send **BRS-044** to cancel.
 
+### Cancelling a Supply Termination (BRS-044)
+
+If the customer withdraws the termination or pays an outstanding balance **before** the effective date:
+
+| Step | Action |
+|------|--------|
+| 1 | DDQ -> DataHub: **BRS-044** cancel termination |
+| 2 | DataHub -> DDQ: Receipt (termination cancelled) |
+| 3 | Internal: Supply continues normally |
+| 4 | Internal: Cancel any prepared final settlements |
+
+**Typical scenario:** The customer has received a BRS-002 due to non-payment and then pays.
+
 ---
 
 ## Phase 6: Closing (Final Settlement / Slutafregning)
@@ -453,12 +485,44 @@ If the customer also **moves into** a new address where we supply, the move-out 
 Regardless of the offboarding reason, the closing process is the same:
 
 1. Receive final RSM-012 metering data from DataHub (up to end date)
-2. Run settlement for the partial billing period
-3. For aconto customers: calculate final aconto settlement (acontoopgørelse) — actual consumption vs. aconto payments
-4. Issue final invoice within 4 weeks (per the Electricity Supply Order / elleveringsbekendtgørelsen section 17)
-5. Archive customer record, retain metering data per retention policy
+2. Run settlement for the partial billing period (period start -> supply end date)
+3. Calculate all components: energy, grid tariff (nettarif), subscriptions (**pro rata**), taxes and charges
+4. For aconto customers: calculate final aconto settlement (acontoopgørelse) — actual consumption vs. aconto payments
+5. Issue final invoice within 4 weeks (per the Electricity Supply Order / elleveringsbekendtgørelsen section 17)
+6. Archive customer record, retain metering data per retention policy
 
-> Details: [Special Cases and Error Handling](datahub3-edge-cases.md#4-slutafregning-ved-offboarding)
+### Aconto Customer: Final Settlement (Slutopgørelse)
+
+1. Calculate actual consumption from the start of the quarter to the supply end date (partial period)
+2. Compare with aconto payments received for this period
+3. Generate final invoice with reconciliation:
+   - Overpaid -> credit note / refund
+   - Underpaid -> final invoice with remaining balance
+
+### Final Invoice Line Items
+
+| Line | Description |
+|------|-------------|
+| Energy + margin | Actual consumption x rates for the partial period |
+| Grid tariff (nettarif) | Actual consumption x tariff rates, pro rata |
+| Subscription (own) | Pro rata to the supply end date |
+| Subscription (grid) | Pro rata to the supply end date |
+| Taxes and charges | Per kWh on actual consumption |
+| Aconto settlement (if applicable) | Difference between paid estimates and actual total |
+| Outstanding balance | Any unpaid previous invoices |
+| **Amount owed / credit balance** | Net amount |
+
+### After the Final Invoice
+
+| Action | Deadline |
+|--------|----------|
+| Send final invoice to the customer | Within 4 weeks (cf. Electricity Supply Order section 17) |
+| If credit balance: refund to customer's bank account | Without undue delay |
+| If debit balance: normal payment terms | Net 14-30 days |
+| Unpaid debit balance -> debt collection (inkasso) | After payment deadline |
+| Archive customer records | Retain for 5 years (WARNING: VERIFY) |
+| Retain metering data | Per retention policy (3+ years, WARNING: VERIFY) |
+| Deactivate customer portal access | After final payment |
 
 ---
 
@@ -467,3 +531,7 @@ Regardless of the offboarding reason, the closing process is the same:
 - [DataHub 3 DDQ Business Process Reference](datahub3-ddq-business-processes.md)
 - [Proposed System Architecture](datahub3-proposed-architecture.md)
 - [RSM-012 Metering Data Reference](rsm-012-datahub3-measure-data.md)
+- [Edge Cases and Error Handling](datahub3-edge-cases.md)
+- [CIS Platform and External Systems](datahub3-cis-and-external-systems.md)
+- [Product Structure and Billing](datahub3-product-and-billing.md)
+- [Settlement Overview](datahub3-settlement-overview.md)

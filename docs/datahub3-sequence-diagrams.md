@@ -9,7 +9,7 @@ The diagrams show the communication between actors in the most important busines
 - **Old DDQ** — the outgoing supplier (during a switch)
 - **New DDQ** — the incoming supplier (during an incoming switch)
 - **Settl** — internal settlement system (afregningssystem)
-- **D365** — Dynamics 365 (billing/ERP)
+- **ERP** — billing/ERP system (e.g. D365, SAP, e-conomic)
 
 ---
 
@@ -99,7 +99,7 @@ sequenceDiagram
     participant DH as DataHub
     participant Netvirk as GridOp (DDM)
     participant Settl as Settlement Engine
-    participant D365 as D365 (billing)
+    participant ERP as ERP (billing)
 
     Note over DDQ: Decision: end of supply<br/>(customer cancellation / non-payment / move-out)
 
@@ -122,11 +122,11 @@ sequenceDiagram
 
     alt Aconto customer
         Settl->>Settl: Aconto settlement (acontoopgorelse):<br/>actual consumption vs. aconto payments
-        Settl->>D365: Credit (overpaid) or<br/>debit (underpaid)
+        Settl->>ERP: Credit (overpaid) or<br/>debit (underpaid)
     end
 
-    Settl->>D365: Final invoice
-    D365->>D365: Send to customer (e-Boks/email)
+    Settl->>ERP: Final invoice
+    ERP->>ERP: Send to customer (e-Boks/email)
 
     Note over DDQ: Archive customer record (5 years)<br/>Retain meter data (3+ years)
 ```
@@ -149,7 +149,7 @@ sequenceDiagram
     participant DH as DataHub
     participant DDQ as Supplier (DDQ)
     participant Settl as Settlement Engine
-    participant D365 as D365 (billing)
+    participant ERP as ERP (billing)
 
     NyDDQ->>DH: BRS-001 (RSM-001)<br/>Request our metering point
     DH->>DDQ: Notification: metering point switching<br/>Effective date: DD-MM-YYYY
@@ -163,8 +163,8 @@ sequenceDiagram
     DDQ->>DDQ: Mark metering point inactive
 
     Settl->>Settl: Final settlement (partial period)
-    Settl->>D365: Final invoice + aconto settlement (acontoopgorelse)
-    D365->>D365: Send final invoice to customer
+    Settl->>ERP: Final invoice + aconto settlement (acontoopgorelse)
+    ERP->>ERP: Send final invoice to customer
 ```
 
 ---
@@ -229,7 +229,7 @@ sequenceDiagram
     DH->>DDQ: Charges queue: New tariff rates<br/>Grid area + validity period + rates
 
     DDQ->>DDQ: Peek + parse Charges message
-    DDQ->>DDQ: Update PriceElementRates:<br/>Price, Price2..Price24 (hours 1-24)<br/>+ validity dates
+    DDQ->>DDQ: Update tariff rates:<br/>Rate per hour (hours 1-24)<br/>+ validity dates
 
     Note over DDQ,Settl: From validity date
 

@@ -1,6 +1,8 @@
 # DataHub 3: Edge Cases and Error Handling
 
-All edge cases, error scenarios, and recovery procedures collected in one place. Covers metering data corrections, erroneous processes, cancellations, reconciliation discrepancies, system errors, customer disputes, electrical heating, and solar panel production.
+All edge cases and special scenarios collected in one place. Covers metering data corrections, erroneous processes, reconciliation discrepancies, customer disputes, concurrent processes, electrical heating, and solar panel production.
+
+Standard lifecycle processes (cancellations, final settlement at offboarding) are documented in [Customer lifecycle](datahub3-customer-lifecycle.md). System errors and recovery procedures are documented in [System architecture](datahub3-proposed-architecture.md#error-handling-and-recovery).
 
 ---
 
@@ -104,96 +106,7 @@ A move-in or move-out date was incorrect.
 
 ---
 
-## 3. Cancellations
-
-### 3.1 Cancel supplier switch (leverandørskifte) (BRS-003)
-
-The customer withdraws from a supplier switch **before** the effective date.
-
-**Prerequisite:** The switch has been requested (BRS-001) but the effective date has not yet been reached.
-
-| Step | Action |
-|------|--------|
-| 1 | DDQ -> DataHub: **BRS-003** cancellation request |
-| 2 | DataHub -> DDQ: Receipt (accepted/rejected) |
-| 3 | DataHub -> old DDQ: Notification of cancellation |
-| 4 | Internal: Mark ProcessRequest as `cancelled` |
-| 5 | Internal: Remove prepared billing plans, aconto estimates, etc. |
-
-**Cannot be cancelled after the effective date** — use BRS-042 instead.
-
-### 3.2 Cancel supply termination (leveranceophør) (BRS-044)
-
-The customer withdraws a termination notice or pays an outstanding amount **before** the effective date.
-
-| Step | Action |
-|------|--------|
-| 1 | DDQ -> DataHub: **BRS-044** cancel termination |
-| 2 | DataHub -> DDQ: Receipt (termination cancelled) |
-| 3 | Internal: Supply continues normally |
-| 4 | Internal: Cancel any prepared final settlements |
-
-**Typical scenario:** The customer has received a BRS-002 due to non-payment and then pays.
-
----
-
-## 4. Final Settlement at Offboarding
-
-Regardless of the offboarding reason (supplier switch, move-out, non-payment), the final settlement is the same.
-
-### Offboarding scenarios
-
-| Scenario | Trigger | BRS process | Who initiates |
-|----------|---------|-------------|---------------|
-| **A** | Customer switches to another supplier | Incoming BRS-001 | New supplier |
-| **B** | Customer terminates | BRS-002 | Us |
-| **C** | Customer moves out (fraflytning) | BRS-010 | Us or grid company |
-| **D** | Non-payment | BRS-002 | Us |
-
-### Final settlement procedure
-
-1. Receive final RSM-012 metering data from DataHub (up to the end date)
-2. Run settlement for the partial billing period (faktureringsperiode) (period start -> supply end date)
-3. Calculate all components: energy, grid tariff (nettarif), subscriptions (**pro rata**), taxes and charges
-
-### Aconto customer: final settlement (slutopgørelse)
-
-Aconto is a prepayment scheme where customers pay estimated amounts periodically rather than per actual consumption, serving as a cash flow tool for the supplier.
-
-1. Calculate actual consumption from the start of the quarter to the supply end date (partial period)
-2. Compare with aconto payments received for this period
-3. Generate final invoice with reconciliation:
-   - Overpaid -> credit note / refund
-   - Underpaid -> final invoice with remaining balance
-
-### Final invoice line items
-
-| Line | Description |
-|------|-------------|
-| Energy + margin | Actual consumption x rates for the partial period |
-| Grid tariff (nettarif) | Actual consumption x tariff rates, pro rata |
-| Subscription (own) | Pro rata to the supply end date |
-| Subscription (grid) | Pro rata to the supply end date |
-| Taxes and charges (afgifter og gebyrer) | Per kWh on actual consumption |
-| Aconto settlement (acontoopgørelse) (if applicable) | Difference between paid estimates and actual total |
-| Outstanding balance | Any unpaid previous invoices |
-| **Amount owed / credit balance** | Net amount |
-
-### After the final invoice
-
-| Action | Deadline |
-|--------|----------|
-| Send final invoice to the customer | Within 4 weeks (cf. the Electricity Supply Order (elleveringsbekendtgørelsen) section 17) |
-| If credit balance: refund to customer's bank account | Without undue delay |
-| If debit balance: normal payment terms | Net 14-30 days |
-| Unpaid debit balance -> debt collection (inkasso) | After payment deadline |
-| Archive customer records | Retain for 5 years (WARNING: VERIFY) |
-| Retain metering data | Per retention policy (3+ years WARNING: VERIFY) |
-| Deactivate customer portal access | After final payment |
-
----
-
-## 5. Reconciliation Discrepancies (BRS-027)
+## 3. Reconciliation Discrepancies (BRS-027)
 
 Our own settlement calculation deviates from DataHub's wholesale settlement (engrosopgørelse) (RSM-014).
 
@@ -228,7 +141,7 @@ Our own settlement calculation deviates from DataHub's wholesale settlement (eng
 
 ---
 
-## 6. Customer Disputes Invoice
+## 4. Customer Disputes Invoice
 
 ### Procedure
 
@@ -244,57 +157,7 @@ Our own settlement calculation deviates from DataHub's wholesale settlement (eng
 
 ---
 
-## 7. System Errors and Recovery
-
-### DataHub Communication Errors
-
-| Scenario | Action |
-|----------|--------|
-| DataHub 5xx / timeout | Retry with exponential backoff, do **not** dequeue |
-| 401 Unauthorized | Fetch new OAuth2 token, retry |
-| 403 Forbidden | Check credentials and GLN in the actor portal (aktørportalen) |
-| 429 Too Many Requests | Wait and retry with backoff |
-
-### Message Processing Errors
-
-| Scenario | Action |
-|----------|--------|
-| Message parsing error (invalid JSON/XML) | Dead-letter, dequeue to free the queue |
-| Unknown MessageType | Dead-letter, dequeue, alert operator |
-| Business validation error (unknown GSRN etc.) | Log + save for review, dequeue |
-| Database error during persistence | Retry, do **not** dequeue (at-least-once guarantee) |
-
-### Settlement Errors
-
-| Scenario | Action |
-|----------|--------|
-| Settlement calculation error | Fail the run, alert, preserve partial results for debugging |
-| Missing spot prices for the period | Stop settlement run, alert — cannot calculate without prices |
-| Missing tariff rates for grid area | Stop for affected metering points, alert |
-| Inconsistent metering data (gaps in time series) | Mark affected metering points, recalculate when data is complete |
-
-### Dead-letter handling
-
-Messages that fail parsing or validation end up in the dead-letter table.
-
-**Operator procedure:**
-1. Monitor `datahub.dead_letter` for unresolved entries (alert on growth)
-2. Analyze `error_reason` and `raw_payload`
-3. Fix the root cause (parsing error, missing data, etc.)
-4. Reprocess the message manually or via replay
-5. Mark as `resolved`
-
-```sql
--- Unprocessed dead letters
-SELECT id, queue_name, error_reason, failed_at
-FROM datahub.dead_letter
-WHERE NOT resolved
-ORDER BY failed_at DESC;
-```
-
----
-
-## 8. Concurrent Processes
+## 5. Concurrent Processes
 
 ### Supplier switch and correction at the same time
 
@@ -319,7 +182,7 @@ The grid company (netvirksomheden) changes tariff rates effective mid-month:
 
 ---
 
-## 9. Electrical Heating (Elvarme)
+## 6. Electrical Heating (Elvarme)
 
 Customers with electrical heating as their primary heat source are eligible for a **reduced electricity tax (elafgift)** rate on consumption above a yearly threshold. This affects the settlement calculation.
 
@@ -358,7 +221,7 @@ Customers with electrical heating as their primary heat source are eligible for 
 
 ---
 
-## 10. Solar Panels and Production Metering Points
+## 7. Solar Panels and Production Metering Points
 
 Customers with solar panels (solceller) have both a **consumption metering point (E17)** and a **production metering point (E18)**. This introduces net settlement (nettoafregning) schemes and production credit handling.
 
@@ -478,6 +341,6 @@ DataHub                    Our system                  Settlement
 - [Business processes](datahub3-ddq-business-processes.md) — BRS/RSM reference
 - [RSM-012 reference](rsm-012-datahub3-measure-data.md) — correction flow for metering data
 - [Settlement overview](datahub3-settlement-overview.md) — corrections as edge case
-- [System architecture](datahub3-proposed-architecture.md) — error handling and dead-letter
+- [System architecture](datahub3-proposed-architecture.md) — error handling and recovery procedures
 - [Database model](datahub3-database-model.md) — dead_letter table, metering_point schema
 - [Product structure and billing](datahub3-product-and-billing.md) — invoice lines and settlement calculation

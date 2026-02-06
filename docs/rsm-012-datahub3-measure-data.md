@@ -31,7 +31,7 @@ The `ProcessType` (BusinessReasonCode) has these values for RSM-012:
 
 **E23 is used for both initial data AND corrections** (page 98: "Alle øvrige målepunktstyper sendes med årsagskode E23"). E30 is for historical data exchanges, not specifically corrections.
 
-**Conclusion:** The correction client must detect corrections by comparing incoming timeseries against what's stored in Xellent DB. If data already exists for that MeteringPointId + period, the delta is what needs to be settled.
+**Conclusion:** The correction client must detect corrections by comparing incoming timeseries against what's already stored. If data already exists for that MeteringPointId + period, the delta is what needs to be settled.
 
 ## DataHub 3 B2B API
 
@@ -147,11 +147,11 @@ If quantity is missing, the `quantity` element is omitted and `quality = A02`.
 4. Parse CIM JSON body:
    - Extract MeteringPointId, period (start/end), resolution
    - Extract Point[] array (position + quantity per interval)
-5. Look up original consumption in Xellent DB for same MeteringPointId + period
+5. Look up original consumption in our database for same MeteringPointId + period
    - If no original data exists → this is initial data, not a correction → dequeue and skip
    - If original data exists → calculate delta per interval
-6. Calculate financial impact using Xellent invoice line rates
-7. Generate invoice/credit note via D365
+6. Calculate financial impact using stored rates and product plan
+7. Generate invoice/credit note via ERP
 8. DELETE /v1.0/cim/dequeue/{MessageId} → acknowledge
 9. Repeat from step 2
 ```
@@ -174,7 +174,7 @@ RSM-012 can be delegated:
 
 ## Related Documentation
 
-- [Særtilfælde og fejlhåndtering](datahub3-edge-cases.md#1-korrektioner-af-måledata) — detektionslogik, korrektionsformler, systemdesign-implikationer
+- [Edge Cases and Error Handling](datahub3-edge-cases.md#1-metering-data-corrections) — detection logic, correction formulas, system design implications
 
 ## Sources
 

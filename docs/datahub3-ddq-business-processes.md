@@ -595,7 +595,7 @@ Source: CIM EDI Guide page 256
 
 ### Related Documentation
 
-- [Særtilfælde og fejlhåndtering](datahub3-edge-cases.md) — Edge cases for BRS-003, BRS-011, BRS-042, BRS-044 m.fl.
+- [Edge Cases and Error Handling](datahub3-edge-cases.md) — Edge cases for BRS-011, BRS-042, and other error scenarios
 
 ### GitHub
 

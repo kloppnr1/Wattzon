@@ -248,6 +248,8 @@ Single entry point for all internal and external consumers.
 | Rates | View current tariffs, upload product margins |
 | Admin | System health, queue lag, dead-letter review |
 
+> Details: [CIS platform and external systems](datahub3-cis-and-external-systems.md) — API contracts per consumer, integration patterns, event-driven architecture
+
 ---
 
 ## Cross-cutting Concerns
@@ -258,16 +260,55 @@ Single entry point for all internal and external consumers.
 - Metrics: messages received/sec per queue, settlement run duration, API latency
 - Alerts: queue processing lag, DataHub authentication failures, dead-letter growth
 
-### Error Handling
+### Error Handling and Recovery
+
+#### DataHub Communication Errors
 
 | Scenario | Action |
 |----------|--------|
-| DataHub 5xx / timeout | Retry with exponential backoff, do not dequeue |
-| Message parsing failure | Dead-letter, dequeue to free the queue |
-| Business validation failure | Log + save for review, dequeue |
-| Settlement calculation failure | Fail the run, alert, preserve partial results for debugging |
+| DataHub 5xx / timeout | Retry with exponential backoff, do **not** dequeue |
+| 401 Unauthorized | Fetch new OAuth2 token, retry |
+| 403 Forbidden | Check credentials and GLN in the actor portal (aktørportalen) |
+| 429 Too Many Requests | Wait and retry with backoff |
 
-> Details: [Edge Cases and Error Handling](datahub3-edge-cases.md#7-systemfejl-og-genopretning)
+#### Message Processing Errors
+
+| Scenario | Action |
+|----------|--------|
+| Message parsing error (invalid JSON/XML) | Dead-letter, dequeue to free the queue |
+| Unknown MessageType | Dead-letter, dequeue, alert operator |
+| Business validation error (unknown GSRN etc.) | Log + save for review, dequeue |
+| Database error during persistence | Retry, do **not** dequeue (at-least-once guarantee) |
+
+#### Settlement Errors
+
+| Scenario | Action |
+|----------|--------|
+| Settlement calculation error | Fail the run, alert, preserve partial results for debugging |
+| Missing spot prices for the period | Stop settlement run, alert — cannot calculate without prices |
+| Missing tariff rates for grid area | Stop for affected metering points, alert |
+| Inconsistent metering data (gaps in time series) | Mark affected metering points, recalculate when data is complete |
+
+#### Dead-letter Handling
+
+Messages that fail parsing or validation end up in the dead-letter table.
+
+**Operator procedure:**
+1. Monitor `datahub.dead_letter` for unresolved entries (alert on growth)
+2. Analyze `error_reason` and `raw_payload`
+3. Fix the root cause (parsing error, missing data, etc.)
+4. Reprocess the message manually or via replay
+5. Mark as `resolved`
+
+```sql
+-- Unprocessed dead letters
+SELECT id, queue_name, error_reason, failed_at
+FROM datahub.dead_letter
+WHERE NOT resolved
+ORDER BY failed_at DESC;
+```
+
+> See also: [Database Model](datahub3-database-model.md) — dead_letter table schema
 
 ### Security
 
@@ -470,7 +511,7 @@ Notes:
 
 - **Development environments** (actor test, preprod) — multiply by 0.5-0.7x per environment (smaller instances)
 - **Personnel/development costs** — by far the dominant cost
-- **Billing/ERP integration** — depends on target system
+- **Billing/ERP integration** — depends on target system (see [CIS and external systems](datahub3-cis-and-external-systems.md))
 - **Customer portal hosting** — if separate from backoffice
 - **Data transfer (egress)** — Azure charges for outbound data, but volumes are small (~1 GB/mo. DataHub traffic)
 - **Disaster recovery / geo-redundancy** — adds ~50% to database costs with zone-redundant HA
@@ -486,16 +527,18 @@ At these volumes, infrastructure cost is negligible compared to business value. 
 
 ---
 
-## Phased Rollout
+## Implementation Approach
 
-| Phase | Scope | Business Processes |
-|-------|-------|--------------------|
-| 1 | DataHub connection + metering data ingestion | Auth, Queue Poller, RSM-012 (BRS-021), time series store |
-| 2 | Portfolio + master data | RSM-004/007, BRS-001/009/010, Customer & Portfolio Service |
-| 3 | Settlement engine | BRS-020, BRS-027, settlement calculations, billing export |
-| 4 | Full lifecycle management | BRS-002/003/005/006/011/042/043/044, state machine |
-| 5 | Wholesale settlement (engrosopgørelse) + charges | BRS-027/028/029/030, RSM-014/016/017, Charges queue |
-| 6 | PT15M migration | Re-partition time series store, update settlement engine, load test at 7.68M points/day |
+The system is built in **MVPs** (minimum viable products), each delivering a working end-to-end result:
+
+| MVP | Scope | Business Processes |
+|-----|-------|--------------------|
+| 1 | One correct invoice (happy path) | Auth, Queue Poller, RSM-012 (BRS-021), time series store, settlement engine, Charges queue |
+| 2 | Full customer lifecycle (happy path) | RSM-004/007, BRS-001/002/003/009/010/043/044, state machine, aconto |
+| 3 | DataHub integration + edge cases | Actor Test validation, parser hardening, corrections, BRS-042/011, RSM-014/015/016, reconciliation, elvarme, solar |
+| 4 | Production | ERP, payment services, e-Boks, customer portal, pilot + full migration, performance |
+
+> Details: [Implementation plan](datahub3-implementation-plan.md) — MVP details, DataHub simulator, testing strategy
 
 ---
 

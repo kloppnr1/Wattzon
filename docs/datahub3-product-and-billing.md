@@ -375,3 +375,4 @@ This means:
 | [Settlement overview](datahub3-settlement-overview.md) | System flow: DataHub → settlement → invoice |
 | [Customer lifecycle](datahub3-customer-lifecycle.md) | Detailed walkthrough of all 6 phases |
 | [System architecture](datahub3-proposed-architecture.md) | Technology choices and data model |
+| [CIS platform and external systems](datahub3-cis-and-external-systems.md) | ERP, portal, payment, and market data integrations |
