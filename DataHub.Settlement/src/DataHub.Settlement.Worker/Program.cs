@@ -1,7 +1,9 @@
+using DataHub.Settlement.Application.AddressLookup;
 using DataHub.Settlement.Application.DataHub;
 using DataHub.Settlement.Application.Metering;
 using DataHub.Settlement.Application.Messaging;
 using DataHub.Settlement.Application.Parsing;
+using DataHub.Settlement.Infrastructure.AddressLookup;
 using DataHub.Settlement.Infrastructure.Database;
 using DataHub.Settlement.Infrastructure.DataHub;
 using DataHub.Settlement.Infrastructure.Messaging;
@@ -48,6 +50,7 @@ var connectionString = builder.Configuration.GetConnectionString("SettlementDb")
     ?? "Host=localhost;Port=5432;Database=datahub_settlement;Username=settlement;Password=settlement";
 
 builder.Services.AddSingleton<IDataHubClient, StubDataHubClient>();
+builder.Services.AddSingleton<IAddressLookupClient, StubAddressLookupClient>();
 builder.Services.AddSingleton<ICimParser, CimJsonParser>();
 builder.Services.AddSingleton<IMeteringDataRepository>(new MeteringDataRepository(connectionString));
 builder.Services.AddSingleton<IMessageLog>(new MessageLog(connectionString));
