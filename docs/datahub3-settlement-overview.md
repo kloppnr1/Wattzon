@@ -257,3 +257,4 @@ Tre kerneservices:
 | [Systemarkitektur](datahub3-proposed-architecture.md) | Teknologivalg, datamodel, driftsomkostninger |
 | [Autentificering og sikkerhed](datahub3-authentication-security.md) | OAuth2, credentials, GDPR, auditlog |
 | [Klassediagram](datahub3-class-diagram.md) | Domænemodel med entiteter og relationer |
+| [Databasemodel](datahub3-database-model.md) | PostgreSQL/TimescaleDB-skema med DDL |

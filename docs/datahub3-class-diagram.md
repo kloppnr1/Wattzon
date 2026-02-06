@@ -728,3 +728,4 @@ SpotPrice                                │
 - [Kundelivscyklus](datahub3-customer-lifecycle.md) — faser og tilstandsovergange
 - [Sekvensdiagrammer](datahub3-sequence-diagrams.md) — meddelelsesflows
 - [Afregningsoverblik](datahub3-settlement-overview.md) — afregningsberegning
+- [Databasemodel](datahub3-database-model.md) — fysisk PostgreSQL/TimescaleDB-skema
