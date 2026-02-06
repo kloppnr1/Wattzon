@@ -96,3 +96,17 @@ tr:hover td { background: rgba(255,255,255,0.02); }
 
 /* Empty state */
 .empty-state { text-align: center; padding: 3rem; color: var(--text-muted); }
+
+/* Step list (Simulation page) */
+.step-list { display: flex; flex-direction: column; gap: 0.75rem; }
+.step { display: flex; align-items: center; gap: 1rem; padding: 0.75rem; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; }
+.step-number { width: 2rem; height: 2rem; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.85rem; flex-shrink: 0; }
+.step-pending .step-number { background: var(--border); color: var(--text-muted); }
+.step-running .step-number { background: var(--accent); color: white; animation: pulse 1.5s infinite; }
+.step-completed .step-number { background: var(--green); color: white; }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+/* Button */
+.btn { padding: 0.6rem 1.25rem; background: var(--accent); color: white; border: none; border-radius: 6px; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: opacity 0.15s; }
+.btn:hover { opacity: 0.9; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }

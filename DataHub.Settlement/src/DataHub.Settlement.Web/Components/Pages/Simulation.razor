@@ -1,0 +1,201 @@
+@page "/simulation"
+@using DataHub.Settlement.Infrastructure.Dashboard
+@inject SimulationService Simulator
+
+<h1>Simulation</h1>
+<p style="color: var(--text-muted); margin-bottom: 1.5rem;">
+    Walk through the sunshine supplier-switch scenario step by step.
+</p>
+
+<div style="margin-bottom: 1.5rem; display: flex; gap: 0.75rem; align-items: center;">
+    @if (_completed && !_running)
+    {
+        <button class="btn" @onclick="ResetAndRunAsync">
+            Reset &amp; Run Again
+        </button>
+    }
+    else
+    {
+        <button class="btn" @onclick="StartAsync" disabled="@_running">
+            @if (_running)
+            {
+                <span>Running...</span>
+            }
+            else
+            {
+                <span>Start Simulation</span>
+            }
+        </button>
+    }
+    @if (_errorMessage is not null)
+    {
+        <span style="color: var(--red);">@_errorMessage</span>
+    }
+</div>
+
+<div class="step-list">
+    @foreach (var step in _steps)
+    {
+        var css = step.Status switch
+        {
+            StepStatus.Running => "step step-running",
+            StepStatus.Completed => "step step-completed",
+            _ => "step step-pending",
+        };
+        <div class="@css">
+            <div class="step-number">@step.Number</div>
+            <div style="flex: 1;">
+                <div style="font-weight: 600; font-size: 0.95rem;">@step.Name</div>
+                @if (step.Details is not null)
+                {
+                    <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.25rem;">@step.Details</div>
+                }
+            </div>
+            <div>
+                @switch (step.Status)
+                {
+                    case StepStatus.Running:
+                        <span class="badge badge-sent">running</span>
+                        break;
+                    case StepStatus.Completed:
+                        <span class="badge badge-completed">done</span>
+                        break;
+                    default:
+                        <span class="badge badge-pending" style="background: rgba(156,163,175,0.15); color: var(--text-muted);">pending</span>
+                        break;
+                }
+            </div>
+        </div>
+    }
+</div>
+
+@if (_log.Count > 0)
+{
+    <h2 style="margin-top: 2rem; font-size: 1.1rem; font-weight: 600;">Activity Log</h2>
+    <table style="margin-top: 0.75rem;">
+        <thead>
+            <tr>
+                <th style="width: 6rem;">Time</th>
+                <th style="width: 12rem;">Step</th>
+                <th>Details</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var entry in _log)
+            {
+                <tr>
+                    <td>@entry.Timestamp.ToString("HH:mm:ss.f")</td>
+                    <td>@entry.StepName</td>
+                    <td>@entry.Details</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private enum StepStatus { Pending, Running, Completed }
+
+    private sealed class StepViewModel
+    {
+        public int Number { get; init; }
+        public string Name { get; init; } = "";
+        public StepStatus Status { get; set; }
+        public string? Details { get; set; }
+    }
+
+    private record LogEntry(DateTime Timestamp, string StepName, string Details);
+
+    private readonly List<StepViewModel> _steps = new()
+    {
+        new() { Number = 1, Name = "Seed Reference Data" },
+        new() { Number = 2, Name = "Create Customer & Product" },
+        new() { Number = 3, Name = "Create Metering Point" },
+        new() { Number = 4, Name = "Submit BRS-001" },
+        new() { Number = 5, Name = "DataHub Acknowledges" },
+        new() { Number = 6, Name = "Receive RSM-007" },
+        new() { Number = 7, Name = "Complete Process" },
+        new() { Number = 8, Name = "Receive RSM-012" },
+        new() { Number = 9, Name = "Run Settlement" },
+    };
+
+    private readonly List<LogEntry> _log = new();
+    private bool _running;
+    private bool _completed;
+    private string? _errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var alreadySeeded = await Simulator.IsAlreadySeededAsync();
+        if (alreadySeeded)
+        {
+            foreach (var step in _steps)
+            {
+                step.Status = StepStatus.Completed;
+                step.Details = "Previously completed";
+            }
+            _completed = true;
+        }
+    }
+
+    private async Task ResetAndRunAsync()
+    {
+        // Reset UI state
+        foreach (var step in _steps)
+        {
+            step.Status = StepStatus.Pending;
+            step.Details = null;
+        }
+        _log.Clear();
+        _completed = false;
+        StateHasChanged();
+
+        // Truncate all tables
+        await Simulator.ResetAsync();
+
+        // Run the simulation
+        await StartAsync();
+    }
+
+    private async Task StartAsync()
+    {
+        _running = true;
+        _errorMessage = null;
+
+        // Mark step 1 as running
+        _steps[0].Status = StepStatus.Running;
+        StateHasChanged();
+
+        try
+        {
+            await Simulator.RunAsync(step =>
+            {
+                var vm = _steps[step.Number - 1];
+                vm.Status = StepStatus.Completed;
+                vm.Details = step.Details;
+
+                _log.Insert(0, new LogEntry(DateTime.Now, step.Name, step.Details));
+
+                if (step.Number < _steps.Count)
+                {
+                    _steps[step.Number].Status = StepStatus.Running;
+                }
+
+                StateHasChanged();
+                return Task.CompletedTask;
+
+            }, CancellationToken.None);
+
+            _completed = true;
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+        }
+        finally
+        {
+            _running = false;
+            StateHasChanged();
+        }
+    }
+}
