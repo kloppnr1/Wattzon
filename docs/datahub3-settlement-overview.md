@@ -258,4 +258,5 @@ Three core services:
 | [Edge cases and error handling](datahub3-edge-cases.md) | Metering data corrections, erroneous processes, reconciliation discrepancies, elvarme, solar |
 | [CIS platform and external systems](datahub3-cis-and-external-systems.md) | ERP, customer portal, payment services, market data integrations |
 | [Implementation plan](datahub3-implementation-plan.md) | MVP-driven build plan, DataHub simulator, testing strategy |
+| [MVP 1 detailed plan](mvp1-implementation-plan.md) | Step-by-step tasks, code interfaces, golden master test data |
 | [Eloverblik integration](datahub3-eloverblik-integration.md) | Third-party API for onboarding: GSRN lookup, historical consumption, tariffs |

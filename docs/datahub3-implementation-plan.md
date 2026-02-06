@@ -245,6 +245,8 @@ Golden Master #2: Partial period (mid-month start)
 - CI/CD runs unit tests on every push
 - Actor Test: successfully authenticate and peek at least one message (if access granted)
 
+> **Detailed plan:** [MVP 1 implementation plan](mvp1-implementation-plan.md) — step-by-step tasks, code interfaces, golden master test data with hand calculations
+
 ---
 
 ## MVP 2: Full Customer Lifecycle
