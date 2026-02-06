@@ -141,21 +141,28 @@ Satserne modtager vi via **Charges-køen** fra DataHub og opdateres typisk 1-2 g
 
 ### Hvad er aconto?
 
-Aconto er en **betalingsmodel** hvor kunden betaler et **fast estimeret beløb** hver måned i stedet for at betale for det faktiske forbrug. Én gang om året laves en **årsopgørelse** der afstemmer estimat mod virkelighed.
+Aconto er en **betalingsmodel** hvor kunden betaler et **fast estimeret beløb** hver måned. Ved hver **faktureringsperiode** (månedlig, kvartalsvis eller årlig — afhængig af kontrakt) laves en **acontoopgørelse** der afstemmer de indbetalte acontobeløb mod det faktiske forbrug i perioden.
 
 ```
-Aconto-året (12 måneder):
+Eksempel: Kvartalsvis fakturering med månedlig aconto
 
-Mdr. 1    Mdr. 2    Mdr. 3   ...   Mdr. 11    Mdr. 12    Årsopgørelse
-  │         │         │               │          │             │
-  ▼         ▼         ▼               ▼          ▼             ▼
-650 kr.   650 kr.   650 kr.  ...   650 kr.    650 kr.     Faktisk vs.
-(fast)    (fast)    (fast)         (fast)     (fast)      estimeret
-                                                            │
-                                               ┌────────────┴────────────┐
-                                               │                         │
-                                          Overbetalt              Underbetalt
-                                          → tilbagebetaling      → ekstraopkrævning
+Mdr. 1       Mdr. 2       Mdr. 3       Acontoopgørelse
+  │            │            │                │
+  ▼            ▼            ▼                ▼
+650 kr.      650 kr.      650 kr.       Faktisk forbrug
+(aconto)     (aconto)     (aconto)      for Q1 beregnes
+                                             │
+                                ┌────────────┴────────────┐
+                                │                         │
+                           Overbetalt              Underbetalt
+                           → kreditnota            → ekstraopkrævning
+
+Mdr. 4       Mdr. 5       Mdr. 6       Acontoopgørelse
+  │            │            │                │
+  ▼            ▼            ▼                ▼
+650 kr.      650 kr.      650 kr.       Faktisk forbrug
+(aconto)     (aconto)     (aconto)      for Q2 beregnes
+  ...          ...          ...              ...
 ```
 
 ### Hvorfor aconto?
@@ -178,45 +185,45 @@ Forventet årsforbrug (kWh)      ← Estimeret fra DataHub eller kundens oplysni
 = Månedligt acontobeløb
 ```
 
-Ved **årlig genberegning** (eksisterende kunde):
+Ved **genberegning** (eksisterende kunde — typisk ved acontoopgørelse):
 
 ```
-Faktisk forbrug de seneste 12 måneder (kWh)     ← Fra RSM-012-data i vores DB
-× forventet gennemsnitspris for næste år         ← Baseret på markedsforventninger
+Faktisk forbrug i seneste perioder (kWh)     ← Fra RSM-012-data i vores DB
+× forventet gennemsnitspris fremadrettet     ← Baseret på markedsforventninger
 + abonnementer + afgifter + moms
 = Nyt estimeret årsbeløb
 ÷ 12
 = Nyt månedligt acontobeløb
 ```
 
-### Årsopgørelsen — den store afstemning
+### Acontoopgørelsen — afstemning ved faktureringsperiode
 
-Én gang om året (eller ved offboarding) laves en årsopgørelse:
+Ved slutningen af hver faktureringsperiode laves en acontoopgørelse. Eksempel for et kvartal:
 
 ```
-ÅRSOPGØRELSE
+ACONTOOPGØRELSE — Q1 2025 (januar-marts)
 
 Faktisk forbrug i perioden:
-  Energi (spot + margin, beregnet pr. time)         5.400,00 kr.
-  Nettarif (pr. time)                                  756,00 kr.
-  Systemtarif                                          291,60 kr.
-  Transmissionstarif                                   264,60 kr.
-  Elafgift                                              43,20 kr.
-  Netabonnement (12 × 49 kr.)                          588,00 kr.
-  Verdo abonnement (12 × 39 kr.)                       468,00 kr.
+  Energi (spot + margin, beregnet pr. time)         1.350,00 kr.
+  Nettarif (pr. time)                                  189,00 kr.
+  Systemtarif                                           72,90 kr.
+  Transmissionstarif                                    66,15 kr.
+  Elafgift                                              10,80 kr.
+  Netabonnement (3 × 49 kr.)                           147,00 kr.
+  Verdo abonnement (3 × 39 kr.)                        117,00 kr.
   ─────────────────────────────────────────────────
-  Subtotal                                           7.811,40 kr.
-  Moms (25%)                                         1.952,85 kr.
+  Subtotal                                           1.952,85 kr.
+  Moms (25%)                                           488,21 kr.
   ─────────────────────────────────────────────────
-  Total faktisk omkostning                           9.764,25 kr.
+  Total faktisk omkostning                           2.441,06 kr.
 
-Aconto indbetalinger (12 × 650 kr.):                 7.800,00 kr.
+Aconto indbetalinger (3 × 650 kr.):                  1.950,00 kr.
 
   ─────────────────────────────────────────────────
-  DIFFERENCE:                                        1.964,25 kr.
+  DIFFERENCE:                                          491,06 kr.
   → Kunden har betalt FOR LIDT
-  → Ekstraopkrævning: 1.964,25 kr.
-  → Nyt acontobeløb justeres op til 815 kr./md.
+  → Ekstraopkrævning: 491,06 kr.
+  → Acontobeløb kan justeres for næste periode
 ```
 
 ### Aconto-flowet i systemet
@@ -228,16 +235,16 @@ sequenceDiagram
     participant V as Vores system
     participant S as Afregningsmotor
 
-    Note over K,V: MÅNEDLIGT (12 gange)
+    Note over K,V: MÅNEDLIGT
     K->>V: Betaler aconto (fast beløb)
     V->>V: Registrér indbetaling
 
-    Note over V,S: BAG SCENEN (selv om kunden betaler aconto)
+    Note over V,S: BAG SCENEN (løbende, uanset aconto)
     S->>S: Beregn faktisk forbrug pr. time<br/>(præcis som ved faktisk afregning)
-    S->>S: Gem afregningsresultat<br/>(bruges til årsopgørelse)
+    S->>S: Gem afregningsresultat
 
-    Note over K,V: ÅRLIGT (eller ved offboarding)
-    S->>S: Årsopgørelse:<br/>sum af 12 måneders faktisk afregning<br/>vs. sum af 12 acontobetalinger
+    Note over K,V: VED FAKTURERINGSPERIODE-SLUT<br/>(månedligt / kvartalsvist / årligt)
+    S->>S: Acontoopgørelse:<br/>faktisk afregning for perioden<br/>vs. acontobetalinger i perioden
 
     alt Overbetalt
         V->>K: Tilbagebetaling (kreditnota)
@@ -245,18 +252,19 @@ sequenceDiagram
         V->>K: Ekstraopkrævning (debitnota)
     end
 
-    S->>S: Genberegn acontobeløb<br/>for næste 12 måneder
+    S->>S: Vurdér om acontobeløb<br/>skal justeres
 ```
 
 ### Vigtigt for systemdesign
 
-Selv om kunden betaler aconto, kører afregningsberegningen **præcis som normalt** bag scenen. Vi beregner stadig `kWh × pris` pr. time for hver måned — vi sender bare ikke en faktura for det. Beregningerne gemmes og bruges til årsopgørelsen.
+Selv om kunden betaler aconto, kører afregningsberegningen **præcis som normalt** bag scenen. Vi beregner stadig `kWh × pris` pr. time for hver måned — vi sender bare ikke en individuel faktura for det. Beregningerne akkumuleres og bruges til acontoopgørelsen ved faktureringsperiodens slutning.
 
 Det betyder:
 - **Afregningsmotor** kører altid, uanset betalingsmodel
 - **Acontobeløbet** er en ren betalings-/cash flow-parameter, ikke en afregningsparameter
-- **Årsopgørelsen** er en differenceberegning: `faktisk total − acontobetalinger`
-- Ved **offboarding** skal årsopgørelsen altid laves for den delvise periode
+- **Acontoopgørelsen** er en differenceberegning: `faktisk total for perioden − acontobetalinger i perioden`
+- **Opgørelsesfrekvens** følger faktureringsfrekvensen (månedlig, kvartalsvis eller årlig)
+- Ved **offboarding** laves acontoopgørelsen altid for den delvise periode
 
 ---
 
@@ -278,7 +286,7 @@ Det betyder:
 | Netområde | RSM-007 (ved aktivering) | Ved flytning | Bestemmer hvilke tariffer |
 | Faktureringsfrekvens | Kontrakt | Ved kontraktændring | Periodeinddeling |
 | Betalingsmodel (aconto/faktisk) | Kontrakt | Ved kontraktændring | Betalingsflow |
-| Acontobeløb | Beregnet af os | Årligt (ved årsopgørelse) | Månedlig betaling |
+| Acontobeløb | Beregnet af os | Ved acontoopgørelse (kan justeres) | Månedlig betaling |
 | Betalingsfrist | Kontrakt | Ved kontraktændring | Betalingsopfølgning |
 
 ---

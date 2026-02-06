@@ -242,7 +242,7 @@ Tre kerneservices:
 | **Spotpris** | Nordpool-børsens timepris for strøm |
 | **Nettarif** | Netvirksomhedens gebyr for transport |
 | **Flex-afregning** | Afregning på faktisk timeforbrug (de fleste kunder) |
-| **Aconto** | Kunden betaler fast estimat, afstemmes årligt |
+| **Aconto** | Kunden betaler fast estimat, afstemmes ved hver faktureringsperiode |
 
 ---
 
