@@ -407,17 +407,54 @@ Nord Pool / Market data              Our system
 
 ---
 
-### 8. Eloverblik (Customer Verification)
+### 8. Eloverblik (Customer Data Access)
 
-**Eloverblik** (eloverblik.dk) is Energinet's public portal where customers can look up their own metering point (GSRN), consumption history, and current supplier. DDQs can use it for verification during onboarding.
+**Eloverblik** (eloverblik.dk) is Energinet's portal for accessing metering point data. It has two faces:
 
-| Use case | How |
-|----------|-----|
-| Customer provides GSRN at signup | Verify via Eloverblik that the GSRN exists and the customer's CPR matches |
-| Estimated annual consumption | Eloverblik can provide the metering point's historical consumption for aconto calculation |
-| Dispute verification | Customer can compare their Eloverblik data with our settlement |
+- **Customer-facing portal** — consumers can look up their GSRN, consumption history, and current supplier
+- **Third-party API** — DDQs and other authorized parties can access customer data programmatically with the customer's consent
 
-**Note:** Eloverblik access for DDQs is via DataHub (not a direct integration) — the data we need arrives through RSM-007 (master data) and RSM-012 (metering data). Eloverblik is primarily a customer-facing tool.
+**Why Eloverblik matters during onboarding:**
+
+Before we are the active supplier on a metering point, we do **not** receive any data through DataHub's B2B API (RSM-007, RSM-012, etc.). The B2B queues only deliver data for metering points where we are the registered supplier. During the signup/onboarding phase, we need another way to verify the customer's data — this is where Eloverblik's API comes in.
+
+**Data flow:**
+
+```
+Customer signup                     Eloverblik API               Our system
+    │                                    │                            │
+    │ Customer provides GSRN             │                            │
+    │ and grants data access             │                            │
+    │ (consent via Eloverblik)           │                            │
+    │                                    │                            │
+    │                                    │  GET metering point data   │
+    │                                    │◄───────────────────────────┤
+    │                                    ├───────────────────────────►│
+    │                                    │  GSRN details, historical  │
+    │                                    │  consumption, current      │
+    │                                    │  supplier                  │
+    │                                    │                            │
+    │                                    │              Verify GSRN,  │
+    │                                    │              estimate      │
+    │                                    │              aconto,       │
+    │                                    │              submit        │
+    │                                    │              BRS-001       │
+```
+
+| Use case | When | How |
+|----------|------|-----|
+| **Verify GSRN at signup** | Before BRS-001 is sent | Query Eloverblik API to confirm the GSRN exists and belongs to the correct address |
+| **Estimate annual consumption** | At onboarding, for aconto calculation | Fetch historical consumption from Eloverblik to calculate the first aconto amount |
+| **Pre-validate before switch** | Before BRS-001 is sent | Check current supplier, metering point type, settlement method — reduces BRS-001 rejections |
+| **Customer dispute verification** | During operations | Customer can compare their Eloverblik data with our settlement as an independent source |
+
+**After activation:** Once we are the active supplier, we receive all data through DataHub's B2B API (RSM-007 for master data, RSM-012 for metering data). Eloverblik is no longer needed for day-to-day operations.
+
+**Eloverblik API access:**
+- Requires registration as a third-party data accessor (WARNING: VERIFY current access model)
+- Customer must grant explicit consent for the DDQ to access their data
+- API provides metering point details, historical consumption, and current supplier information
+- Separate from the DataHub B2B API — different authentication, different endpoints
 
 ---
 
