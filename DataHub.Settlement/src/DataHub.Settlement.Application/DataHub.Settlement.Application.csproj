@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\DataHub.Settlement.Domain\DataHub.Settlement.Domain.csproj" />
+  </ItemGroup>
+
+</Project>
