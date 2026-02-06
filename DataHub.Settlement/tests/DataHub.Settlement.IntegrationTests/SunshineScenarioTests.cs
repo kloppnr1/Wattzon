@@ -69,7 +69,7 @@ public class SunshineScenarioTests
         var processRequest = await stateMachine.CreateRequestAsync(Gsrn, "supplier_switch", new DateOnly(2025, 1, 1), ct);
 
         var fakeClient = new FakeDataHubClient();
-        var brsBuilder = new Infrastructure.DataHub.Brs001RequestBuilder();
+        var brsBuilder = new Infrastructure.DataHub.BrsRequestBuilder();
         var cimPayload = brsBuilder.BuildBrs001(Gsrn, "0101901234", new DateOnly(2025, 1, 1));
         var response = await fakeClient.SendRequestAsync("BRS-001", cimPayload, ct);
 

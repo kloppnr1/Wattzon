@@ -3,7 +3,7 @@ using DataHub.Settlement.Application.DataHub;
 
 namespace DataHub.Settlement.Infrastructure.DataHub;
 
-public sealed class Brs001RequestBuilder : IBrsRequestBuilder
+public sealed class BrsRequestBuilder : IBrsRequestBuilder
 {
     private const string OurGln = "5790002000000";
     private const string DataHubGln = "5790001330552";

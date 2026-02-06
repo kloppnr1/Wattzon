@@ -5,9 +5,9 @@ using Xunit;
 
 namespace DataHub.Settlement.UnitTests;
 
-public class Brs001RequestBuilderTests
+public class BrsRequestBuilderTests
 {
-    private readonly Brs001RequestBuilder _sut = new();
+    private readonly BrsRequestBuilder _sut = new();
 
     [Fact]
     public void BuildBrs001_produces_valid_json_with_correct_gsrn()
