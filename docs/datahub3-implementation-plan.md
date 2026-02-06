@@ -31,13 +31,13 @@ Instead of building the system in horizontal layers (first all integration, then
 Traditional (waterfall)              Our approach (MVP)
 ──────────────────────               ──────────────────
 Phase 1: Integration                 MVP 1: One correct invoice
-Phase 2: Portfolio                     (OAuth → RSM-012 → settlement → result)
+Phase 2: Portfolio                     (happy path: OAuth → RSM-012 → settlement)
 Phase 3: Settlement                  MVP 2: Full customer lifecycle
-Phase 4: Lifecycle                     (onboarding → operation → offboarding)
-Phase 5: Reconciliation              MVP 3: Production pilot
-Phase 6: Validation                    (real customers, ERP, billing)
-                                     MVP 4: Full operation
-                                       (reconciliation, portal, scale)
+Phase 4: Lifecycle                     (happy path: onboarding → offboarding)
+Phase 5: Reconciliation              MVP 3: Edge cases
+Phase 6: Validation                    (corrections, reconciliation, elvarme, solar)
+                                     MVP 4: Production
+                                       (real customers, ERP, portal, scale)
 ```
 
 **Why this matters:**
@@ -92,9 +92,9 @@ The simulator is a lightweight HTTP server that mimics the DataHub B2B API — j
 | MVP | Simulator capabilities |
 |-----|----------------------|
 | **MVP 1** | OAuth2 token endpoint. Timeseries queue (RSM-012 only). Charges queue. Dequeue. In-process fake (`FakeDataHubClient`) for unit tests |
-| **MVP 2** | + MasterData queue (RSM-007, RSM-004). + BRS-001/002/003/009/010/042/044 request endpoints. + Scenario engine ("full onboarding", "offboarding", "rejection"). Standalone HTTP simulator (Docker) |
-| **MVP 3** | + Realistic timing and error injection (401, 503, empty queues). + Actor Test validation in parallel |
-| **MVP 4** | + Aggregations queue (RSM-014). + RSM-015/016 response endpoints. + Performance scenarios (80K metering points) |
+| **MVP 2** | + MasterData queue (RSM-007, RSM-004). + BRS-001/002/003/009/010/044 request endpoints. + Scenario engine ("full onboarding", "offboarding", "rejection"). Standalone HTTP simulator (Docker) |
+| **MVP 3** | + Correction scenarios (original → correction on same queue). + BRS-042/011 endpoints. + Aggregations queue (RSM-014). + RSM-015/016 response endpoints. + Error injection (401, 503, malformed messages). + Elvarme/solar fixtures |
+| **MVP 4** | + Actor Test validation in parallel. + Performance scenarios (80K metering points). + Realistic timing |
 
 ### Test fixture library
 
@@ -104,16 +104,16 @@ The simulator is powered by **CIM JSON fixture files** — real-format messages 
 |-------------|---------------|-------|
 | `rsm012-single-day.json` | MVP 1 | Basic ingestion pipeline |
 | `rsm012-multi-day.json` | MVP 1 | Full monthly settlement |
-| `rsm012-correction.json` | MVP 1 | Correction detection + delta calculation |
 | `charges-tariff-update.json` | MVP 1 | Rate table update |
 | `rsm007-activation.json` | MVP 2 | Metering point activation |
 | `rsm004-grid-area-change.json` | MVP 2 | Tariff reassignment |
 | `brs001-receipt-accepted.json` | MVP 2 | Onboarding flow |
 | `brs001-receipt-rejected.json` | MVP 2 | Error handling |
+| `rsm012-correction.json` | MVP 3 | Correction detection + delta calculation |
 | `rsm012-production-e18.json` | MVP 3 | E18 handling, net settlement |
 | `rsm012-missing-hours.json` | MVP 3 | Incomplete data handling |
 | `rsm007-electrical-heating.json` | MVP 3 | Elvarme threshold tracking |
-| `rsm014-aggregation.json` | MVP 4 | Reconciliation |
+| `rsm014-aggregation.json` | MVP 3 | Reconciliation |
 
 **Where do fixtures come from?**
 
@@ -205,7 +205,7 @@ Run against Energinet's Actor Test or Preprod with real credentials. These tests
 
 ## MVP 1: One Correct Invoice
 
-**Goal:** Prove the entire chain works end-to-end — from DataHub connection to a verifiable settlement result for one metering point.
+**Goal:** Prove the entire chain works end-to-end — from DataHub connection to a verifiable settlement result for one metering point. Happy path only: initial data in, correct invoice out.
 
 **Delivered outcome:** A calculated invoice you can put next to a hand-calculated reference and confirm they match.
 
@@ -218,7 +218,6 @@ Run against Energinet's Actor Test or Preprod with real credentials. These tests
 | **Auth** | OAuth2 Auth Manager — token fetch, cache, proactive renewal, 401 retry | Unit: mock token endpoint |
 | **Ingestion** | Queue Poller (Timeseries), CIM JSON Parser (RSM-012), time series storage (`metering_data` hypertable) | Unit: parse fixtures. Integration: parse → store → query roundtrip |
 | **Idempotency** | Track MessageId, skip duplicates, dead-letter on parse failure | Integration: enqueue twice → stored once. Malformed → dead-letter |
-| **Corrections** | Compare incoming RSM-012 against stored data, calculate delta | Unit: stored + new → delta per interval |
 | **Spot prices** | Fetch and store Nord Pool prices (DK1/DK2) | Integration: mock market data → stored prices |
 | **Charges** | Parse tariff updates from Charges queue | Unit: fixture files |
 | **Settlement** | `kWh × (spot + margin)` per hour, grid tariff (time-differentiated), system/transmission tariff, elafgift, subscriptions (pro rata), VAT (25%) | Unit: **golden master tests** |
@@ -233,11 +232,7 @@ Golden Master #1: Simple spot customer, one month
   Input: 720 hours consumption + spot prices + grid tariffs + margin 0.04 DKK/kWh
   Expected: hand-calculated energy + tariff + tax + subscription + VAT lines
 
-Golden Master #2: Correction (delta settlement)
-  Input: original data + corrected data for same period
-  Expected: credit/debit note with correct delta amounts
-
-Golden Master #3: Partial period (mid-month start)
+Golden Master #2: Partial period (mid-month start)
   Input: 15 days of data, pro rata subscriptions
   Expected: correctly prorated amounts
 ```
@@ -246,7 +241,6 @@ Golden Master #3: Partial period (mid-month start)
 
 - `docker compose up` starts the database and services
 - Simulator RSM-012 → parsed → stored → settlement run → invoice lines match golden master
-- Correction detection works: original + correction → delta calculated
 - Dead-letter handles malformed messages
 - CI/CD runs unit tests on every push
 - Actor Test: successfully authenticate and peek at least one message (if access granted)
@@ -255,7 +249,7 @@ Golden Master #3: Partial period (mid-month start)
 
 ## MVP 2: Full Customer Lifecycle
 
-**Goal:** Handle a customer from onboarding to offboarding — all BRS processes, all state transitions. A customer can be signed up, activated, operated, and terminated through the system.
+**Goal:** Handle a customer from onboarding to offboarding — all BRS processes, all state transitions. Happy path lifecycle: a customer can be signed up, activated, operated, and terminated through the system.
 
 **Delivered outcome:** Run the "full lifecycle" simulator scenario — a customer goes through every phase and the system handles each step correctly.
 
@@ -263,7 +257,7 @@ Golden Master #3: Partial period (mid-month start)
 
 | Area | Task | Test approach |
 |------|------|---------------|
-| **Simulator** | Upgrade to standalone HTTP server (Docker). MasterData queue. All BRS request endpoints. Scenario engine | Integration: full lifecycle scenario |
+| **Simulator** | Upgrade to standalone HTTP server (Docker). MasterData queue. BRS request endpoints (001/002/003/009/010/043/044). Scenario engine | Integration: full lifecycle scenario |
 | **Master data** | CIM JSON Parser (RSM-007, RSM-004). MasterData queue poller | Unit: fixtures. Integration: simulator |
 | **Portfolio** | Metering point CRUD, supply period tracking, grid area assignment, tariff assignment | Unit: domain logic. Integration: DB roundtrip |
 | **Customer** | Customer record (CPR/CVR, contact, product association). Eloverblik GSRN lookup at onboarding | Unit + integration |
@@ -271,25 +265,19 @@ Golden Master #3: Partial period (mid-month start)
 | **State machine** | ProcessRequest lifecycle: Pending → SentToDataHub → Acknowledged → EffectuationPending → Completed (and Rejected, Cancelled) | Unit: state transition rules |
 | **Cancellation** | BRS-003 (cancel switch before effective date) | Unit: state machine. Integration: simulator |
 | **Offboarding** | BRS-002 (end of supply). BRS-010 (move-out). BRS-044 (cancel termination). Incoming BRS-001 (we lose customer) | Unit + integration: simulator |
-| **Erroneous processes** | BRS-042 (erroneous switch — reverse and credit). BRS-011 (erroneous move — adjust dates and recalculate) | Integration: full reversal flow |
 | **Final settlement** | Partial period settlement. Aconto settlement at offboarding (actual vs. paid). Final invoice generation | Unit: golden master tests |
-| **Credit/debit notes** | Generate correction invoices after reversals or corrections | Integration |
 | **Aconto** | Aconto estimation (new customer from Eloverblik data, existing from 12-month history). Quarterly settlement cycle. Combined quarterly invoice | Unit: golden master tests |
 
 ### New golden master tests
 
 ```
-Golden Master #4: Aconto customer, quarterly settlement
+Golden Master #3: Aconto customer, quarterly settlement
   Input: 3 months data, aconto payments, combined invoice
   Expected: settlement part + aconto difference + new aconto estimate
 
-Golden Master #5: Final settlement at offboarding (partial quarter)
+Golden Master #4: Final settlement at offboarding (partial quarter)
   Input: 6 weeks of data (mid-quarter departure), aconto paid
   Expected: prorated settlement, aconto difference, final invoice
-
-Golden Master #6: Erroneous switch reversal
-  Input: 2 months of data for an erroneous period
-  Expected: all invoices credited, metering point reversed
 ```
 
 ### Simulator scenarios
@@ -339,38 +327,45 @@ Golden Master #6: Erroneous switch reversal
 ### Exit criteria
 
 - Full lifecycle scenario works end-to-end against simulator (onboarding → operation → offboarding → final invoice)
-- All BRS processes can be submitted and responses handled
-- State machine handles all transitions correctly (including error paths: rejection, cancellation, reversal)
+- All happy path BRS processes can be submitted and responses handled
+- State machine handles all transitions correctly (including rejection and cancellation)
 - Aconto quarterly cycle works (estimation → payment → settlement → combined invoice)
 - Final settlement and aconto settlement produce correct results (golden masters pass)
 - BRS-001 submitted to Actor Test and accepted (if access granted)
 
 ---
 
-## MVP 3: Production Pilot
+## MVP 3: Edge Cases
 
-**Goal:** Bill real customers through the system. A small batch (10-50 metering points) runs through the full flow with real DataHub communication and real ERP integration.
+**Goal:** Handle everything that can go wrong. Corrections, erroneous processes, reconciliation discrepancies, special metering scenarios, concurrent processes, and customer disputes. After this MVP, the system handles the real world, not just the happy path.
 
-**Delivered outcome:** First real invoices sent to customers, calculated and verified by the system.
+**Delivered outcome:** All edge case scenarios pass against the simulator. The system correctly detects corrections, reverses erroneous processes, reconciles against DataHub wholesale data, and handles elvarme/solar customers.
 
 ### What to build
 
 | Area | Task | Test approach |
 |------|------|---------------|
-| **Actor Test validation** | Full flow against real DataHub: BRS-001 → RSM-007 → RSM-012 → settlement → BRS-002 | E2E: real messages, real responses |
-| **Parser hardening** | Fix any parsing failures discovered with real messages. Add every real CIM JSON to fixture library | Capture → fixture → regression test |
-| **ERP integration** | Settlement results → ERP export (invoice generation, receivables). Domain events: `settlement.completed`, `customer.activated` | Integration: API returns correct data |
-| **Payment services** | Betalingsservice (PBS) integration for recurring payments | Integration: payment file generation |
-| **Digital post** | e-Boks integration for invoice delivery | Integration: document format + delivery |
-| **Error injection** | Simulator: 401 (token expiry), 503 (unavailable), empty queues, malformed messages | Integration: system recovers gracefully |
-| **Elvarme** | Electrical heating threshold tracking (4,000 kWh, split rate) | Unit: golden master |
-| **Solar** | E18 production metering points, hourly net settlement, production credit | Unit: golden master |
-| **Monitoring** | Health checks, alerting, audit logging (CorrelationId, GDPR compliance) | — |
-| **Pilot migration** | Onboard 10-50 real customers, verify first settlement against manual calculation | Manual verification |
+| **Corrections** | Compare incoming RSM-012 against stored data. Calculate delta per interval. Generate credit/debit notes | Unit: stored + new → delta per interval. Golden master tests |
+| **Erroneous processes** | BRS-042 (erroneous switch — reverse supply period, credit all invoices). BRS-011 (erroneous move — adjust dates, recalculate) | Integration: full reversal flow against simulator |
+| **Wholesale reconciliation** | RSM-014 parser. Compare own settlement vs. DataHub aggregation per grid area. Identify deviating metering points | Unit: matching + discrepancy scenarios |
+| **Historical data requests** | RSM-015 (request validated data for verification). RSM-016 (request detailed aggregated data) | Integration: simulator |
+| **Elvarme** | Electrical heating flag from RSM-007. Cumulative annual kWh tracking. Split rate at 4,000 kWh threshold. Year boundary reset | Unit: golden master. Edge: threshold crossed mid-period |
+| **Solar / E18** | E18 production metering point ingestion. Link E17↔E18. Hourly net settlement. Production credit at spot price (no tariffs/tax on excess) | Unit: golden master. Edge: negative settlement lines |
+| **Concurrent processes** | Correction during supplier switch (filter to our supply period). Move-out mid-quarter (partial aconto settlement). Tariff change mid-billing period (split rate application) | Unit: specific scenarios |
+| **Customer disputes** | Request historical data (RSM-015) for verification. Compare against own settlement. Support workflow for disputed invoices | Integration |
+| **Error handling** | Token expiry mid-poll (401 → renew → retry). DataHub unavailable (503 → backoff). Malformed messages (dead-letter → dequeue). Missing spot prices (halt gracefully) | Integration: simulator error injection |
 
 ### New golden master tests
 
 ```
+Golden Master #5: Correction (delta settlement)
+  Input: original data + corrected data for same period
+  Expected: credit/debit note with correct delta amounts
+
+Golden Master #6: Erroneous switch reversal
+  Input: 2 months of data for an erroneous period
+  Expected: all invoices credited, metering point reversed
+
 Golden Master #7: Elvarme customer crossing 4,000 kWh threshold
   Input: cumulative consumption crossing threshold mid-period
   Expected: split rate (standard below, reduced above)
@@ -378,67 +373,36 @@ Golden Master #7: Elvarme customer crossing 4,000 kWh threshold
 Golden Master #8: Solar customer with E18 production
   Input: E17 consumption + E18 production per hour
   Expected: net settlement per hour, production credit at spot price
+
+Golden Master #9: Correction during active supply period overlap
+  Input: correction spanning period before and after our supply start
+  Expected: only delta within our supply period is settled
+
+Golden Master #10: Tariff change mid-billing period
+  Input: old rate until 15th, new rate from 16th
+  Expected: split calculation with correct rates per hour
 ```
 
 ### Simulator scenarios
 
-**Scenario: Token expiry during polling**
+**Scenario: Correction**
 ```
-1. Simulator issues token with 5-second TTL
-2. System starts polling → first peek succeeds
-3. Token expires
-4. Next peek → Simulator returns 401
-5. System fetches new token → retries → succeeds
-```
-
-**Scenario: DataHub unavailable**
-```
-1. Simulator configured to return 503 for all requests
-2. System retries with exponential backoff
-3. After N retries, simulator starts returning 200
-4. System resumes normal operation
-5. No messages lost (at-least-once guarantee)
+1. Simulator enqueues RSM-012 (original: 1.5 kWh for hour 14:00)
+2. System stores data
+3. System runs settlement → original invoice
+4. Simulator enqueues RSM-012 (correction: 2.0 kWh for hour 14:00)
+5. System detects delta (+0.5 kWh), calculates financial impact
+6. System generates credit/debit note
 ```
 
-**Scenario: Malformed message**
+**Scenario: Erroneous switch reversal**
 ```
-1. Simulator enqueues invalid CIM JSON (missing required fields)
-2. System attempts to parse → fails
-3. Message goes to dead-letter table
-4. System dequeues to free the queue
-5. Next message (valid) is processed normally
+1. System has active metering point with 2 months of data and invoices
+2. System sends BRS-042 (erroneous switch reversal)
+3. Simulator confirms reversal
+4. System: reverse supply period, credit all issued invoices
+5. System: delete/mark metering data as reversed
 ```
-
-### Exit criteria
-
-- Full flow works against Energinet Actor Test with real messages
-- Every real CIM JSON that broke the parser is now a fixture in the test suite
-- ERP receives settlement results and generates invoices
-- 10-50 real customers billed through the system
-- First invoices verified against manual calculation
-- Monitoring and alerting in place
-
----
-
-## MVP 4: Full Operation
-
-**Goal:** The system runs the entire business. Full portfolio migration, wholesale reconciliation, customer portal, and scale.
-
-**Delivered outcome:** All customers billed through the system. Wholesale reconciliation runs monthly. Self-service portal live.
-
-### What to build
-
-| Area | Task | Test approach |
-|------|------|---------------|
-| **Wholesale reconciliation** | RSM-014 parser. Compare own settlement vs. DataHub aggregation. Discrepancy analysis | Unit: matching + discrepancy. Integration: simulator |
-| **Historical data requests** | RSM-015 (request validated data). RSM-016 (request aggregated data) | Integration: simulator |
-| **Customer portal** | Consumption graphs, invoice history, contract details, contact info | Integration + E2E |
-| **Full portfolio migration** | Migrate all customers from existing system | Migration scripts + verification |
-| **Preprod validation** | Final validation against production-like environment | E2E |
-| **Performance** | Load test: 80K metering points, daily ingestion, monthly settlement | Simulator at scale |
-| **Security audit** | GDPR compliance review, secret management, ISAE 3402 requirements | — |
-
-### Simulator scenarios
 
 **Scenario: Wholesale reconciliation discrepancy**
 ```
@@ -453,12 +417,77 @@ Golden Master #8: Solar customer with E18 production
 9. System recalculates and the discrepancy resolves
 ```
 
+**Scenario: Token expiry during polling**
+```
+1. Simulator issues token with 5-second TTL
+2. System starts polling → first peek succeeds
+3. Token expires → Simulator returns 401
+4. System fetches new token → retries → succeeds
+```
+
+**Scenario: DataHub unavailable**
+```
+1. Simulator configured to return 503 for all requests
+2. System retries with exponential backoff
+3. After N retries, simulator starts returning 200
+4. System resumes normal operation — no messages lost
+```
+
+**Scenario: Malformed message**
+```
+1. Simulator enqueues invalid CIM JSON (missing required fields)
+2. System attempts to parse → fails
+3. Message goes to dead-letter table
+4. System dequeues to free the queue
+5. Next message (valid) is processed normally
+```
+
 ### Exit criteria
 
+- Correction detection works: original + correction → correct delta calculated and credit/debit note generated
+- Erroneous switch reversal credits all invoices and reverses supply period
+- Wholesale reconciliation detects discrepancies and resolves via RSM-015/016
+- Elvarme threshold tracking produces correct split rates (golden master passes)
+- Solar net settlement produces correct hourly netting with production credits (golden master passes)
+- Concurrent process scenarios handled correctly (correction during switch, mid-quarter move-out, mid-period tariff change)
+- System recovers gracefully from all error scenarios (401, 503, malformed messages, missing data)
+- All golden master tests (#5-#10) pass
+
+---
+
+## MVP 4: Production
+
+**Goal:** Go live with real customers. ERP integration, payment services, parser hardening against real DataHub messages, and progressive migration from pilot to full portfolio.
+
+**Delivered outcome:** All customers billed through the system. Real invoices sent. Customer portal live. System validated at scale.
+
+### What to build
+
+| Area | Task | Test approach |
+|------|------|---------------|
+| **Actor Test validation** | Full flow against real DataHub: BRS-001 → RSM-007 → RSM-012 → settlement → BRS-002 | E2E: real messages, real responses |
+| **Parser hardening** | Fix any parsing failures discovered with real messages. Add every real CIM JSON to fixture library | Capture → fixture → regression test |
+| **ERP integration** | Settlement results → ERP export (invoice generation, receivables). Domain events: `settlement.completed`, `customer.activated` | Integration: API returns correct data |
+| **Payment services** | Betalingsservice (PBS) integration for recurring payments | Integration: payment file generation |
+| **Digital post** | e-Boks integration for invoice delivery | Integration: document format + delivery |
+| **Customer portal** | Consumption graphs (hourly/daily/monthly), invoice history, contract details, contact info | Integration + E2E |
+| **Monitoring** | Health checks, alerting, audit logging (CorrelationId, GDPR compliance) | — |
+| **Pilot** | Onboard 10-50 real customers, verify first settlement against manual calculation | Manual verification |
+| **Full migration** | Migrate all customers from existing system | Migration scripts + verification |
+| **Preprod validation** | Final validation against production-like environment | E2E |
+| **Performance** | Load test: 80K metering points, daily ingestion, monthly settlement | Simulator at scale |
+| **Security audit** | GDPR compliance review, secret management, ISAE 3402 requirements | — |
+
+### Exit criteria
+
+- Full flow works against Energinet Actor Test with real messages
+- Every real CIM JSON that broke the parser is now a fixture in the test suite
+- ERP receives settlement results and generates invoices
+- Pilot customers (10-50) billed and verified against manual calculation
 - All customers migrated and billed through the system
-- Wholesale reconciliation runs monthly and discrepancies are identified and resolved
 - Customer portal live
 - Performance validated at full portfolio scale
+- Monitoring, alerting, and audit logging in place
 - Security audit passed
 
 ---
@@ -563,12 +592,12 @@ Push to main
 
 | MVP | Focus | Key deliverable | Depends on |
 |-----|-------|----------------|------------|
-| **1** | One correct invoice | DataHub connection → RSM-012 ingestion → settlement → verified result | — |
-| **2** | Full customer lifecycle | All BRS processes. Onboarding → operation → offboarding → final settlement | MVP 1 |
-| **3** | Production pilot | Real customers (10-50). ERP integration. Real DataHub. Parser hardening | MVP 2 + Actor Test access |
-| **4** | Full operation | All customers. Wholesale reconciliation. Portal. Scale | MVP 3 |
+| **1** | One correct invoice | Happy path: DataHub connection → RSM-012 ingestion → settlement → verified result | — |
+| **2** | Full customer lifecycle | Happy path: all BRS processes. Onboarding → operation → offboarding → final settlement | MVP 1 |
+| **3** | Edge cases | Everything that can go wrong: corrections, erroneous processes, reconciliation, elvarme, solar, concurrent processes, error handling | MVP 2 |
+| **4** | Production | Real customers. ERP + payment + portal. Pilot → full migration. Scale | MVP 3 + Actor Test access |
 
-**Critical path:** Actor Test access. Apply during MVP 1. If access is delayed, MVP 2 proceeds against the simulator, and Actor Test validation shifts to MVP 3.
+**Critical path:** Actor Test access. Apply during MVP 1. If access is delayed, MVPs 2-3 proceed against the simulator, and Actor Test validation shifts to MVP 4.
 
 ---
 

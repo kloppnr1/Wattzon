@@ -533,10 +533,10 @@ The system is built in **MVPs** (minimum viable products), each delivering a wor
 
 | MVP | Scope | Business Processes |
 |-----|-------|--------------------|
-| 1 | One correct invoice — DataHub connection + metering data + settlement | Auth, Queue Poller, RSM-012 (BRS-021), time series store, settlement engine, Charges queue |
-| 2 | Full customer lifecycle — onboarding to offboarding | RSM-004/007, BRS-001/002/003/009/010/011/042/043/044, state machine, aconto |
-| 3 | Production pilot — real customers, ERP integration | ERP export, payment services, e-Boks, elvarme, solar, monitoring |
-| 4 | Full operation — all customers, reconciliation, portal | BRS-027/028/029/030, RSM-014/015/016, customer portal, performance |
+| 1 | One correct invoice (happy path) | Auth, Queue Poller, RSM-012 (BRS-021), time series store, settlement engine, Charges queue |
+| 2 | Full customer lifecycle (happy path) | RSM-004/007, BRS-001/002/003/009/010/043/044, state machine, aconto |
+| 3 | Edge cases | Corrections, BRS-042/011, RSM-014/015/016, reconciliation, elvarme, solar, error handling |
+| 4 | Production | ERP, payment services, e-Boks, customer portal, pilot + full migration, performance |
 
 > Details: [Implementation plan](datahub3-implementation-plan.md) — MVP details, DataHub simulator, testing strategy
 
