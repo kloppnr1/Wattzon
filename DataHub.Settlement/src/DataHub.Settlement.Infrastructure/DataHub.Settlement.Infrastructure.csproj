@@ -3,6 +3,7 @@
   <ItemGroup>
     <PackageReference Include="Dapper" Version="2.1.*" />
     <PackageReference Include="dbup-postgresql" Version="5.0.*" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="9.0.*" />
     <PackageReference Include="Npgsql" Version="9.0.*" />
   </ItemGroup>
 

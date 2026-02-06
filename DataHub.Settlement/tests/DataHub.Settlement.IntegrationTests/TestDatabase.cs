@@ -41,7 +41,28 @@ public sealed class TestDatabase : IAsyncLifetime
         await conn.OpenAsync();
         await using var cmd = conn.CreateCommand();
         cmd.CommandText = """
-            TRUNCATE metering.metering_data, metering.spot_price CASCADE;
+            TRUNCATE
+                settlement.settlement_line,
+                settlement.settlement_run,
+                settlement.billing_period,
+                lifecycle.process_event,
+                lifecycle.process_request,
+                datahub.dead_letter,
+                datahub.processed_message_id,
+                datahub.inbound_message,
+                datahub.outbound_request,
+                tariff.tariff_rate,
+                tariff.grid_tariff,
+                tariff.subscription,
+                tariff.electricity_tax,
+                portfolio.contract,
+                portfolio.supply_period,
+                portfolio.metering_point,
+                portfolio.product,
+                portfolio.customer,
+                metering.metering_data,
+                metering.spot_price
+            CASCADE;
             """;
         await cmd.ExecuteNonQueryAsync();
     }

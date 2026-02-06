@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: timescale/timescaledb:latest-pg16
+        env:
+          POSTGRES_DB: datahub_settlement_test
+          POSTGRES_USER: settlement
+          POSTGRES_PASSWORD: settlement
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Restore
+        run: dotnet restore DataHub.Settlement/DataHub.Settlement.sln
+
+      - name: Build
+        run: dotnet build DataHub.Settlement/DataHub.Settlement.sln --no-restore --configuration Release
+
+      - name: Unit Tests
+        run: dotnet test DataHub.Settlement/tests/DataHub.Settlement.UnitTests/ --no-build --configuration Release --verbosity normal
+
+      - name: Integration Tests
+        run: dotnet test DataHub.Settlement/tests/DataHub.Settlement.IntegrationTests/ --no-build --configuration Release --verbosity normal

@@ -5,7 +5,8 @@ using Xunit;
 
 namespace DataHub.Settlement.IntegrationTests;
 
-public class MeteringDataRepositoryTests : IClassFixture<TestDatabase>
+[Collection("Database")]
+public class MeteringDataRepositoryTests
 {
     private readonly MeteringDataRepository _sut = new(TestDatabase.ConnectionString);
     private readonly TestDatabase _db;
