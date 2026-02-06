@@ -141,7 +141,7 @@ En privatkunde kan typisk vælge mellem to betalingsmodeller. Valget påvirker *
 
 | | **Aconto** (forudbetaling) | **Bagudbetaling** (faktisk forbrug) |
 |---|---|---|
-| **Hvad kunden betaler** | Fast estimeret beløb pr. måned | Faktisk forbrug for foregående måned |
+| **Hvad kunden betaler** | Fast estimeret beløb pr. kvartal | Faktisk forbrug for foregående måned |
 | **Faktureringsfrekvens** | Kvartalsvis (4 fakturaer/år) | Månedlig (12 fakturaer/år) |
 | **Opgørelse** | Hvert kvartal: faktisk forbrug vs. aconto | Ingen opgørelse nødvendig — fakturaen ER endelig |
 | **Betalingstidspunkt** | Forud (betaler for kommende periode) | Bagud (betaler for afsluttet periode) |
@@ -157,7 +157,7 @@ En privatkunde kan typisk vælge mellem to betalingsmodeller. Valget påvirker *
 
 ### Hvad er aconto?
 
-Aconto er en **forudbetalingsmodel** hvor kunden betaler et **fast estimeret beløb** hver måned. Ved hver **faktureringsperiode** (typisk kvartal) laves en **acontoopgørelse** der afstemmer de indbetalte acontobeløb mod det faktiske forbrug.
+Aconto er en **forudbetalingsmodel** hvor kunden betaler et **fast estimeret beløb** forud for hver **faktureringsperiode** (typisk kvartal). Ved periodens slutning laves en **acontoopgørelse** der afstemmer det indbetalte acontobeløb mod det faktiske forbrug.
 
 Alle fire kvartaler følger **samme cyklus** — der er ingen særlig årlig opgørelse.
 
@@ -165,7 +165,7 @@ Alle fire kvartaler følger **samme cyklus** — der er ingen særlig årlig opg
 
 Acontos primære formål er **cash flow for Verdo**:
 
-- Vi modtager penge **løbende** uanset sæsonudsving i forbrug og spotpriser
+- Vi modtager penge **forud** uanset sæsonudsving i forbrug og spotpriser
 - Under engrosmodellen betaler vi netvirksomhed, Energinet og stat for kunden — aconto sikrer at vi har likviditet til dette
 - Kunden opnår færre fakturaer (4 vs. 12 pr. år) og lavere betalingsgebyrer
 
@@ -187,9 +187,8 @@ Estimeret årsforbrug (kWh)                    ← Fra DataHub, eller standardes
 + abonnementer (net + Verdo, 12 måneder)
 + moms (25%)
 = Estimeret årsomkostning
-                                                  Fordeles med sæsonnøgle (30/20/20/30)
-÷ 3 måneder pr. kvartal
-= Månedligt acontobeløb for indeværende kvartal
+÷ 4 kvartaler
+= Kvartalsvis acontobeløb
 ```
 
 **Eksisterende kunde (genberegning):**
@@ -199,9 +198,8 @@ Faktisk forbrug, seneste 12 måneder (kWh)    ← Fra RSM-012-data i vores DB
 × forventet gennemsnitspris fremadrettet      ← Aktuelle spot-/tarifniveauer
 + abonnementer + afgifter + moms
 = Nyt estimeret årsbeløb
-                                                  Fordeles med sæsonnøgle (30/20/20/30)
-÷ 3 måneder pr. kvartal
-= Nyt månedligt acontobeløb
+÷ 4 kvartaler
+= Nyt kvartalsvis acontobeløb
 ```
 
 **Genberegning sker:**
@@ -236,7 +234,7 @@ Hver kvartalsfaktura er et **samlet dokument** med to hoveddele:
 │    ───────────────────────────────────────────────                    │
 │    Total faktisk omkostning Q1:                       2.441,06 kr.    │
 │                                                                       │
-│    Acontobetalinger Q1 (3 × 650 kr.):              − 1.950,00 kr.    │
+│    Aconto indbetalt for Q1:                        − 1.950,00 kr.    │
 │    ───────────────────────────────────────────────                    │
 │    DIFFERENCE Q1:                                   +   491,06 kr.    │
 │    (Du har betalt 491,06 kr. for lidt i Q1)                           │
@@ -249,16 +247,16 @@ Hver kvartalsfaktura er et **samlet dokument** med to hoveddele:
 │    Q2-andel (20%): 840 kWh                                            │
 │    Estimeret Q2-omkostning inkl. moms:                1.520,00 kr.    │
 │                                                                       │
-│    Månedlig aconto Q2: 507 kr. × 3 =                  1.521,00 kr.    │
+│    Aconto Q2:                                         1.520,00 kr.    │
 │                                                                       │
 │  ═══════════════════════════════════════════════════════════════       │
 │  SAMLET BELØB                                                         │
 │  ═══════════════════════════════════════════════════════════════       │
 │                                                                       │
 │    Q1 underbetaling:                                +   491,06 kr.    │
-│    Q2 aconto:                                       + 1.521,00 kr.    │
+│    Q2 aconto:                                       + 1.520,00 kr.    │
 │    ───────────────────────────────────────────────                    │
-│    TOTAL AT BETALE:                                   2.012,06 kr.    │
+│    TOTAL AT BETALE:                                   2.011,06 kr.    │
 │                                                                       │
 │    Betalingsfrist: 10. maj 2025                                       │
 │                                                                       │
@@ -274,10 +272,6 @@ Alle fire kvartaler følger nøjagtig samme cyklus:
 ```
               Q1                  Q2                  Q3                  Q4
           (jan-mar)           (apr-jun)           (jul-sep)           (okt-dec)
-              │                   │                   │                   │
-              ▼                   ▼                   ▼                   ▼
-         3 × aconto          3 × aconto          3 × aconto          3 × aconto
-         (sats: vinter)      (sats: sommer)      (sats: sommer)      (sats: vinter)
               │                   │                   │                   │
               ▼                   ▼                   ▼                   ▼
         ┌────────────┐     ┌────────────┐     ┌────────────┐     ┌────────────┐
@@ -299,8 +293,8 @@ sequenceDiagram
     participant V as Vores system
     participant S as Afregningsmotor
 
-    Note over K,V: MÅNEDLIGT (3 gange pr. kvartal)
-    K->>V: Betaler aconto (fast beløb)
+    Note over K,V: VED KVARTALETS START
+    K->>V: Betaler aconto for kvartalet (fast beløb)
     V->>V: Registrér acontoindbetaling
 
     Note over V,S: BAG SCENEN (løbende)
@@ -369,7 +363,7 @@ Det betyder:
 | Netområde | RSM-007 (ved aktivering) | Ved flytning | Bestemmer hvilke tariffer |
 | Faktureringsfrekvens | Kontrakt | Ved kontraktændring | Periodeinddeling |
 | Betalingsmodel (aconto/faktisk) | Kontrakt | Ved kontraktændring | Betalingsflow |
-| Acontobeløb | Beregnet af os | Ved acontoopgørelse (kan justeres) | Månedlig betaling |
+| Acontobeløb | Beregnet af os | Ved acontoopgørelse (kan justeres) | Kvartalsvis betaling |
 | Betalingsfrist | Kontrakt | Ved kontraktændring | Betalingsopfølgning |
 
 ---
