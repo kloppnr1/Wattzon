@@ -85,7 +85,7 @@ public sealed class ProcessRepository : IProcessRepository
     {
         const string sql = """
             INSERT INTO lifecycle.process_event (process_request_id, event_type, payload, source)
-            VALUES (@ProcessRequestId, @EventType, @Payload::jsonb, @Source)
+            VALUES (@ProcessRequestId, @EventType, CASE WHEN @Payload IS NULL THEN NULL ELSE jsonb_build_object('reason', @Payload) END, @Source)
             """;
 
         await using var conn = new NpgsqlConnection(_connectionString);

@@ -1,5 +1,4 @@
 using DataHub.Settlement.Application.Billing;
-using DataHub.Settlement.Application.Eloverblik;
 using FluentAssertions;
 using Xunit;
 
@@ -8,58 +7,44 @@ namespace DataHub.Settlement.UnitTests;
 public class AcontoEstimatorTests
 {
     [Fact]
-    public void Quarterly_estimate_from_12_month_history()
+    public void Quarterly_estimate_from_annual_consumption()
     {
-        // 12 months × 400 kWh = 4800 kWh/year, monthly avg = 400, quarterly = 1200 kWh
-        var history = Enumerable.Range(1, 12)
-            .Select(m => new MonthlyConsumption(2024, m, 400m))
-            .ToList();
-
-        var result = AcontoEstimator.EstimateQuarterlyAmount(history, expectedPricePerKwh: 1.50m);
+        // 4800 kWh/year → quarterly = 1200 kWh
+        var result = AcontoEstimator.EstimateQuarterlyAmount(
+            annualConsumptionKwh: 4800m, expectedPricePerKwh: 1.50m);
 
         // 1200 kWh × 1.50 DKK/kWh = 1800.00, +25% VAT = 2250.00
         result.Should().Be(2250.00m);
     }
 
     [Fact]
-    public void Quarterly_estimate_with_seasonal_variation()
+    public void Quarterly_estimate_for_typical_house()
     {
-        // Winter-heavy: 3 months at 400 kWh average
-        var history = new List<MonthlyConsumption>
-        {
-            new(2024, 1, 420m),
-            new(2024, 2, 380m),
-            new(2024, 3, 350m),
-        };
+        // Default Danish house: 4000 kWh/year → quarterly = 1000 kWh
+        var result = AcontoEstimator.EstimateQuarterlyAmount(
+            annualConsumptionKwh: 4000m, expectedPricePerKwh: 1.50m);
 
-        var result = AcontoEstimator.EstimateQuarterlyAmount(history, expectedPricePerKwh: 1.50m);
-
-        // Average monthly = (420+380+350)/3 = 383.33, quarterly = 1150 kWh
-        // 1150 × 1.50 = 1725, +25% VAT = 2156.25
-        var expectedMonthlyAvg = (420m + 380m + 350m) / 3m;
-        var expectedQuarterlyKwh = expectedMonthlyAvg * 3m;
-        var expected = Math.Round(expectedQuarterlyKwh * 1.50m * 1.25m, 2);
-        result.Should().Be(expected);
+        // 1000 kWh × 1.50 = 1500.00, +25% VAT = 1875.00
+        result.Should().Be(1875.00m);
     }
 
     [Fact]
-    public void Empty_history_returns_zero()
+    public void Quarterly_estimate_for_apartment()
     {
-        var result = AcontoEstimator.EstimateQuarterlyAmount([], expectedPricePerKwh: 1.50m);
+        // Typical apartment: 2500 kWh/year → quarterly = 625 kWh
+        var result = AcontoEstimator.EstimateQuarterlyAmount(
+            annualConsumptionKwh: 2500m, expectedPricePerKwh: 1.50m);
 
-        result.Should().Be(0m);
+        // 625 kWh × 1.50 = 937.50, +25% VAT = 1171.875 → 1171.88
+        result.Should().Be(1171.88m);
     }
 
     [Fact]
     public void Quarterly_estimate_includes_subscriptions()
     {
-        // 12 months × 400 kWh, quarterly = 1200 kWh
-        var history = Enumerable.Range(1, 12)
-            .Select(m => new MonthlyConsumption(2024, m, 400m))
-            .ToList();
-
+        // 4800 kWh/year → quarterly = 1200 kWh
         var result = AcontoEstimator.EstimateQuarterlyAmount(
-            history, expectedPricePerKwh: 1.50m,
+            annualConsumptionKwh: 4800m, expectedPricePerKwh: 1.50m,
             gridSubscriptionPerMonth: 49.00m,
             supplierSubscriptionPerMonth: 39.00m);
 

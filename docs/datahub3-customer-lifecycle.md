@@ -214,18 +214,13 @@ Invoice total  = sum of all lines + VAT
 ### Internal Steps
 
 1. Sales creates customer record (name, CPR/CVR, contact details, contract terms)
-2. Sales registers the metering point's GSRN (18-digit number from the customer's current bill or via [Eloverblik](datahub3-cis-and-external-systems.md#8-eloverblik-onboarding-data))
-3. The system looks up the GSRN via the **Eloverblik API** to collect onboarding data:
-   - Validate that the GSRN exists and matches the customer's address
-   - Retrieve metering point type (E17/E18), grid area, settlement method
-   - Retrieve historical consumption (12 months) for aconto estimation
-   - Identify current supplier (who we are switching from)
-4. The system determines the correct process:
+2. Customer provides the metering point's GSRN (18-digit number from the customer's current bill)
+3. The system determines the correct process:
    - **New customer on existing metering point** -> supplier switch (leverandørskifte) (BRS-001 or BRS-043)
    - **Customer moving into a new address** -> move-in (tilflytning) (BRS-009)
-5. The system selects product/tariff plan based on contract terms and metering point data from Eloverblik
-6. For aconto customers: calculate initial aconto estimate based on Eloverblik historical consumption
-7. Onboarding record is created with status `awaiting_datahub`
+4. The system selects product/tariff plan based on contract terms
+5. For aconto customers: calculate initial aconto estimate based on static annual consumption (4,000 kWh/year for house, 2,500 kWh/year for apartment)
+6. Onboarding record is created with status `awaiting_datahub`
 
 ### DataHub Communication
 
