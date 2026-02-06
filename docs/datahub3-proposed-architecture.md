@@ -535,7 +535,7 @@ The system is built in **MVPs** (minimum viable products), each delivering a wor
 |-----|-------|--------------------|
 | 1 | One correct invoice (happy path) | Auth, Queue Poller, RSM-012 (BRS-021), time series store, settlement engine, Charges queue |
 | 2 | Full customer lifecycle (happy path) | RSM-004/007, BRS-001/002/003/009/010/043/044, state machine, aconto |
-| 3 | Edge cases | Corrections, BRS-042/011, RSM-014/015/016, reconciliation, elvarme, solar, error handling |
+| 3 | DataHub integration + edge cases | Actor Test validation, parser hardening, corrections, BRS-042/011, RSM-014/015/016, reconciliation, elvarme, solar |
 | 4 | Production | ERP, payment services, e-Boks, customer portal, pilot + full migration, performance |
 
 > Details: [Implementation plan](datahub3-implementation-plan.md) — MVP details, DataHub simulator, testing strategy
