@@ -137,94 +137,175 @@ Satserne modtager vi via **Charges-køen** fra DataHub og opdateres typisk 1-2 g
 
 ---
 
+## Betalingsmodeller: Aconto vs. bagudbetaling
+
+En privatkunde kan typisk vælge mellem to betalingsmodeller. Valget påvirker **hvornår og hvordan** kunden betaler — men **ikke hvad** kunden betaler. Den samlede udgift over et år er den samme.
+
+| | **Aconto** (forudbetaling) | **Bagudbetaling** (faktisk forbrug) |
+|---|---|---|
+| **Hvad kunden betaler** | Fast estimeret beløb pr. måned | Faktisk forbrug for foregående måned |
+| **Faktureringsfrekvens** | Kvartalsvis (4 fakturaer/år) | Månedlig (12 fakturaer/år) |
+| **Opgørelse** | Hvert kvartal: faktisk forbrug vs. aconto | Ingen opgørelse nødvendig — fakturaen ER endelig |
+| **Betalingstidspunkt** | Forud (betaler for kommende periode) | Bagud (betaler for afsluttet periode) |
+| **For Verdo** | Jævn, forudsigelig cash flow | Verdo lægger ud for net/afgifter inden kundens betaling |
+| **For kunden** | Færre fakturaer, men periodevis opgørelse | Fuld gennemsigtighed, ingen overraskelser |
+| **Betalingsgebyr** | 4 × gebyr pr. år | 12 × gebyr pr. år |
+
+**Branchetrend:** Flere leverandører (Andel Energi, EWII) har afskaffet aconto helt og tilbyder kun bagudbetaling. Begrundelsen er at fjernaflæste målere gør månedlig afregning på faktisk forbrug mulig, og at aconto i praksis er et rentefrit lån fra kunden til leverandøren.
+
+---
+
 ## Aconto: Detaljeret forklaring
 
 ### Hvad er aconto?
 
-Aconto er en **betalingsmodel** hvor kunden betaler et **fast estimeret beløb** hver måned. Ved hver **faktureringsperiode** (månedlig, kvartalsvis eller årlig — afhængig af kontrakt) laves en **acontoopgørelse** der afstemmer de indbetalte acontobeløb mod det faktiske forbrug i perioden.
+Aconto er en **forudbetalingsmodel** hvor kunden betaler et **fast estimeret beløb** hver måned. Ved hver **faktureringsperiode** (typisk kvartal) laves en **acontoopgørelse** der afstemmer de indbetalte acontobeløb mod det faktiske forbrug.
 
-```
-Eksempel: Kvartalsvis fakturering med månedlig aconto
-
-Mdr. 1       Mdr. 2       Mdr. 3       Acontoopgørelse
-  │            │            │                │
-  ▼            ▼            ▼                ▼
-650 kr.      650 kr.      650 kr.       Faktisk forbrug
-(aconto)     (aconto)     (aconto)      for Q1 beregnes
-                                             │
-                                ┌────────────┴────────────┐
-                                │                         │
-                           Overbetalt              Underbetalt
-                           → kreditnota            → ekstraopkrævning
-
-Mdr. 4       Mdr. 5       Mdr. 6       Acontoopgørelse
-  │            │            │                │
-  ▼            ▼            ▼                ▼
-650 kr.      650 kr.      650 kr.       Faktisk forbrug
-(aconto)     (aconto)     (aconto)      for Q2 beregnes
-  ...          ...          ...              ...
-```
+Alle fire kvartaler følger **samme cyklus** — der er ingen særlig årlig opgørelse.
 
 ### Hvorfor aconto?
 
-- **For Verdo:** Jævn og forudsigelig cash flow — vi modtager penge løbende uanset sæsonudsving i forbrug og spotpriser
-- **For kunden:** Lavere månedlige udsving mellem acontobetalingerne — differencen opgøres ved faktureringsperiodens slutning
+Acontos primære formål er **cash flow for Verdo**:
 
-### Hvordan beregnes acontobeløbet?
+- Vi modtager penge **løbende** uanset sæsonudsving i forbrug og spotpriser
+- Under engrosmodellen betaler vi netvirksomhed, Energinet og stat for kunden — aconto sikrer at vi har likviditet til dette
+- Kunden opnår færre fakturaer (4 vs. 12 pr. år) og lavere betalingsgebyrer
 
-Ved **onboarding** (ny kunde):
+### Engrosmodellen og aconto
+
+Siden 1. april 2016 gælder **engrosmodellen** i Danmark. Kunden modtager **én samlet faktura** fra elleverandøren der dækker alle omkostninger: energi, nettarif, Energinet-tariffer, elafgift, abonnementer og moms.
+
+Acontobeløbet skal derfor dække **hele omkostningsstakken** — ikke kun energiprisen. Det gør beregningen mere kompleks, fordi vi skal estimere fremtidige priser for alle komponenter.
+
+### Sæsonfordelingsnøgle
+
+Elforbrug varierer kraftigt over året. Standardfordelingen er:
+
+| Kvartal | Periode | Andel af årsforbrug | Hvorfor |
+|---------|---------|--------------------:|---------|
+| Q1 | Januar–marts | **30%** | Vinter: mørkt, koldt, mere indendørs |
+| Q2 | April–juni | **20%** | Forår/sommer: lyst, varmt |
+| Q3 | Juli–september | **20%** | Sommer: mindst forbrug |
+| Q4 | Oktober–december | **30%** | Efterår/vinter: mørkt igen |
+
+Acontobeløbet er **ikke ens alle måneder** — det justeres efter sæson. En kunde med 4.000 kWh forventet årsforbrug fordeles ca.:
+- Q1 og Q4: 1.200 kWh → højere aconto
+- Q2 og Q3: 800 kWh → lavere aconto
+
+### Beregning af acontobeløbet
+
+**Ny kunde (ingen historik):**
 
 ```
-Forventet årsforbrug (kWh)      ← Estimeret fra DataHub eller kundens oplysninger
-× forventet gennemsnitspris     ← Baseret på aktuelle spot-/tarifniveauer
-+ abonnementer (12 måneder)
-+ afgifter
+Estimeret årsforbrug (kWh)                    ← Fra DataHub, eller standardestimat:
+                                                  Lejlighed: ~2.500 kWh/år
+                                                  Hus:       ~4.000 kWh/år
+× forventet gennemsnitspris (alle komponenter)← Spot + margin + tariffer + afgifter
++ abonnementer (net + Verdo, 12 måneder)
 + moms (25%)
 = Estimeret årsomkostning
-÷ 12
-= Månedligt acontobeløb
+                                                  Fordeles med sæsonnøgle (30/20/20/30)
+÷ 3 måneder pr. kvartal
+= Månedligt acontobeløb for indeværende kvartal
 ```
 
-Ved **genberegning** (eksisterende kunde — typisk ved acontoopgørelse):
+**Eksisterende kunde (genberegning):**
 
 ```
-Faktisk forbrug i seneste perioder (kWh)     ← Fra RSM-012-data i vores DB
-× forventet gennemsnitspris fremadrettet     ← Baseret på markedsforventninger
+Faktisk forbrug, seneste 12 måneder (kWh)    ← Fra RSM-012-data i vores DB
+× forventet gennemsnitspris fremadrettet      ← Aktuelle spot-/tarifniveauer
 + abonnementer + afgifter + moms
 = Nyt estimeret årsbeløb
-÷ 12
+                                                  Fordeles med sæsonnøgle (30/20/20/30)
+÷ 3 måneder pr. kvartal
 = Nyt månedligt acontobeløb
 ```
 
-### Acontoopgørelsen — afstemning ved faktureringsperiode
+**Genberegning sker:**
+- Automatisk ved hver kvartalsopgørelse
+- Hvis kunden anmoder om det (f.eks. efter køb af elbil, varmepumpe, ny beboer)
+- Hvis forbrugsmønstret afviger væsentligt fra estimatet
 
-Ved slutningen af hver faktureringsperiode laves en acontoopgørelse. Eksempel for et kvartal:
+**Udfordring ved variable priser:** For spotprodukter skal vi estimere **både** fremtidigt forbrug **og** fremtidige spotpriser. Det gør aconto-estimatet iboende usikkert.
+
+### Den kombinerede kvartalsfaktura
+
+Hver kvartalsfaktura er et **samlet dokument** med to hoveddele:
 
 ```
-ACONTOOPGØRELSE — Q1 2025 (januar-marts)
-
-Faktisk forbrug i perioden:
-  Energi (spot + margin, beregnet pr. time)         1.350,00 kr.
-  Nettarif (pr. time)                                  189,00 kr.
-  Systemtarif                                           72,90 kr.
-  Transmissionstarif                                    66,15 kr.
-  Elafgift                                              10,80 kr.
-  Netabonnement (3 × 49 kr.)                           147,00 kr.
-  Verdo abonnement (3 × 39 kr.)                        117,00 kr.
-  ─────────────────────────────────────────────────
-  Subtotal                                           1.952,85 kr.
-  Moms (25%)                                           488,21 kr.
-  ─────────────────────────────────────────────────
-  Total faktisk omkostning                           2.441,06 kr.
-
-Aconto indbetalinger (3 × 650 kr.):                  1.950,00 kr.
-
-  ─────────────────────────────────────────────────
-  DIFFERENCE:                                          491,06 kr.
-  → Kunden har betalt FOR LIDT
-  → Ekstraopkrævning: 491,06 kr.
-  → Acontobeløb kan justeres for næste periode
+┌───────────────────────────────────────────────────────────────────────┐
+│  KVARTALSFAKTURA — maj 2025                                           │
+│  Periode: Q1 opgørelse + Q2 aconto                                    │
+│                                                                       │
+│  ═══════════════════════════════════════════════════════════════       │
+│  DEL 1: OPGØRELSE FOR Q1 (januar-marts)                               │
+│  ═══════════════════════════════════════════════════════════════       │
+│                                                                       │
+│  Faktisk forbrug i Q1:                                                │
+│    Energi (spot + margin, beregnet pr. time)         1.350,00 kr.    │
+│    Nettarif (tidsdifferentieret)                        189,00 kr.    │
+│    Systemtarif (Energinet)                               72,90 kr.    │
+│    Transmissionstarif (Energinet)                        66,15 kr.    │
+│    Elafgift                                              10,80 kr.    │
+│    Netabonnement (3 × 49 kr.)                           147,00 kr.    │
+│    Verdo abonnement (3 × 39 kr.)                        117,00 kr.    │
+│    Moms (25%)                                           488,21 kr.    │
+│    ───────────────────────────────────────────────                    │
+│    Total faktisk omkostning Q1:                       2.441,06 kr.    │
+│                                                                       │
+│    Acontobetalinger Q1 (3 × 650 kr.):              − 1.950,00 kr.    │
+│    ───────────────────────────────────────────────                    │
+│    DIFFERENCE Q1:                                   +   491,06 kr.    │
+│    (Du har betalt 491,06 kr. for lidt i Q1)                           │
+│                                                                       │
+│  ═══════════════════════════════════════════════════════════════       │
+│  DEL 2: ACONTO FOR Q2 (april-juni)                                    │
+│  ═══════════════════════════════════════════════════════════════       │
+│                                                                       │
+│    Forventet årsforbrug: 4.200 kWh                                    │
+│    Q2-andel (20%): 840 kWh                                            │
+│    Estimeret Q2-omkostning inkl. moms:                1.520,00 kr.    │
+│                                                                       │
+│    Månedlig aconto Q2: 507 kr. × 3 =                  1.521,00 kr.    │
+│                                                                       │
+│  ═══════════════════════════════════════════════════════════════       │
+│  SAMLET BELØB                                                         │
+│  ═══════════════════════════════════════════════════════════════       │
+│                                                                       │
+│    Q1 underbetaling:                                +   491,06 kr.    │
+│    Q2 aconto:                                       + 1.521,00 kr.    │
+│    ───────────────────────────────────────────────                    │
+│    TOTAL AT BETALE:                                   2.012,06 kr.    │
+│                                                                       │
+│    Betalingsfrist: 10. maj 2025                                       │
+│                                                                       │
+└───────────────────────────────────────────────────────────────────────┘
 ```
+
+**Nøglepointe:** Over-/underbetaling fra opgørelsen udlignes **på den samlede faktura** — der sendes ikke en separat kreditnota eller debitnota. Kunden betaler ét nettobeløb.
+
+### De fire identiske kvartaler
+
+Alle fire kvartaler følger nøjagtig samme cyklus:
+
+```
+              Q1                  Q2                  Q3                  Q4
+          (jan-mar)           (apr-jun)           (jul-sep)           (okt-dec)
+              │                   │                   │                   │
+              ▼                   ▼                   ▼                   ▼
+         3 × aconto          3 × aconto          3 × aconto          3 × aconto
+         (sats: vinter)      (sats: sommer)      (sats: sommer)      (sats: vinter)
+              │                   │                   │                   │
+              ▼                   ▼                   ▼                   ▼
+        ┌────────────┐     ┌────────────┐     ┌────────────┐     ┌────────────┐
+        │ Faktura:   │     │ Faktura:   │     │ Faktura:   │     │ Faktura:   │
+        │ Q4 opgør.  │     │ Q1 opgør.  │     │ Q2 opgør.  │     │ Q3 opgør.  │
+        │ + Q1 aconto│     │ + Q2 aconto│     │ + Q3 aconto│     │ + Q4 aconto│
+        │ = netbeløb │     │ = netbeløb │     │ = netbeløb │     │ = netbeløb │
+        └────────────┘     └────────────┘     └────────────┘     └────────────┘
+```
+
+Ingen kvartalsfaktura er "speciel" — hver indeholder opgørelse af forrige kvartal + aconto for kommende kvartal.
 
 ### Aconto-flowet i systemet
 
@@ -235,36 +316,55 @@ sequenceDiagram
     participant V as Vores system
     participant S as Afregningsmotor
 
-    Note over K,V: MÅNEDLIGT
+    Note over K,V: MÅNEDLIGT (3 gange pr. kvartal)
     K->>V: Betaler aconto (fast beløb)
-    V->>V: Registrér indbetaling
+    V->>V: Registrér acontoindbetaling
 
-    Note over V,S: BAG SCENEN (løbende, uanset aconto)
-    S->>S: Beregn faktisk forbrug pr. time<br/>(præcis som ved faktisk afregning)
+    Note over V,S: BAG SCENEN (løbende)
+    S->>S: Modtag RSM-012 dagligt<br/>Beregn faktisk forbrug pr. time<br/>(præcis som ved bagudbetaling)
     S->>S: Gem afregningsresultat
 
-    Note over K,V: VED FAKTURERINGSPERIODE-SLUT
-    S->>S: Acontoopgørelse:<br/>faktisk afregning for perioden<br/>vs. acontobetalinger i perioden
+    Note over K,S: VED KVARTALSSKIFTE
+    S->>S: Acontoopgørelse:<br/>faktisk afregning for kvartalet<br/>vs. acontobetalinger i kvartalet
+    S->>S: Beregn nyt acontobeløb<br/>for kommende kvartal<br/>(baseret på seneste 12 mdr. forbrug)
 
-    alt Overbetalt
-        V->>K: Tilbagebetaling (kreditnota)
-    else Underbetalt
-        V->>K: Ekstraopkrævning (debitnota)
-    end
+    S->>V: Generér kombineret faktura:<br/>opgørelse ± difference<br/>+ nyt kvartal aconto<br/>= ét nettobeløb
 
-    S->>S: Vurdér om acontobeløb<br/>skal justeres
+    V->>K: Send kvartalsfaktura
 ```
+
+### Slutafregning ved offboarding
+
+Når en kunde forlader os (skifte, fraflytning, opsigelse), laves en **slutafregning** for den delvise periode:
+
+1. Afregn faktisk forbrug fra kvartalets start til slutdato
+2. Beregn difference mod indbetalte acontobeløb for perioden
+3. Udsted **slutfaktura** — dette er det eneste tidspunkt hvor en separat kredit- eller debitnota udstedes
+4. Frist: **4 uger** efter kundens afgang (jf. elleveringsbekendtgørelsen, pr. 17. januar 2025)
+5. Hvis kunden har betalt for meget: tilbagebetaling til kundens bankkonto
 
 ### Vigtigt for systemdesign
 
-Selv om kunden betaler aconto, kører afregningsberegningen **præcis som normalt** bag scenen. Vi beregner stadig `kWh × pris` pr. time for hver måned — vi sender bare ikke en individuel faktura for det. Beregningerne akkumuleres og bruges til acontoopgørelsen ved faktureringsperiodens slutning.
+Selv om kunden betaler aconto, kører afregningsberegningen **præcis som normalt** bag scenen. Vi beregner stadig `kWh × pris` pr. time for hver måned — vi sender bare ikke en individuel faktura for det.
 
 Det betyder:
-- **Afregningsmotor** kører altid, uanset betalingsmodel
+- **Afregningsmotor** kører altid, uanset betalingsmodel — aconto ændrer intet ved beregningen
 - **Acontobeløbet** er en ren betalings-/cash flow-parameter, ikke en afregningsparameter
 - **Acontoopgørelsen** er en differenceberegning: `faktisk total for perioden − acontobetalinger i perioden`
-- **Opgørelsesfrekvens** følger faktureringsfrekvensen (månedlig, kvartalsvis eller årlig)
-- Ved **offboarding** laves acontoopgørelsen altid for den delvise periode
+- **Den kombinerede faktura** er et præsentationsspørgsmål — to uafhængige beregninger (opgørelse + nyt aconto) samles i ét dokument
+- **Opgørelsesfrekvens** følger faktureringsfrekvensen (typisk kvartalsvis)
+- Ved **offboarding** laves slutafregning for den delvise periode inden for 4 uger
+- **Over-/underbetaling** nettes på den kombinerede faktura — separate kreditnotaer kun ved slutafregning
+
+### Lovmæssige krav
+
+| Krav | Kilde |
+|------|-------|
+| Minimum én faktura baseret på faktisk forbrug pr. år | Elleveringsbekendtgørelsen §8 |
+| Månedlig adgang til forbrugsoplysninger (kan være via portal) | Elleveringsbekendtgørelsen §9 |
+| Slutafregning inden 4 uger ved leverandørskifte/fraflytning | Elleveringsbekendtgørelsen §17 |
+| Kontrakten skal specificere afregningsformen (aconto/bagud) | Elleveringsbekendtgørelsen |
+| Aconto er **ikke lovpligtigt** — leverandøren vælger frit | Elforsyningsloven |
 
 ---
 

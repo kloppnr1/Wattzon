@@ -56,7 +56,7 @@ DataHub:      ← RSM-012 (daglige timemåledata)
 Fakturering:  Periodisk fakturering (månedligt/kvartalsvist)
               Engrosafstemning: egen beregning vs. DataHub (RSM-014/BRS-027)
               Tarifopdateringer ved nye satser fra netvirksomhed
-              Aconto-årsopgørelse: faktisk forbrug vs. betalte estimater
+              Acontoopgørelse: faktisk forbrug vs. acontobetalinger (hvert kvartal)
                                     │
                                     ▼
 FASE 5: OFFBOARDING                                              ~15 hverdage
@@ -327,7 +327,7 @@ For et **profilafregnet** målepunkt:
 
 | Model | Beskrivelse | Afstemning |
 |-------|-------------|------------|
-| **Aconto** | Kunden betaler fast månedligt estimat. Årsopgørelse afstemmer mod faktisk forbrug. | Én gang årligt (eller ved offboarding) |
+| **Aconto** | Kunden betaler fast månedligt estimat. Acontoopgørelse afstemmer mod faktisk forbrug. | Hvert kvartal (ved faktureringsperiode-slut) |
 | **Faktisk** | Kunden betaler baseret på faktisk målt forbrug hver periode. | Hver faktura er endelig (ingen afstemning nødvendig) |
 
 ### Interne trin
@@ -358,7 +358,7 @@ Kunden er aktiv. Følgende sker løbende:
 |----------|----------|---------|---------|
 | Fakturagenerering | Månedligt / kvartalsvist | — | Afregningskørsel → faktura → send til kunde |
 | Engrosopgørelsesafstemning | Månedligt ⚠ VERIFICÉR | RSM-014 (BRS-027) | Sammenlign egen afregning med DataHub-aggregering |
-| Aconto-årsopgørelse | Årligt (ved aconto) | — | Beregn faktisk vs. estimeret, udsted kredit-/debitnota |
+| Acontoopgørelse | Kvartalsvist (ved aconto) | — | Beregn faktisk vs. acontobetalinger, net på kvartalsfaktura |
 | Produkt-/prisændringer | Jf. kontrakt | — | Opdatér produktsatser, underret kunde |
 | Nettarifændringer | Typisk årligt | Charges-kø | Opdatér satstabeller, genberegn fremtidige estimater |
 | Skift af balanceansvarlig | Sjældent | BRS-006-notifikation | Opdatér porteføljeregistre |
@@ -454,13 +454,14 @@ Uanset offboarding-årsag er afslutningsprocessen den samme:
 2. Kør afregning for den delvise faktureringsperiode (periodens start → leverancens slutdato)
 3. Beregn alle komponenter: energi, nettarif, abonnementer (forholdsmæssigt), afgifter
 
-### For acontokunder: årsopgørelse
+### For acontokunder: slutopgørelse
 
-1. Beregn samlet faktisk forbrug for hele leveranceperioden (eller siden sidste årsopgørelse)
-2. Sammenlign med samlede acontobetalinger modtaget
-3. Generér afstemningsopgørelse:
+1. Beregn faktisk forbrug fra kvartalets start til leverancens slutdato (delvis periode)
+2. Sammenlign med acontobetalinger modtaget for denne periode
+3. Generér slutfaktura med afstemning:
    - Hvis kunden har betalt for meget → kreditnota / tilbagebetaling
    - Hvis kunden har betalt for lidt → slutfaktura med restbeløb
+4. Frist: inden 4 uger efter leverancens ophør (jf. elleveringsbekendtgørelsen)
 
 ### Slutfaktura
 
