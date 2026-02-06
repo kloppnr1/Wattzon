@@ -41,7 +41,7 @@ Produktet styrer altså kun **en del** af fakturaen. Resten er gennemfakturering
 
 ## Alle fakturalinjer for en privatkunde
 
-En typisk månedsfaktura for en privatkunde på spotprodukt:
+En typisk månedsfaktura for en privatkunde på spotprodukt (bagudbetaling):
 
 ```
 ┌───────────────────────────────────────────────────────────────────────┐
@@ -69,14 +69,12 @@ En typisk månedsfaktura for en privatkunde på spotprodukt:
 │  Subtotal                                                     614,95│
 │  Moms (25%)                                                   153,74│
 │  ────────────────────────────────────────────────────────────         │
-│  TOTAL                                                        768,69│
-│                                                                       │
-│  Aconto indbetalt for januar:                               -650,00│
-│  ────────────────────────────────────────────────────────────         │
-│  SKYLDIG DETTE KVARTAL (tillægges næste acontoopkrævning)    118,69│
+│  AT BETALE                                                    768,69│
 │                                                                       │
 └───────────────────────────────────────────────────────────────────────┘
 ```
+
+For acontokunder: denne beregning sker bag scenen. Kunden ser den først som del af den kombinerede kvartalsfaktura (se [aconto-sektionen](#den-kombinerede-kvartalsfaktura)).
 
 ### Linje for linje
 
