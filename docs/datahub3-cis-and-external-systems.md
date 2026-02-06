@@ -225,10 +225,17 @@ The CRM manages the sales funnel and hands off new customers to our system for D
 **Data flow:**
 
 ```
-CRM / Sales                         Our system
+CRM / Sales                         Our system                    Eloverblik API
+    │                                    │                              │
+    │ New contract signed                │                              │
+    ├───── Customer + GSRN + product ───►│                              │
+    │                                    ├── Lookup GSRN ──────────────►│
+    │                                    │◄── Metering point data, ─────┤
+    │                                    │    historical consumption    │
+    │                                    │                              │
+    │                                    │ Validate GSRN, pre-assign
+    │                                    │ tariffs, calculate aconto
     │                                    │
-    │ New contract signed                │
-    ├───── Customer + GSRN + product ───►│ Create customer record
     │                                    │ Initiate BRS-001 (supplier switch)
     │                                    │ or BRS-009 (move-in)
     │◄──── Process status ───────────────┤
@@ -248,6 +255,7 @@ CRM / Sales                         Our system
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
+| `/api/metering-points/{gsrn}/lookup` | GET | Look up a GSRN via Eloverblik — returns metering point data, grid area, historical consumption |
 | `/api/customers` | POST | Create a new customer + metering point association |
 | `/api/customers/{id}/switch` | POST | Initiate a supplier switch (BRS-001 / BRS-043) |
 | `/api/customers/{id}/move-in` | POST | Initiate a move-in (BRS-009) |
@@ -407,48 +415,61 @@ Nord Pool / Market data              Our system
 
 ---
 
-### 8. Eloverblik (Customer Data Access)
+### 8. Eloverblik (Onboarding Data)
 
-**Eloverblik** (eloverblik.dk) is Energinet's portal for accessing metering point data. It has two faces:
+**Eloverblik** (eloverblik.dk) is Energinet's portal for accessing metering point data. It is a **core part of the onboarding flow** — not an optional verification tool.
 
-- **Customer-facing portal** — consumers can look up their GSRN, consumption history, and current supplier
-- **Third-party API** — DDQs and other authorized parties can access customer data programmatically with the customer's consent
+**Why Eloverblik is essential for onboarding:**
 
-**Why Eloverblik matters during onboarding:**
+Before we are the active supplier on a metering point, we do **not** receive any data through DataHub's B2B API (RSM-007, RSM-012, etc.). The B2B queues only deliver data for metering points where we are the registered supplier. During signup, we need Eloverblik to get the data required to onboard the customer and submit the switch request (BRS-001).
 
-Before we are the active supplier on a metering point, we do **not** receive any data through DataHub's B2B API (RSM-007, RSM-012, etc.). The B2B queues only deliver data for metering points where we are the registered supplier. During the signup/onboarding phase, we need another way to verify the customer's data — this is where Eloverblik's API comes in.
+**What Eloverblik provides:**
 
-**Data flow:**
+| Data | Used for |
+|------|----------|
+| GSRN validation | Confirm the metering point exists and matches the customer's address |
+| Metering point type (E17/E18) | Determine settlement method, detect solar installations |
+| Current supplier | Know who we are switching from |
+| Grid area | Pre-assign tariff plan before RSM-007 arrives |
+| Settlement method (flex/profile) | Set up correct billing |
+| Historical consumption (12 months) | Calculate the first aconto amount for aconto customers |
+| Estimated annual consumption | Fallback if historical data is insufficient |
+
+**The onboarding flow with Eloverblik:**
 
 ```
-Customer signup                     Eloverblik API               Our system
-    │                                    │                            │
-    │ Customer provides GSRN             │                            │
-    │ and grants data access             │                            │
-    │ (consent via Eloverblik)           │                            │
-    │                                    │                            │
-    │                                    │  GET metering point data   │
-    │                                    │◄───────────────────────────┤
-    │                                    ├───────────────────────────►│
-    │                                    │  GSRN details, historical  │
-    │                                    │  consumption, current      │
-    │                                    │  supplier                  │
-    │                                    │                            │
-    │                                    │              Verify GSRN,  │
-    │                                    │              estimate      │
-    │                                    │              aconto,       │
-    │                                    │              submit        │
-    │                                    │              BRS-001       │
+Customer                CRM / Sales              Our system              Eloverblik API
+    │                       │                        │                        │
+    │ Signs contract,       │                        │                        │
+    │ provides GSRN         │                        │                        │
+    ├──────────────────────►│                        │                        │
+    │                       │                        │                        │
+    │                       ├── Create customer ────►│                        │
+    │                       │   + GSRN               │                        │
+    │                       │                        │                        │
+    │                       │                        ├── Lookup GSRN ────────►│
+    │                       │                        │◄── Metering point      │
+    │                       │                        │    data + historical   │
+    │                       │                        │    consumption         │
+    │                       │                        │                        │
+    │                       │                        │ Validate GSRN          │
+    │                       │                        │ Pre-assign grid area   │
+    │                       │                        │ Calculate aconto       │
+    │                       │                        │ estimate               │
+    │                       │                        │                        │
+    │                       │                        ├── BRS-001 ────────────►│ (DataHub,
+    │                       │                        │   (supplier switch)    │  not Eloverblik)
+    │                       │                        │                        │
 ```
 
-| Use case | When | How |
-|----------|------|-----|
-| **Verify GSRN at signup** | Before BRS-001 is sent | Query Eloverblik API to confirm the GSRN exists and belongs to the correct address |
-| **Estimate annual consumption** | At onboarding, for aconto calculation | Fetch historical consumption from Eloverblik to calculate the first aconto amount |
-| **Pre-validate before switch** | Before BRS-001 is sent | Check current supplier, metering point type, settlement method — reduces BRS-001 rejections |
-| **Customer dispute verification** | During operations | Customer can compare their Eloverblik data with our settlement as an independent source |
+**After activation:** Once we are the active supplier, we receive all data through DataHub's B2B API (RSM-007 for master data, RSM-012 for metering data). Eloverblik is no longer needed for day-to-day operations, but remains available for dispute resolution where customers can independently verify their data.
 
-**After activation:** Once we are the active supplier, we receive all data through DataHub's B2B API (RSM-007 for master data, RSM-012 for metering data). Eloverblik is no longer needed for day-to-day operations.
+**Eloverblik has two interfaces:**
+
+| Interface | Users | Purpose |
+|-----------|-------|---------|
+| **Customer portal** (eloverblik.dk) | Consumers | Look up own GSRN, consumption history, current supplier |
+| **Third-party API** | DDQs, energy apps, comparison sites | Programmatic access with customer consent |
 
 **Eloverblik API access:**
 - Requires registration as a third-party data accessor (WARNING: VERIFY current access model)
