@@ -177,21 +177,6 @@ Siden 1. april 2016 gælder **engrosmodellen** i Danmark. Kunden modtager **én 
 
 Acontobeløbet skal derfor dække **hele omkostningsstakken** — ikke kun energiprisen. Det gør beregningen mere kompleks, fordi vi skal estimere fremtidige priser for alle komponenter.
 
-### Sæsonfordelingsnøgle
-
-Elforbrug varierer kraftigt over året. Standardfordelingen er:
-
-| Kvartal | Periode | Andel af årsforbrug | Hvorfor |
-|---------|---------|--------------------:|---------|
-| Q1 | Januar–marts | **30%** | Vinter: mørkt, koldt, mere indendørs |
-| Q2 | April–juni | **20%** | Forår/sommer: lyst, varmt |
-| Q3 | Juli–september | **20%** | Sommer: mindst forbrug |
-| Q4 | Oktober–december | **30%** | Efterår/vinter: mørkt igen |
-
-Acontobeløbet er **ikke ens alle måneder** — det justeres efter sæson. En kunde med 4.000 kWh forventet årsforbrug fordeles ca.:
-- Q1 og Q4: 1.200 kWh → højere aconto
-- Q2 og Q3: 800 kWh → lavere aconto
-
 ### Beregning af acontobeløbet
 
 **Ny kunde (ingen historik):**
