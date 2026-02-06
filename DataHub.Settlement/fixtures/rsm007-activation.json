@@ -1,0 +1,34 @@
+{
+  "MarketDocument": {
+    "mRID": "msg-rsm007-001",
+    "type": "E44",
+    "Process": { "ProcessType": "E65" },
+    "Sender_MarketParticipant": {
+      "mRID": "5790001330552",
+      "MarketRole": { "type": "DGL" }
+    },
+    "Receiver_MarketParticipant": {
+      "mRID": "5790002000000",
+      "MarketRole": { "type": "DDQ" }
+    },
+    "createdDateTime": "2025-01-01T06:00:00Z",
+    "MktActivityRecord": {
+      "MarketEvaluationPoint": {
+        "mRID": "571313100000012345",
+        "type": "E17",
+        "settlementMethod": "D01",
+        "linkedMarketEvaluationPoint": {
+          "mRID": "344"
+        },
+        "inDomain": {
+          "mRID": "5790000392261"
+        }
+      },
+      "Period": {
+        "timeInterval": {
+          "start": "2025-01-01T00:00:00Z"
+        }
+      }
+    }
+  }
+}

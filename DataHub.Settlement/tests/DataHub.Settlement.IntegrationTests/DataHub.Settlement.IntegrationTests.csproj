@@ -19,6 +19,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\DataHub.Settlement.Infrastructure\DataHub.Settlement.Infrastructure.csproj" />
     <ProjectReference Include="..\..\src\DataHub.Settlement.Worker\DataHub.Settlement.Worker.csproj" />
+    <ProjectReference Include="..\DataHub.Settlement.UnitTests\DataHub.Settlement.UnitTests.csproj" />
   </ItemGroup>
 
 </Project>
