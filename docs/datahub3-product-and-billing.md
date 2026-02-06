@@ -243,7 +243,7 @@ sequenceDiagram
     S->>S: Beregn faktisk forbrug pr. time<br/>(præcis som ved faktisk afregning)
     S->>S: Gem afregningsresultat
 
-    Note over K,V: VED FAKTURERINGSPERIODE-SLUT<br/>(månedligt / kvartalsvist / årligt)
+    Note over K,V: VED FAKTURERINGSPERIODE-SLUT
     S->>S: Acontoopgørelse:<br/>faktisk afregning for perioden<br/>vs. acontobetalinger i perioden
 
     alt Overbetalt
