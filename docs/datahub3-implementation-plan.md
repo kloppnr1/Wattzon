@@ -34,8 +34,8 @@ Phase 1: Integration                 MVP 1: One correct invoice
 Phase 2: Portfolio                     (happy path: OAuth → RSM-012 → settlement)
 Phase 3: Settlement                  MVP 2: Full customer lifecycle
 Phase 4: Lifecycle                     (happy path: onboarding → offboarding)
-Phase 5: Reconciliation              MVP 3: Edge cases
-Phase 6: Validation                    (corrections, reconciliation, elvarme, solar)
+Phase 5: Reconciliation              MVP 3: DataHub integration + edge cases
+Phase 6: Validation                    (Actor Test, corrections, reconciliation, elvarme, solar)
                                      MVP 4: Production
                                        (real customers, ERP, portal, scale)
 ```

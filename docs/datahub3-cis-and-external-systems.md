@@ -46,9 +46,11 @@ In the Danish electricity market, a DDQ's CIS typically handles:
 | **Customer Portal** | **←** we send | Settlement Engine | Consumption data, invoice data |
 | **CRM / Sales** | **→** we receive | Customer & Portfolio | New customer + GSRN |
 | **CRM / Sales** | **←** we send | Customer & Portfolio | Portfolio status, process status |
-| **Payment Service** (PBS) | **←→** bidirectional | DataHub Integration | Payment requests out, payment confirmations in |
-| **Digital Post** (e-Boks) | **←** we send | DataHub Integration | Invoice PDFs |
-| **Debt Collection** (inkasso) | **←→** bidirectional | DataHub Integration | Overdue invoices out, payment/write-off in |
+| **Payment Service** (PBS) | **←** we send | Settlement Engine | Payment requests (amounts, due dates, PBS agreement no.) |
+| **Payment Service** (PBS) | **→** we receive | Customer & Portfolio | Payment confirmations, rejections |
+| **Digital Post** (e-Boks) | **←** via ERP | Settlement Engine | Settlement data → ERP generates and dispatches invoice PDFs |
+| **Debt Collection** (inkasso) | **←** we send | Customer & Portfolio | Overdue cases (customer data, invoice history) |
+| **Debt Collection** (inkasso) | **→** we receive | Customer & Portfolio | Payment received or write-off recommendation |
 
 ### What our system owns
 
