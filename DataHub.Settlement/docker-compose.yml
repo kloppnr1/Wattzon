@@ -11,7 +11,7 @@ services:
     volumes:
       - timescaledb-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U settlement"]
+      test: ["CMD-SHELL", "pg_isready -U settlement -d datahub_settlement"]
       interval: 5s
       timeout: 3s
       retries: 5
