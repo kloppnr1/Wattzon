@@ -23,7 +23,7 @@ classDiagram
         class EnergyModel
     }
 
-    namespace MeteringData {
+    namespace TimeSeries {
         class MeteringData
         class DailySummary
     }
