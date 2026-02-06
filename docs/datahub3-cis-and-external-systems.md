@@ -35,43 +35,45 @@ In the Danish electricity market, a DDQ's CIS typically handles:
 
 ## System Boundary
 
-```
-                    EXTERNAL SYSTEMS                    OUR SYSTEM                     EXTERNAL SYSTEMS
-                    (customer-facing)                   (DataHub core)                 (market/regulatory)
+```mermaid
+flowchart LR
+    subgraph customer_facing["Customer-Facing Systems"]
+        Portal["Customer Portal"]
+        ERP["ERP / Accounting"]
+        CRM["CRM / Sales"]
+        PBS["Payment Service (PBS)"]
+        eBoks["Digital Post (e-Boks)"]
+        Inkasso["Debt Collection (inkasso)"]
+    end
 
-┌──────────────┐                              ┌─────────────────────┐               ┌──────────────┐
-│  Customer    │◄────── Consumption ──────────│  Settlement Engine  │◄──── kWh ─────│  DataHub 3   │
-│  Portal      │◄────── Invoice data ─────────│                     │◄──── Tariffs ─│  (Energinet) │
-└──────────────┘                              │                     │◄──── RSM-014 ─│              │
-                                              └──────────┬──────────┘               └──────────────┘
-┌──────────────┐                                         │
-│  ERP /       │◄────── Settlement results ──────────────┤                          ┌──────────────┐
-│  Accounting  │◄────── Invoice lines ───────────────────┤                          │  Nord Pool   │
-│              │─────── Payment status ─────────────────►│                          │  (spot       │
-└──────────────┘                              ┌──────────┴──────────┐               │   prices)    │
-                                              │  Customer &         │               └──────────────┘
-┌──────────────┐                              │  Portfolio Service  │
-│  CRM /       │─────── New customer ────────►│                     │               ┌──────────────┐
-│  Sales       │◄────── Portfolio status ─────│                     │               │  Eloverblik  │
-└──────────────┘                              └──────────┬──────────┘               │  (GSRN       │
-                                                         │                          │   lookup)    │
-┌──────────────┐                              ┌──────────┴──────────┐               └──────────────┘
-│  Payment     │─────── Payment received ────►│  DataHub            │
-│  Service     │◄────── Payment request ──────│  Integration        │
-│  (PBS etc.)  │                              │  Service            │
-└──────────────┘                              └─────────────────────┘
+    subgraph our_system["Our System"]
+        SE["Settlement Engine"]
+        CPS["Customer &\nPortfolio Service"]
+        DHI["DataHub\nIntegration Service"]
+    end
 
-┌──────────────┐
-│  Digital     │◄────── Invoice PDF ──────────────────────┘
-│  Post        │
-│  (e-Boks)    │
-└──────────────┘
+    subgraph market["Market / Regulatory"]
+        DH["DataHub 3\n(Energinet)"]
+        NP["Nord Pool\n(spot prices)"]
+        EL["Eloverblik\n(GSRN lookup)"]
+    end
 
-┌──────────────┐
-│  Debt        │◄────── Overdue invoices ─────────────────┘
-│  Collection  │─────── Payment/write-off ────────────────┘
-│  (inkasso)   │
-└──────────────┘
+    SE -- "consumption data,\ninvoice data" --> Portal
+    SE -- "settlement results,\ninvoice lines" --> ERP
+    ERP -- "payment status" --> CPS
+    CRM -- "new customer" --> CPS
+    CPS -- "portfolio status" --> CRM
+    PBS -- "payment received" --> DHI
+    DHI -- "payment request" --> PBS
+    DHI -- "invoice PDF" --> eBoks
+    DHI -- "overdue invoices" --> Inkasso
+    Inkasso -- "payment / write-off" --> DHI
+
+    DH -- "kWh (RSM-012),\ntariffs, RSM-014" --> SE
+    DH -- "RSM-007, RSM-004,\nBRS responses" --> DHI
+    DHI -- "BRS-001/002/009\netc." --> DH
+    NP -- "hourly spot prices\n(DK1/DK2)" --> SE
+    EL -- "GSRN data,\nhistorical consumption" --> CPS
 ```
 
 ### What our system owns
