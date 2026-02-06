@@ -167,8 +167,8 @@ Mdr. 4       Mdr. 5       Mdr. 6       Acontoopgørelse
 
 ### Hvorfor aconto?
 
-- **For kunden:** Forudsigelige udgifter — ingen overraskelser i kolde vintermåneder
-- **For Verdo:** Jævn cash flow — vi modtager penge hele året, ikke kun i dyre perioder
+- **For Verdo:** Jævn og forudsigelig cash flow — vi modtager penge løbende uanset sæsonudsving i forbrug og spotpriser
+- **For kunden:** Lavere månedlige udsving mellem acontobetalingerne — differencen opgøres ved faktureringsperiodens slutning
 
 ### Hvordan beregnes acontobeløbet?
 
