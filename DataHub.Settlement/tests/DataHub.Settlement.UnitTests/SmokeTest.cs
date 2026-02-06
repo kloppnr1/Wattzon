@@ -1,3 +1,5 @@
+using Xunit;
+
 namespace DataHub.Settlement.UnitTests;
 
 public class SmokeTest
