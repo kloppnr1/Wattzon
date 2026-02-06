@@ -51,6 +51,25 @@ public class AcontoEstimatorTests
     }
 
     [Fact]
+    public void Quarterly_estimate_includes_subscriptions()
+    {
+        // 12 months × 400 kWh, quarterly = 1200 kWh
+        var history = Enumerable.Range(1, 12)
+            .Select(m => new MonthlyConsumption(2024, m, 400m))
+            .ToList();
+
+        var result = AcontoEstimator.EstimateQuarterlyAmount(
+            history, expectedPricePerKwh: 1.50m,
+            gridSubscriptionPerMonth: 49.00m,
+            supplierSubscriptionPerMonth: 39.00m);
+
+        // Variable: 1200 kWh × 1.50 = 1800.00
+        // Subscriptions: (49 + 39) × 3 = 264.00
+        // Subtotal: 2064.00, +25% VAT = 2580.00
+        result.Should().Be(2580.00m);
+    }
+
+    [Fact]
     public void Expected_price_per_kwh_calculation()
     {
         // Spot 80 øre, margin 4 øre, system 0.054, transmission 0.049, tax 0.008, grid avg 0.20

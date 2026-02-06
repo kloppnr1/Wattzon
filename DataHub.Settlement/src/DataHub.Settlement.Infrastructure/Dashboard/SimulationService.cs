@@ -222,6 +222,8 @@ public sealed class SimulationService
         await Task.Delay(3000, ct);
 
         // ── Step 8: Receive RSM-012 ──
+        // In production, RSM-012 arrives once per day (~02:00), covering the previous 24 hours.
+        // Here we simulate 31 daily deliveries as a single batch for January.
         var rows = new List<MeteringDataRow>();
         for (var i = 0; i < 744; i++)
         {
@@ -243,7 +245,7 @@ public sealed class SimulationService
         }
 
         await onStepCompleted(new SimulationStep(8, "Receive RSM-012",
-            "744 hourly readings stored (409.200 kWh), inbound message recorded"));
+            "31 daily RSM-012 deliveries — 744 hourly readings (409.200 kWh)"));
         await Task.Delay(1500, ct);
 
         // ── Step 9: Run Settlement ──
@@ -394,24 +396,26 @@ public sealed class SimulationService
             averageSpotPriceOrePerKwh: 75m, marginOrePerKwh: 4.0m,
             systemTariffRate: 0.054m, transmissionTariffRate: 0.049m,
             electricityTaxRate: 0.008m, averageGridTariffRate: 0.18m);
-        var quarterlyEstimate = AcontoEstimator.EstimateQuarterlyAmount(history, expectedPrice);
-        var monthlyPayment = Math.Round(quarterlyEstimate / 3, 2);
+        var gridSubRate = 49.00m;
+        var supplierSubRate = setup.Product.SubscriptionKrPerMonth;
+        var quarterlyEstimate = AcontoEstimator.EstimateQuarterlyAmount(
+            history, expectedPrice, gridSubRate, supplierSubRate);
 
-        // Record 3 monthly aconto payments
-        await acontoRepo.RecordPaymentAsync(Gsrn, new DateOnly(2025, 1, 1), new DateOnly(2025, 1, 31), monthlyPayment, ct);
-        await acontoRepo.RecordPaymentAsync(Gsrn, new DateOnly(2025, 2, 1), new DateOnly(2025, 2, 28), monthlyPayment, ct);
-        await acontoRepo.RecordPaymentAsync(Gsrn, new DateOnly(2025, 3, 1), new DateOnly(2025, 3, 31), monthlyPayment, ct);
+        // Customer pays the full quarterly aconto amount upfront at Q1 start
+        await acontoRepo.RecordPaymentAsync(Gsrn, new DateOnly(2025, 1, 1), new DateOnly(2025, 3, 31), quarterlyEstimate, ct);
 
         await onStepCompleted(new SimulationStep(5, "Estimate Q1 Aconto",
-            $"Quarterly estimate: {quarterlyEstimate:N2} DKK, monthly payment: {monthlyPayment:N2} DKK"));
+            $"Quarterly estimate: {quarterlyEstimate:N2} DKK (paid upfront for Q1)"));
         await Task.Delay(1200, ct);
 
         // ── Step 6: Receive January Metering ──
+        // In production, RSM-012 arrives once per day (~02:00), covering the previous 24 hours.
+        // Here we simulate 31 daily deliveries as a single batch.
         var janRows = GenerateMeteringData(start, 744, 0.55m, "msg-aconto-jan");
         await setup.MeteringRepo.StoreTimeSeriesAsync(Gsrn, janRows, ct);
 
         await onStepCompleted(new SimulationStep(6, "Receive January Metering",
-            $"744 hourly readings — {744 * 0.55m:N1} kWh total"));
+            $"31 daily RSM-012 deliveries — 744 hourly readings ({744 * 0.55m:N1} kWh total)"));
         await Task.Delay(1000, ct);
 
         // ── Step 7: Receive February Metering ──
@@ -423,7 +427,7 @@ public sealed class SimulationService
         await setup.SpotPriceRepo.StorePricesAsync(febPrices, ct);
 
         await onStepCompleted(new SimulationStep(7, "Receive February Metering",
-            $"672 hourly readings — {672 * 0.55m:N1} kWh total"));
+            $"28 daily RSM-012 deliveries — 672 hourly readings ({672 * 0.55m:N1} kWh total)"));
         await Task.Delay(1000, ct);
 
         // ── Step 8: Receive March Metering ──
@@ -435,7 +439,7 @@ public sealed class SimulationService
         await setup.SpotPriceRepo.StorePricesAsync(marPrices, ct);
 
         await onStepCompleted(new SimulationStep(8, "Receive March Metering",
-            $"744 hourly readings — {744 * 0.55m:N1} kWh total"));
+            $"31 daily RSM-012 deliveries — 744 hourly readings ({744 * 0.55m:N1} kWh total)"));
         await Task.Delay(1000, ct);
 
         // ── Step 9: Run Q1 Settlement ──
@@ -480,11 +484,10 @@ public sealed class SimulationService
         await Task.Delay(1500, ct);
 
         // ── Step 10: Aconto Reconciliation ──
-        var totalPaid = monthlyPayment * 3;
-        var difference = q1Total - totalPaid;
+        var difference = q1Total - quarterlyEstimate;
 
         await onStepCompleted(new SimulationStep(10, "Aconto Reconciliation",
-            $"Paid {totalPaid:N2} DKK, actual {q1Total:N2} DKK, difference {difference:N2} DKK"));
+            $"Aconto paid {quarterlyEstimate:N2} DKK, actual {q1Total:N2} DKK, difference {difference:N2} DKK"));
         await Task.Delay(1200, ct);
 
         // ── Step 11: Estimate Q2 + Combined Invoice ──
@@ -494,7 +497,7 @@ public sealed class SimulationService
             new(2025, 2, febResult.TotalKwh),
             new(2025, 3, marResult.TotalKwh),
         };
-        var q2Estimate = AcontoEstimator.EstimateQuarterlyAmount(q1Actuals, expectedPrice);
+        var q2Estimate = AcontoEstimator.EstimateQuarterlyAmount(q1Actuals, expectedPrice, gridSubRate, supplierSubRate);
         var totalDue = difference + q2Estimate;
 
         await onStepCompleted(new SimulationStep(11, "Combined Invoice",
