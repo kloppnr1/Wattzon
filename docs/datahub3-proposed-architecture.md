@@ -533,8 +533,8 @@ The system is built in **MVPs** (minimum viable products), each delivering a wor
 
 | MVP | Scope | Business Processes |
 |-----|-------|--------------------|
-| 1 | One correct invoice (happy path) | Auth, Queue Poller, RSM-012 (BRS-021), time series store, settlement engine, Charges queue |
-| 2 | Full customer lifecycle (happy path) | RSM-004/007, BRS-001/002/003/009/010/043/044, state machine, aconto |
+| 1 | Sunshine scenario: one customer, one correct invoice | Auth, BRS-001, RSM-009/007/012, Queue Poller, time series store, settlement engine, Charges, state machine, portfolio |
+| 2 | Full customer lifecycle (offboarding, aconto, rejections) | RSM-004, BRS-002/003/005/009/010/043/044, aconto, final settlement, Eloverblik |
 | 3 | DataHub integration + edge cases | Actor Test validation, parser hardening, corrections, BRS-042/011, RSM-014/015/016, reconciliation, elvarme, solar |
 | 4 | Production | ERP, payment services, e-Boks, customer portal, pilot + full migration, performance |
 

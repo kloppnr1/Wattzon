@@ -1,18 +1,18 @@
-# MVP 1: One Correct Invoice — Detailed Implementation Plan
+# MVP 1: Sunshine Scenario — Detailed Implementation Plan
 
-**Goal:** Prove the entire chain works end-to-end — from simulated DataHub messages to a verifiable settlement result for one metering point. Happy path only.
+**Goal:** Prove the entire sunshine path works end-to-end — from customer signup, through supplier switch (BRS-001), metering data reception, to a verifiable settlement result. Happy path only: no rejections, no cancellations, no offboarding.
 
-**Delivered outcome:** A calculated invoice you can put next to a hand-calculated reference and confirm they match, line by line.
+**Delivered outcome:** Run the sunshine scenario — a customer is signed up, the switch is accepted, master data and metering data arrive, and the settlement run produces an invoice that matches a hand-calculated reference.
 
 ---
 
 ## Implementation Order
 
-The tasks below are ordered by dependency. Each task produces a testable result before moving to the next.
+The tasks below are ordered by dependency. Each task produces a testable result before moving to the next. Tasks 1-12 are the settlement core, tasks 13-18 add the customer flow.
 
 ```mermaid
 flowchart TD
-    A["1. Solution structure\n+ Docker Compose"] --> B["2. Database schema\n(MVP 1 subset)"]
+    A["1. Solution structure\n+ Docker Compose"] --> B["2. Database schema"]
     B --> C["3. IDataHubClient\ninterface + fake"]
     C --> D["4. CIM JSON parser\n(RSM-012)"]
     D --> E["5. Metering data\nstorage"]
@@ -24,7 +24,19 @@ flowchart TD
     G --> J
     H --> J
     J --> K["11. Golden master\ntests"]
-    K --> L["12. CI/CD\npipeline"]
+
+    B --> M["13. Portfolio\nmanagement"]
+    C --> N["14. BRS-001 request\nbuilder"]
+    C --> O["15. RSM-007/009\nparsers"]
+    M --> P["16. Process\nstate machine"]
+    N --> P
+    O --> P
+    P --> Q["17. Standalone HTTP\nsimulator"]
+    I --> Q
+    Q --> R["18. Sunshine scenario\nend-to-end test"]
+    K --> R
+    R --> L["12. CI/CD\npipeline"]
+
     F -.->|"parallel"| I
 ```
 
@@ -93,6 +105,7 @@ volumes:
 | `portfolio` | `product` | Margin, subscription, energy model |
 | `portfolio` | `customer` | Minimal — name, CPR/CVR |
 | `portfolio` | `contract` | Binds customer ↔ metering point ↔ product |
+| `portfolio` | `supply_period` | Track when we are the active supplier |
 | `metering` | `metering_data` | **Hypertable** — kWh per hour per metering point |
 | `metering` | `spot_price` | Nordpool hourly spot prices (DK1/DK2) |
 | `tariff` | `grid_tariff` | Grid/system/transmission tariff headers |
@@ -102,7 +115,10 @@ volumes:
 | `settlement` | `billing_period` | Period start/end, frequency |
 | `settlement` | `settlement_run` | Run metadata (status, version, executed_at) |
 | `settlement` | `settlement_line` | Result per metering point per charge type |
+| `lifecycle` | `process_request` | BRS-001 process lifecycle tracking |
+| `lifecycle` | `process_event` | Event sourcing for state transitions |
 | `datahub` | `inbound_message` | Message log |
+| `datahub` | `outbound_request` | Track BRS-001 requests sent to DataHub |
 | `datahub` | `processed_message_id` | Idempotency |
 | `datahub` | `dead_letter` | Failed messages |
 
@@ -110,14 +126,10 @@ volumes:
 
 | Table | Deferred to |
 |-------|-------------|
-| `portfolio.supply_period` | MVP 2 (lifecycle) |
 | `settlement.aconto_payment` | MVP 2 (aconto) |
 | `settlement.aconto_settlement` | MVP 2 (aconto) |
 | `invoicing.invoice` | MVP 2 (invoicing) |
 | `invoicing.invoice_line` | MVP 2 (invoicing) |
-| `lifecycle.process_request` | MVP 2 (lifecycle) |
-| `lifecycle.process_event` | MVP 2 (lifecycle) |
-| `datahub.outbound_request` | MVP 2 (BRS requests) |
 | `metering.daily_summary` | MVP 1 or 2 (continuous aggregate, optional optimization) |
 
 **Migration approach:** Plain SQL migration files, run in order at container startup. Use a simple migration tool (e.g. DbUp or FluentMigrator) — not EF Core Migrations for MVP 1.
@@ -144,6 +156,9 @@ public interface IDataHubClient
 
     /// Acknowledge and remove a message from the queue.
     Task DequeueAsync(string messageId, CancellationToken ct);
+
+    /// Send a BRS request (e.g. supplier switch) to DataHub. Returns the response.
+    Task<DataHubResponse> SendRequestAsync(string processType, string cimPayload, CancellationToken ct);
 }
 
 public record DataHubMessage(
@@ -151,6 +166,12 @@ public record DataHubMessage(
     string MessageType,        // "NotifyValidatedMeasureData", "NotifyAggregatedMeasureData", etc.
     string? CorrelationId,
     string RawPayload          // CIM JSON string
+);
+
+public record DataHubResponse(
+    string CorrelationId,
+    bool Accepted,
+    string? RejectionReason
 );
 
 public enum QueueName { Timeseries, MasterData, Charges, Aggregations }
@@ -820,6 +841,300 @@ public async Task GoldenMaster2_PartialPeriod_15Days()
 
 ---
 
+## Task 13: Portfolio Management
+
+**What:** Create and link the domain entities needed to represent a customer in the system: customer, metering point, contract, supply period. This is the "customer" side that settlement reads from.
+
+**Entities:**
+
+```csharp
+public class Customer
+{
+    public Guid Id { get; set; }
+    public string Name { get; set; }
+    public string CprCvr { get; set; }          // CPR (10) or CVR (8)
+    public string ContactType { get; set; }      // "private" or "business"
+    public string Status { get; set; }           // "active"
+}
+
+public class MeteringPoint
+{
+    public string Gsrn { get; set; }             // 18 digits
+    public string Type { get; set; }             // "E17" (consumption)
+    public string SettlementMethod { get; set; } // "flex"
+    public string GridAreaCode { get; set; }
+    public string PriceArea { get; set; }        // "DK1" or "DK2"
+    public string ConnectionStatus { get; set; } // "connected"
+}
+
+public class Contract
+{
+    public Guid Id { get; set; }
+    public Guid CustomerId { get; set; }
+    public string Gsrn { get; set; }
+    public Guid ProductId { get; set; }
+    public string BillingFrequency { get; set; } // "monthly"
+    public string PaymentModel { get; set; }     // "post_payment"
+    public DateOnly StartDate { get; set; }
+}
+
+public class SupplyPeriod
+{
+    public Guid Id { get; set; }
+    public string Gsrn { get; set; }
+    public DateOnly StartDate { get; set; }
+    public DateOnly? EndDate { get; set; }       // NULL = active
+}
+```
+
+**Interfaces:**
+
+```csharp
+public interface IPortfolioRepository
+{
+    Task<Customer> CreateCustomerAsync(Customer customer, CancellationToken ct);
+    Task<MeteringPoint> CreateMeteringPointAsync(MeteringPoint mp, CancellationToken ct);
+    Task<Contract> CreateContractAsync(Contract contract, CancellationToken ct);
+    Task<SupplyPeriod> CreateSupplyPeriodAsync(SupplyPeriod period, CancellationToken ct);
+    Task<Contract?> GetActiveContractAsync(string gsrn, CancellationToken ct);
+    Task ActivateMeteringPointAsync(string gsrn, DateTimeOffset activatedAt, CancellationToken ct);
+}
+```
+
+**For MVP 1 sunshine scenario:** CRM creates the customer + contract + GSRN before BRS-001 is sent. The metering point is initially created with `connection_status = 'connected'` but `activated_at = NULL`. When RSM-007 arrives, we set `activated_at` and create the supply period.
+
+**Dependencies:**
+- Depends on: #2 (Database schema)
+
+**Definition of done:**
+- Can create customer, metering point, contract, supply period
+- Can query active contract for a GSRN
+- Can activate metering point (set `activated_at`, create supply period)
+- Integration test: create full portfolio → query back → data correct
+
+---
+
+## Task 14: BRS-001 Request Builder
+
+**What:** Build and send a BRS-001 (supplier switch) request to DataHub in CIM JSON format.
+
+**CIM JSON structure (outbound):**
+
+```json
+{
+  "RequestChangeOfSupplier_MarketDocument": {
+    "mRID": "request-uuid",
+    "process.processType": { "value": "E65" },
+    "sender_MarketParticipant.mRID": { "value": "our-gln", "codingScheme": "A10" },
+    "sender_MarketParticipant.marketRole.type": { "value": "DDQ" },
+    "receiver_MarketParticipant.mRID": { "value": "datahub-gln", "codingScheme": "A10" },
+    "receiver_MarketParticipant.marketRole.type": { "value": "DGL" },
+    "createdDateTime": "2025-01-15T10:00:00Z",
+    "MktActivityRecord": {
+      "mRID": "activity-uuid",
+      "marketEvaluationPoint.mRID": { "value": "571313100000012345", "codingScheme": "A10" },
+      "start_DateAndOrTime.dateTime": "2025-02-01T00:00:00Z",
+      "balanceResponsibleParty_MarketParticipant.mRID": { "value": "brp-gln" },
+      "customer_MarketParticipant.mRID": { "value": "cpr-or-cvr" }
+    }
+  }
+}
+```
+
+**Interface:**
+
+```csharp
+public interface IBrsRequestBuilder
+{
+    string BuildBrs001(string gsrn, string cprCvr, DateOnly effectiveDate);
+}
+```
+
+Uses `IDataHubClient.SendRequestAsync` to submit and receive the synchronous acknowledgement.
+
+**Dependencies:**
+- Depends on: #3 (IDataHubClient — needs `SendRequestAsync`)
+
+**Definition of done:**
+- `BuildBrs001` produces valid CIM JSON
+- Unit test: built JSON has correct structure, GSRN, CPR, effective date
+- Integration test: send to FakeDataHubClient → get accepted response
+
+---
+
+## Task 15: RSM-009 Response Parser + RSM-007 Master Data Parser
+
+**What:** Parse the two new message types needed for the sunshine flow.
+
+**RSM-009 (BRS-001 response):** Already handled as the synchronous response from `SendRequestAsync`. The `DataHubResponse` record captures accepted/rejected + reason.
+
+**RSM-007 (NotifyMasterData):** Arrives on the MasterData queue after activation. Contains metering point details.
+
+**Key fields from RSM-007:**
+
+| Field | CIM path | Our use |
+|-------|----------|---------|
+| GSRN | `MarketEvaluationPoint.mRID` | Match to our metering point |
+| Grid area | `MarketEvaluationPoint.linkedMarketEvaluationPoint.mRID` | Update grid area assignment |
+| Type | `MarketEvaluationPoint.type` | E17 = consumption |
+| Settlement method | `MarketEvaluationPoint.settlementMethod` | flex / non-profiled |
+| Supply start | `Period.timeInterval.start` | Our supply period start date |
+| Grid operator GLN | `MarketEvaluationPoint.inDomain.mRID` | Grid company identity |
+
+**Domain object:**
+
+```csharp
+public record ParsedMasterData(
+    string MessageId,
+    string MeteringPointId,      // GSRN
+    string Type,                 // "E17"
+    string SettlementMethod,     // "D01" (flex) or "E02" (non-profiled)
+    string GridAreaCode,
+    string GridOperatorGln,
+    string PriceArea,            // derived from grid area
+    DateTimeOffset SupplyStart
+);
+```
+
+**Fixture files:**
+
+| File | Content |
+|------|---------|
+| `rsm007-activation.json` | GSRN 571313100000012345, grid area 344, flex settlement, supply start 2025-01-01 |
+| `rsm009-accepted.json` | BRS-001 accepted (if needed as separate message — depends on sync/async) |
+
+**Dependencies:**
+- Depends on: #3 (IDataHubClient), #4 (CIM parser foundation)
+
+**Definition of done:**
+- `CimJsonParser.ParseRsm007(string json)` returns `ParsedMasterData`
+- Fixture parses correctly
+- Unit tests: all fields extracted, unknown fields tolerated
+
+---
+
+## Task 16: Process State Machine (BRS-001)
+
+**What:** Track the lifecycle of a BRS-001 request through the system.
+
+**State transitions (sunshine path only):**
+
+```mermaid
+stateDiagram-v2
+    [*] --> Pending : CRM creates request
+    Pending --> SentToDataHub : BRS-001 sent
+    SentToDataHub --> Acknowledged : RSM-009 accepted
+    Acknowledged --> EffectuationPending : Awaiting activation
+    EffectuationPending --> Completed : RSM-007 received
+    Completed --> [*]
+```
+
+**Implementation:**
+
+```csharp
+public class ProcessStateMachine
+{
+    public ProcessRequest CreateRequest(string gsrn, string processType, DateOnly effectiveDate);
+    public void MarkSent(ProcessRequest request, string correlationId);
+    public void MarkAcknowledged(ProcessRequest request);
+    public void MarkCompleted(ProcessRequest request);
+    // MVP 2 adds: MarkRejected, MarkCancelled
+}
+```
+
+Each state transition creates a `ProcessEvent` (event sourcing for audit trail).
+
+**Integration with other tasks:**
+- Task 14 (BRS-001 builder) calls `MarkSent` after successful send
+- Task 15 (RSM-009 parser) calls `MarkAcknowledged` on acceptance
+- Task 15 (RSM-007 parser) calls `MarkCompleted` when master data arrives
+
+**Dependencies:**
+- Depends on: #13 (Portfolio), #14 (BRS-001 builder), #15 (RSM parsers)
+
+**Definition of done:**
+- State machine enforces valid transitions (Pending → Sent → Acknowledged → EffectuationPending → Completed)
+- Invalid transition throws exception
+- Each transition creates an immutable `ProcessEvent`
+- Unit test: full sunshine path transitions
+- Integration test: process request stored + events recorded in DB
+
+---
+
+## Task 17: Standalone HTTP Simulator
+
+**What:** Upgrade from in-process fake to a standalone HTTP server (Docker) that mimics the DataHub B2B API. Supports the sunshine scenario.
+
+**Endpoints:**
+
+```
+POST /oauth2/v2.0/token              → returns fake JWT
+GET  /v1.0/cim/Timeseries            → peek RSM-012 from queue
+GET  /v1.0/cim/MasterData            → peek RSM-007 from queue
+GET  /v1.0/cim/Charges               → peek tariff update from queue
+DELETE /v1.0/cim/dequeue/{id}        → acknowledge message
+POST /v1.0/cim/requestchangeofsupplier → accept BRS-001, return RSM-009
+
+POST /admin/scenario/sunshine        → load sunshine scenario
+POST /admin/enqueue                  → add message to any queue
+POST /admin/reset                    → clear all state
+GET  /admin/requests                 → inspect received BRS requests
+```
+
+**Sunshine scenario behavior:**
+1. System sends BRS-001 to `/cim/requestchangeofsupplier`
+2. Simulator validates format, returns RSM-009 (accepted) synchronously
+3. Simulator auto-enqueues RSM-007 on MasterData queue
+4. Simulator auto-enqueues 30 × RSM-012 (one per day) on Timeseries queue
+5. System polls queues → processes all messages
+
+**Implementation:** ASP.NET Minimal API, Docker container, reads fixture files from disk.
+
+**Dependencies:**
+- Depends on: #9 (Queue Poller — needs to work against HTTP), #16 (State machine — needs the full flow)
+
+**Definition of done:**
+- `docker compose up` starts simulator alongside TimescaleDB
+- Simulator serves OAuth2 token endpoint
+- Sunshine scenario: BRS-001 → auto-enqueues RSM-007 + 30 × RSM-012
+- Admin API: `/admin/scenario/sunshine`, `/admin/reset`, `/admin/requests`
+- Integration test: full sunshine flow against HTTP simulator
+
+---
+
+## Task 18: Sunshine Scenario End-to-End Test
+
+**What:** The capstone test — runs the entire sunshine scenario and verifies the result matches the golden master.
+
+**Test flow:**
+
+```
+1. Seed: product, tariffs, spot prices, electricity tax in DB
+2. Act: create customer + contract via portfolio service
+3. Act: submit BRS-001 → simulator accepts
+4. Assert: process state = Acknowledged
+5. Act: poll MasterData queue → RSM-007 → activate metering point
+6. Assert: metering point activated, supply period created, process state = Completed
+7. Act: poll Timeseries queue → 30 × RSM-012 → store metering data
+8. Assert: 30 days × 24 hours = 720 rows in metering_data (or 744 for Jan)
+9. Act: run settlement engine for the period
+10. Assert: settlement lines match Golden Master #1 exactly
+```
+
+**This test validates the full chain:**
+- CRM → portfolio → BRS-001 → simulator → RSM-009 → RSM-007 → RSM-012 → settlement → golden master
+
+**Dependencies:**
+- Depends on: #11 (Golden master tests), #17 (Standalone simulator)
+
+**Definition of done:**
+- End-to-end test passes with Golden Master #1 amounts
+- Test runs against standalone HTTP simulator (Docker)
+- Test is idempotent (can re-run with `/admin/reset`)
+- Test is part of the integration test suite in CI/CD
+
+---
+
 ## Task 12: CI/CD Pipeline
 
 **What:** Automated build, test, and (optional) container image push on every commit.
@@ -857,19 +1172,24 @@ steps:
 
 | # | Criterion | How to verify |
 |---|-----------|---------------|
-| 1 | `docker compose up` starts the database and services | Manual: run it |
-| 2 | FakeDataHubClient delivers RSM-012 fixtures | Unit test: enqueue → peek → dequeue |
-| 3 | CIM JSON parser correctly extracts RSM-012 data | Unit test: parse fixtures |
-| 4 | Metering data stored in TimescaleDB hypertable | Integration test: store → query |
+| 1 | `docker compose up` starts database + simulator | Manual: run it |
+| 2 | FakeDataHubClient delivers RSM-012 and RSM-007 fixtures | Unit test |
+| 3 | CIM JSON parser extracts RSM-012 + RSM-007 data | Unit test: parse fixtures |
+| 4 | Metering data stored in TimescaleDB hypertable | Integration test |
 | 5 | Spot prices stored and retrievable | Integration test |
 | 6 | Tariff rates stored and retrievable | Integration test |
-| 7 | Queue poller processes messages end-to-end | Integration test: enqueue → poll → stored |
+| 7 | Queue poller processes Timeseries + MasterData queues | Integration test |
 | 8 | Idempotency: duplicate message → skipped | Integration test |
 | 9 | Dead-letter: malformed message → dead_letter table | Integration test |
-| 10 | **Golden Master #1 passes** (full month) | Unit test with seeded data |
-| 11 | **Golden Master #2 passes** (partial period) | Unit test with seeded data |
-| 12 | CI/CD runs all tests on every push | Verify pipeline |
-| 13 | OAuth2 Auth Manager implemented and tested | Unit test (mocked endpoint) |
+| 10 | Portfolio: customer + metering point + contract + supply period | Integration test |
+| 11 | BRS-001 sent → RSM-009 accepted | Integration test against simulator |
+| 12 | RSM-007 → metering point activated + supply period created | Integration test |
+| 13 | State machine: Pending → Sent → Acknowledged → Completed | Unit test |
+| 14 | **Golden Master #1 passes** (full month) | Unit test with seeded data |
+| 15 | **Golden Master #2 passes** (partial period) | Unit test with seeded data |
+| 16 | **Sunshine scenario end-to-end passes** against simulator | Integration test |
+| 17 | CI/CD runs all tests on every push | Verify pipeline |
+| 18 | OAuth2 Auth Manager implemented and tested | Unit test (mocked endpoint) |
 
 ---
 
@@ -878,9 +1198,9 @@ steps:
 | Task | Estimated size | Dependencies |
 |------|---------------|-------------|
 | 1. Solution structure + Docker | Small (1 day) | None |
-| 2. Database schema | Small (1 day) | Task 1 |
+| 2. Database schema | Small (1.5 days) | Task 1 |
 | 3. IDataHubClient + Fake | Small (0.5 day) | None |
-| 4. CIM JSON parser | Medium (2 days) | Task 3 |
+| 4. CIM JSON parser (RSM-012) | Medium (2 days) | Task 3 |
 | 5. Metering data storage | Small (1 day) | Tasks 2, 4 |
 | 6. OAuth2 Auth Manager | Small (1 day) | None (parallel) |
 | 7. Spot price fetcher | Small (0.5 day) | Task 2 |
@@ -889,9 +1209,20 @@ steps:
 | 10. Settlement engine | Large (3 days) | Tasks 5, 7, 8 |
 | 11. Golden master tests | Medium (2 days) | Task 10 |
 | 12. CI/CD pipeline | Small (0.5 day) | All |
-| **Total** | **~16 days** | |
+| 13. Portfolio management | Small (1 day) | Task 2 |
+| 14. BRS-001 request builder | Small (1 day) | Task 3 |
+| 15. RSM-009 + RSM-007 parsers | Medium (1.5 days) | Tasks 3, 4 |
+| 16. Process state machine | Small (1 day) | Tasks 13, 14, 15 |
+| 17. Standalone HTTP simulator | Medium (2 days) | Tasks 9, 16 |
+| 18. Sunshine scenario E2E test | Small (1 day) | Tasks 11, 17 |
+| **Total** | **~24 days** | |
 
-Tasks 3-4, 6, 7, and 8 can run in parallel (separate developers or parallel focus areas). Critical path: 1 → 2 → 5 → 9 → 10 → 11 → 12.
+**Parallel tracks:**
+- Track A (settlement): 1 → 2 → 5 → 9 → 10 → 11
+- Track B (customer flow): 3 → 14 + 15 → 13 → 16 → 17 → 18
+- Track C (independent): 6, 7, 8
+
+Critical path: 1 → 2 → 5 → 10 → 11 → 17 → 18 → 12.
 
 ---
 
@@ -901,14 +1232,18 @@ These are explicitly deferred to later MVPs:
 
 | Feature | Deferred to | Why |
 |---------|-------------|-----|
-| Customer lifecycle (onboarding/offboarding) | MVP 2 | Not needed for "one correct invoice" |
-| BRS requests (supplier switch, etc.) | MVP 2 | No DataHub communication needed for MVP 1 |
+| Offboarding (BRS-002, BRS-010) | MVP 2 | Sunshine path only — no customer leaves |
+| Cancellations (BRS-003) | MVP 2 | No cancellation in sunshine path |
+| Rejections (RSM-009 rejected) | MVP 2 | Sunshine path = always accepted |
+| Short notice switch (BRS-043) | MVP 2 | Standard BRS-001 only |
+| Move-in (BRS-009) | MVP 2 | Supplier switch only |
+| Eloverblik integration | MVP 2 | Not needed for sunshine path |
 | Aconto calculation and settlement | MVP 2 | MVP 1 only does post-payment (arrears billing) |
 | Invoice generation (PDF/document) | MVP 2 | MVP 1 produces settlement lines, not formatted invoices |
+| Final settlement at offboarding | MVP 2 | No offboarding in MVP 1 |
 | Metering data corrections (delta) | MVP 3 | MVP 1 handles upsert, but delta detection is MVP 3 |
 | Reconciliation (RSM-014) | MVP 3 | No reconciliation in MVP 1 |
 | Elvarme / solar (E18) | MVP 3 | Edge cases |
-| Standalone HTTP simulator | MVP 2 | In-process fake is sufficient for MVP 1 |
 | Real DataHub communication | MVP 3 | Actor Test environment |
 | ERP integration | MVP 4 | Production concern |
 | Customer portal | MVP 4 | Production concern |

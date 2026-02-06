@@ -91,8 +91,8 @@ The simulator is a lightweight HTTP server that mimics the DataHub B2B API — j
 
 | MVP | Simulator capabilities |
 |-----|----------------------|
-| **MVP 1** | OAuth2 token endpoint. Timeseries queue (RSM-012 only). Charges queue. Dequeue. In-process fake (`FakeDataHubClient`) for unit tests |
-| **MVP 2** | + MasterData queue (RSM-007, RSM-004). + BRS-001/002/003/009/010/044 request endpoints. + Scenario engine ("full onboarding", "offboarding", "rejection"). Standalone HTTP simulator (Docker) |
+| **MVP 1** | OAuth2 token endpoint. Timeseries queue (RSM-012). Charges queue. MasterData queue (RSM-007). BRS-001 request endpoint (returns RSM-009 accepted). Dequeue. Scenario engine: sunshine onboarding. In-process fake (`FakeDataHubClient`) for unit tests + standalone HTTP simulator (Docker) for integration |
+| **MVP 2** | + RSM-004. + BRS-002/003/005/009/010/043/044 request endpoints. + Scenarios: "rejection", "offboarding", "cancellation", "full lifecycle". + Eloverblik mock |
 | **MVP 3** | + **Real DataHub (Actor Test) in parallel.** + Correction scenarios (original → correction on same queue). + BRS-042/011 endpoints. + Aggregations queue (RSM-014). + RSM-015/016 response endpoints. + Error injection (401, 503, malformed messages). + Elvarme/solar fixtures |
 | **MVP 4** | + Performance scenarios (80K metering points). + Realistic timing. + Preprod validation |
 
@@ -105,9 +105,9 @@ The simulator is powered by **CIM JSON fixture files** — real-format messages 
 | `rsm012-single-day.json` | MVP 1 | Basic ingestion pipeline |
 | `rsm012-multi-day.json` | MVP 1 | Full monthly settlement |
 | `charges-tariff-update.json` | MVP 1 | Rate table update |
-| `rsm007-activation.json` | MVP 2 | Metering point activation |
+| `rsm007-activation.json` | MVP 1 | Metering point activation |
+| `brs001-receipt-accepted.json` | MVP 1 | Onboarding flow |
 | `rsm004-grid-area-change.json` | MVP 2 | Tariff reassignment |
-| `brs001-receipt-accepted.json` | MVP 2 | Onboarding flow |
 | `brs001-receipt-rejected.json` | MVP 2 | Error handling |
 | `rsm012-correction.json` | MVP 3 | Correction detection + delta calculation |
 | `rsm012-production-e18.json` | MVP 3 | E18 handling, net settlement |
@@ -203,46 +203,68 @@ Run against Energinet's Actor Test or Preprod with real credentials. These tests
 
 ---
 
-## MVP 1: One Correct Invoice
+## MVP 1: Sunshine Scenario — One Customer, One Correct Invoice
 
-**Goal:** Prove the entire chain works end-to-end — from DataHub connection to a verifiable settlement result for one metering point. Happy path only: initial data in, correct invoice out.
+**Goal:** Prove the entire sunshine path works end-to-end — from customer signup, through supplier switch, metering data reception, to a verifiable settlement result. Happy path only: no rejections, no cancellations, no offboarding.
 
-**Delivered outcome:** A calculated invoice you can put next to a hand-calculated reference and confirm they match.
+**Delivered outcome:** Run the "sunshine onboarding" scenario — a customer is signed up, the supplier switch is accepted by DataHub (simulator), master data and metering data arrive, and the settlement run produces an invoice that matches a hand-calculated reference.
 
 ### What to build
 
 | Area | Task | Test approach |
 |------|------|---------------|
 | **Foundation** | .NET solution structure, CI/CD pipeline, Docker Compose (PostgreSQL + TimescaleDB) | Verify container starts, CI runs |
-| **Simulator** | In-process `FakeDataHubClient` + first CIM JSON fixtures (`rsm012-single-day`, `rsm012-multi-day`, `charges-tariff-update`) | Unit tests against fake |
+| **Simulator** | In-process `FakeDataHubClient` + standalone HTTP simulator (Docker). Sunshine scenario: BRS-001 → RSM-009 (accepted) → RSM-007 → RSM-012 (30 days) | Unit + integration |
 | **Auth** | OAuth2 Auth Manager — token fetch, cache, proactive renewal, 401 retry | Unit: mock token endpoint |
-| **Ingestion** | Queue Poller (Timeseries), CIM JSON Parser (RSM-012), time series storage (`metering_data` hypertable) | Unit: parse fixtures. Integration: parse → store → query roundtrip |
+| **Ingestion** | Queue Poller (Timeseries + MasterData), CIM JSON Parser (RSM-012 + RSM-007), time series storage (`metering_data` hypertable) | Unit: parse fixtures. Integration: parse → store → query roundtrip |
 | **Idempotency** | Track MessageId, skip duplicates, dead-letter on parse failure | Integration: enqueue twice → stored once. Malformed → dead-letter |
 | **Spot prices** | Fetch and store Nord Pool prices (DK1/DK2) | Integration: mock market data → stored prices |
 | **Charges** | Parse tariff updates from Charges queue | Unit: fixture files |
+| **Portfolio** | Customer, metering point, contract, supply period — create and link entities at onboarding | Unit: domain logic. Integration: DB roundtrip |
+| **Onboarding** | BRS-001 request builder + RSM-009 response parser (accepted). RSM-007 master data → activate metering point | Unit: CIM structure. Integration: simulator validates format, returns response |
+| **State machine** | ProcessRequest lifecycle: Pending → SentToDataHub → Acknowledged → EffectuationPending → Completed | Unit: state transition rules |
 | **Settlement** | `kWh × (spot + margin)` per hour, grid tariff (time-differentiated), system/transmission tariff, elafgift, subscriptions (pro rata), VAT (25%) | Unit: **golden master tests** |
 | **Actor Test access** | Apply for access to Energinet's test environment (can run in parallel with development) | — |
+
+### Sunshine scenario
+
+```
+1. CRM creates customer + contract + GSRN
+2. System sends BRS-001 (supplier switch) to DataHub (simulator)
+   → Simulator returns RSM-009 (accepted)
+3. After "effective date" (immediate in test):
+   → Simulator enqueues RSM-007 (master data) on MasterData queue
+   → Simulator enqueues RSM-012 (first day of metering data) on Timeseries queue
+4. System peeks MasterData → parses RSM-007 → activates metering point + supply period
+5. System peeks Timeseries → parses RSM-012 → stores metering data
+6. Repeat step 5 for 30 days (30 RSM-012 messages)
+7. System runs settlement → produces invoice lines → matches golden master
+```
 
 ### Golden master tests (introduced here, expanded in later MVPs)
 
 Hand-calculated reference invoices that the settlement engine must reproduce exactly:
 
 ```
-Golden Master #1: Simple spot customer, one month
-  Input: 720 hours consumption + spot prices + grid tariffs + margin 0.04 DKK/kWh
+Golden Master #1: Simple spot customer, one month (sunshine scenario result)
+  Input: 744 hours consumption + spot prices + grid tariffs + margin 0.04 DKK/kWh
   Expected: hand-calculated energy + tariff + tax + subscription + VAT lines
+  Total: 804.21 DKK incl. VAT
 
 Golden Master #2: Partial period (mid-month start)
-  Input: 15 days of data, pro rata subscriptions
+  Input: 16 days of data, pro rata subscriptions
   Expected: correctly prorated amounts
+  Total: 415.08 DKK incl. VAT
 ```
 
 ### Exit criteria
 
-- `docker compose up` starts the database and services
-- Simulator RSM-012 → parsed → stored → settlement run → invoice lines match golden master
+- `docker compose up` starts the database and all services
+- Sunshine scenario works end-to-end: BRS-001 → RSM-009 → RSM-007 → RSM-012 → settlement → golden master match
+- Portfolio: customer + metering point + contract + supply period created correctly
+- State machine: BRS-001 process goes Pending → SentToDataHub → Acknowledged → Completed
 - Dead-letter handles malformed messages
-- CI/CD runs unit tests on every push
+- CI/CD runs unit tests + integration tests on every push
 - Actor Test: successfully authenticate and peek at least one message (if access granted)
 
 > **Detailed plan:** [MVP 1 implementation plan](mvp1-implementation-plan.md) — step-by-step tasks, code interfaces, golden master test data with hand calculations
@@ -251,22 +273,22 @@ Golden Master #2: Partial period (mid-month start)
 
 ## MVP 2: Full Customer Lifecycle
 
-**Goal:** Handle a customer from onboarding to offboarding — all BRS processes, all state transitions. Happy path lifecycle: a customer can be signed up, activated, operated, and terminated through the system.
+**Goal:** Handle a customer's full lifecycle — offboarding, cancellations, rejections, aconto, and final settlement. Everything that happens after the sunshine path. A customer can go through every state in the system.
 
-**Delivered outcome:** Run the "full lifecycle" simulator scenario — a customer goes through every phase and the system handles each step correctly.
+**Delivered outcome:** Run the "full lifecycle" simulator scenario — a customer goes through onboarding, operation, and offboarding. Aconto customers get quarterly combined invoices. Final settlement produces the correct closing invoice.
+
+**Builds on MVP 1:** MVP 1 delivers the sunshine path (signup → switch → data → settlement). MVP 2 adds everything else.
 
 ### What to build
 
 | Area | Task | Test approach |
 |------|------|---------------|
-| **Simulator** | Upgrade to standalone HTTP server (Docker). MasterData queue. BRS request endpoints (001/002/003/009/010/043/044). Scenario engine | Integration: full lifecycle scenario |
-| **Master data** | CIM JSON Parser (RSM-007, RSM-004). MasterData queue poller | Unit: fixtures. Integration: simulator |
-| **Portfolio** | Metering point CRUD, supply period tracking, grid area assignment, tariff assignment | Unit: domain logic. Integration: DB roundtrip |
-| **Customer** | Customer record (CPR/CVR, contact, product association). Eloverblik GSRN lookup at onboarding | Unit + integration |
-| **Onboarding** | BRS-001 request builder + RSM-009 response handler. BRS-043 (short notice). BRS-009 (move-in). BRS-015 (customer master data) | Unit: CIM structure. Integration: simulator validates format, returns response |
-| **State machine** | ProcessRequest lifecycle: Pending → SentToDataHub → Acknowledged → EffectuationPending → Completed (and Rejected, Cancelled) | Unit: state transition rules |
+| **Simulator** | + BRS-002/003/005/009/010/043/044 endpoints. + RSM-004 on MasterData queue. + Scenarios: rejection, offboarding, cancellation, full lifecycle. + Eloverblik mock | Integration: full lifecycle scenario |
+| **Master data** | RSM-004 parser (grid area change, metering point updates). Tariff reassignment on grid area change | Unit: fixtures. Integration: simulator |
+| **Eloverblik** | GSRN lookup at onboarding (metering point details, charges, historical consumption). Aconto estimation from 12-month history | Unit + integration |
+| **Rejection handling** | RSM-009 rejected → update process, notify CRM. Retry with corrected data | Unit: state machine. Integration: simulator |
 | **Cancellation** | BRS-003 (cancel switch before effective date) | Unit: state machine. Integration: simulator |
-| **Offboarding** | BRS-002 (end of supply). BRS-010 (move-out). BRS-044 (cancel termination). Incoming BRS-001 (we lose customer) | Unit + integration: simulator |
+| **Offboarding** | BRS-002 (end of supply). BRS-010 (move-out). BRS-044 (cancel termination). Incoming BRS-001 (we lose customer). BRS-043 (short notice switch). BRS-009 (move-in). BRS-015 (customer master data) | Unit + integration: simulator |
 | **Final settlement** | Partial period settlement. Aconto settlement at offboarding (actual vs. paid). Final invoice generation | Unit: golden master tests |
 | **Aconto** | Aconto estimation (new customer from Eloverblik data, existing from 12-month history). Quarterly settlement cycle. Combined quarterly invoice | Unit: golden master tests |
 
@@ -284,18 +306,7 @@ Golden Master #4: Final settlement at offboarding (partial quarter)
 
 ### Simulator scenarios
 
-**Scenario: Happy path onboarding**
-```
-1. System sends BRS-001 (supplier switch)
-   → Simulator returns RSM-009 (accepted)
-2. After "effective date" (immediate in test):
-   → Simulator enqueues RSM-007 (master data) on MasterData queue
-   → Simulator enqueues RSM-012 (first day of metering data) on Timeseries queue
-3. System peeks MasterData → parses RSM-007 → creates metering point
-4. System peeks Timeseries → parses RSM-012 → stores metering data
-5. Repeat step 4 for 30 days (30 RSM-012 messages)
-6. System runs settlement → produces invoice lines
-```
+(The "sunshine onboarding" scenario has moved to MVP 1.)
 
 **Scenario: Rejection and retry**
 ```

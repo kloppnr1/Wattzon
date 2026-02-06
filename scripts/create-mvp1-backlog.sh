@@ -12,8 +12,8 @@
 #
 # What it does:
 #   1. Creates the "mvp-1" milestone
-#   2. Creates labels (mvp-1, foundation, integration, settlement, infrastructure)
-#   3. Creates 12 issues — one per task from docs/mvp1-implementation-plan.md
+#   2. Creates labels (mvp-1, foundation, integration, settlement, infrastructure, portfolio)
+#   3. Creates 18 issues — one per task from docs/mvp1-implementation-plan.md
 #
 set -euo pipefail
 
@@ -26,12 +26,12 @@ echo ""
 echo "Creating milestone..."
 gh api repos/"$REPO"/milestones \
   --method POST \
-  --field title="MVP 1: One Correct Invoice" \
-  --field description="Prove the entire chain works end-to-end — from simulated DataHub messages to a verifiable settlement result for one metering point. Happy path only. Delivered outcome: a calculated invoice you can put next to a hand-calculated reference and confirm they match." \
+  --field title="MVP 1: Sunshine Scenario" \
+  --field description="Prove the entire sunshine path works end-to-end — from customer signup, through supplier switch (BRS-001), metering data reception, to a verifiable settlement result. Happy path only: no rejections, no cancellations, no offboarding. Delivered outcome: run the sunshine scenario and confirm the settlement matches a hand-calculated reference." \
   --field state=open \
   --silent 2>/dev/null || echo "  (milestone may already exist)"
 
-MILESTONE_NUMBER=$(gh api repos/"$REPO"/milestones --jq '.[] | select(.title=="MVP 1: One Correct Invoice") | .number')
+MILESTONE_NUMBER=$(gh api repos/"$REPO"/milestones --jq '.[] | select(.title=="MVP 1: Sunshine Scenario") | .number')
 echo "  Milestone number: $MILESTONE_NUMBER"
 echo ""
 
@@ -44,7 +44,8 @@ for label_def in \
   "integration:#D93F0B:DataHub communication, queues, parsing" \
   "settlement:#7057FF:Settlement engine, calculation, golden master" \
   "data-storage:#FBCA04:Database, repositories, time series" \
-  "infrastructure:#BFD4F2:Auth, config, cross-cutting"
+  "infrastructure:#BFD4F2:Auth, config, cross-cutting" \
+  "portfolio:#0052CC:Customer, metering point, contract, supply period"
 do
   IFS=: read -r name color description <<< "$label_def"
   gh label create "$name" --color "${color#\#}" --description "$description" --force 2>/dev/null
@@ -60,7 +61,7 @@ echo ""
 # --- Issue 1 ---
 ISSUE_1=$(gh issue create \
   --title "Task 1: Solution structure + Docker Compose" \
-  --milestone "MVP 1: One Correct Invoice" \
+  --milestone "MVP 1: Sunshine Scenario" \
   --label "mvp-1,foundation" \
   --body "$(cat <<'BODY'
 ## What
@@ -115,14 +116,14 @@ echo "  #1: Solution structure + Docker Compose → $ISSUE_1"
 # --- Issue 2 ---
 ISSUE_2=$(gh issue create \
   --title "Task 2: Database schema (MVP 1 subset)" \
-  --milestone "MVP 1: One Correct Invoice" \
+  --milestone "MVP 1: Sunshine Scenario" \
   --label "mvp-1,data-storage" \
   --body "$(cat <<'BODY'
 ## What
 
 Create database migration scripts for the tables needed in MVP 1. Not the full schema — only what we need to produce one correct invoice.
 
-## Tables needed (17 tables across 5 schemas)
+## Tables needed (21 tables across 6 schemas)
 
 | Schema | Table | Why |
 |--------|-------|-----|
@@ -143,10 +144,14 @@ Create database migration scripts for the tables needed in MVP 1. Not the full s
 | `datahub` | `inbound_message` | Message log |
 | `datahub` | `processed_message_id` | Idempotency |
 | `datahub` | `dead_letter` | Failed messages |
+| `portfolio` | `supply_period` | When we are active supplier for a GSRN |
+| `lifecycle` | `process_request` | BRS-001 process tracking |
+| `lifecycle` | `process_event` | Event sourcing for state transitions |
+| `datahub` | `outbound_request` | Track BRS-001 requests sent |
 
 ## Deferred tables (MVP 2+)
 
-`supply_period`, `aconto_payment`, `aconto_settlement`, `invoice`, `invoice_line`, `process_request`, `process_event`, `outbound_request`, `daily_summary`
+`aconto_payment`, `aconto_settlement`, `invoice`, `invoice_line`, `daily_summary`
 
 ## Migration approach
 
@@ -178,7 +183,7 @@ echo "  #2: Database schema → $ISSUE_2"
 # --- Issue 3 ---
 ISSUE_3=$(gh issue create \
   --title "Task 3: IDataHubClient interface + FakeDataHubClient" \
-  --milestone "MVP 1: One Correct Invoice" \
+  --milestone "MVP 1: Sunshine Scenario" \
   --label "mvp-1,integration" \
   --body "$(cat <<'BODY'
 ## What
@@ -192,6 +197,7 @@ public interface IDataHubClient
 {
     Task<DataHubMessage?> PeekAsync(QueueName queue, CancellationToken ct);
     Task DequeueAsync(string messageId, CancellationToken ct);
+    Task<DataHubResponse> SendRequestAsync(string processType, string cimPayload, CancellationToken ct);
 }
 
 public record DataHubMessage(
@@ -200,6 +206,8 @@ public record DataHubMessage(
     string? CorrelationId,
     string RawPayload
 );
+
+public record DataHubResponse(string CorrelationId, bool Accepted, string? RejectionReason);
 
 public enum QueueName { Timeseries, MasterData, Charges, Aggregations }
 ```
@@ -220,9 +228,11 @@ Switching between implementations is **configuration**, not code change.
 
 ## Acceptance criteria
 
-- [ ] `IDataHubClient` interface defined in Application project
+- [ ] `IDataHubClient` interface defined in Application project (including `SendRequestAsync`)
 - [ ] `FakeDataHubClient` in test project, can enqueue and peek fixture messages
+- [ ] `FakeDataHubClient` handles `SendRequestAsync` (returns accepted response)
 - [ ] Unit test: enqueue a message → peek returns it → dequeue removes it → peek returns null
+- [ ] Unit test: send BRS-001 → get accepted DataHubResponse
 - [ ] Can load CIM JSON fixture files from disk
 
 ## Estimated effort
@@ -239,7 +249,7 @@ echo "  #3: IDataHubClient + Fake → $ISSUE_3"
 # --- Issue 4 ---
 ISSUE_4=$(gh issue create \
   --title "Task 4: CIM JSON parser (RSM-012)" \
-  --milestone "MVP 1: One Correct Invoice" \
+  --milestone "MVP 1: Sunshine Scenario" \
   --label "mvp-1,integration" \
   --body "$(cat <<'BODY'
 ## What
@@ -289,7 +299,7 @@ echo "  #4: CIM JSON parser → $ISSUE_4"
 # --- Issue 5 ---
 ISSUE_5=$(gh issue create \
   --title "Task 5: Metering data storage (TimescaleDB)" \
-  --milestone "MVP 1: One Correct Invoice" \
+  --milestone "MVP 1: Sunshine Scenario" \
   --label "mvp-1,data-storage" \
   --body "$(cat <<'BODY'
 ## What
@@ -337,7 +347,7 @@ echo "  #5: Metering data storage → $ISSUE_5"
 # --- Issue 6 ---
 ISSUE_6=$(gh issue create \
   --title "Task 6: OAuth2 Auth Manager" \
-  --milestone "MVP 1: One Correct Invoice" \
+  --milestone "MVP 1: Sunshine Scenario" \
   --label "mvp-1,infrastructure" \
   --body "$(cat <<'BODY'
 ## What
@@ -385,7 +395,7 @@ echo "  #6: OAuth2 Auth Manager → $ISSUE_6"
 # --- Issue 7 ---
 ISSUE_7=$(gh issue create \
   --title "Task 7: Spot price fetcher + storage" \
-  --milestone "MVP 1: One Correct Invoice" \
+  --milestone "MVP 1: Sunshine Scenario" \
   --label "mvp-1,data-storage" \
   --body "$(cat <<'BODY'
 ## What
@@ -446,7 +456,7 @@ echo "  #7: Spot price fetcher → $ISSUE_7"
 # --- Issue 8 ---
 ISSUE_8=$(gh issue create \
   --title "Task 8: Charges parser + tariff storage" \
-  --milestone "MVP 1: One Correct Invoice" \
+  --milestone "MVP 1: Sunshine Scenario" \
   --label "mvp-1,data-storage,integration" \
   --body "$(cat <<'BODY'
 ## What
@@ -501,7 +511,7 @@ echo "  #8: Charges + tariff storage → $ISSUE_8"
 # --- Issue 9 ---
 ISSUE_9=$(gh issue create \
   --title "Task 9: Queue Poller + idempotency" \
-  --milestone "MVP 1: One Correct Invoice" \
+  --milestone "MVP 1: Sunshine Scenario" \
   --label "mvp-1,integration" \
   --body "$(cat <<'BODY'
 ## What
@@ -558,7 +568,7 @@ echo "  #9: Queue Poller + idempotency → $ISSUE_9"
 # --- Issue 10 ---
 ISSUE_10=$(gh issue create \
   --title "Task 10: Settlement engine" \
-  --milestone "MVP 1: One Correct Invoice" \
+  --milestone "MVP 1: Sunshine Scenario" \
   --label "mvp-1,settlement" \
   --body "$(cat <<'BODY'
 ## What
@@ -624,7 +634,7 @@ echo "  #10: Settlement engine → $ISSUE_10"
 # --- Issue 11 ---
 ISSUE_11=$(gh issue create \
   --title "Task 11: Golden master tests" \
-  --milestone "MVP 1: One Correct Invoice" \
+  --milestone "MVP 1: Sunshine Scenario" \
   --label "mvp-1,settlement" \
   --body "$(cat <<'BODY'
 ## What
@@ -697,7 +707,7 @@ echo "  #11: Golden master tests → $ISSUE_11"
 # --- Issue 12 ---
 ISSUE_12=$(gh issue create \
   --title "Task 12: CI/CD pipeline (GitHub Actions)" \
-  --milestone "MVP 1: One Correct Invoice" \
+  --milestone "MVP 1: Sunshine Scenario" \
   --label "mvp-1,foundation" \
   --body "$(cat <<'BODY'
 ## What
@@ -763,11 +773,411 @@ BODY
 )" 2>&1 | tail -1)
 echo "  #12: CI/CD pipeline → $ISSUE_12"
 
+# --- Issue 13 ---
+ISSUE_13=$(gh issue create \
+  --title "Task 13: Portfolio management" \
+  --milestone "MVP 1: Sunshine Scenario" \
+  --label "mvp-1,portfolio,data-storage" \
+  --body "$(cat <<'BODY'
+## What
+
+Create and link the domain entities needed to represent a customer in the system: customer, metering point, contract, supply period. This is the "customer" side that settlement reads from.
+
+## Entities
+
+```csharp
+public class Customer
+{
+    public Guid Id { get; set; }
+    public string Name { get; set; }
+    public string CprCvr { get; set; }          // CPR (10) or CVR (8)
+    public string ContactType { get; set; }      // "private" or "business"
+    public string Status { get; set; }           // "active"
+}
+
+public class MeteringPoint
+{
+    public string Gsrn { get; set; }             // 18 digits
+    public string Type { get; set; }             // "E17" (consumption)
+    public string SettlementMethod { get; set; } // "flex"
+    public string GridAreaCode { get; set; }
+    public string PriceArea { get; set; }        // "DK1" or "DK2"
+    public string ConnectionStatus { get; set; } // "connected"
+}
+
+public class Contract
+{
+    public Guid Id { get; set; }
+    public Guid CustomerId { get; set; }
+    public string Gsrn { get; set; }
+    public Guid ProductId { get; set; }
+    public string BillingFrequency { get; set; } // "monthly"
+    public string PaymentModel { get; set; }     // "post_payment"
+    public DateOnly StartDate { get; set; }
+}
+
+public class SupplyPeriod
+{
+    public Guid Id { get; set; }
+    public string Gsrn { get; set; }
+    public DateOnly StartDate { get; set; }
+    public DateOnly? EndDate { get; set; }       // NULL = active
+}
+```
+
+## Interface
+
+```csharp
+public interface IPortfolioRepository
+{
+    Task<Customer> CreateCustomerAsync(Customer customer, CancellationToken ct);
+    Task<MeteringPoint> CreateMeteringPointAsync(MeteringPoint mp, CancellationToken ct);
+    Task<Contract> CreateContractAsync(Contract contract, CancellationToken ct);
+    Task<SupplyPeriod> CreateSupplyPeriodAsync(SupplyPeriod period, CancellationToken ct);
+    Task<Contract?> GetActiveContractAsync(string gsrn, CancellationToken ct);
+    Task ActivateMeteringPointAsync(string gsrn, DateTimeOffset activatedAt, CancellationToken ct);
+}
+```
+
+For MVP 1 sunshine scenario: CRM creates the customer + contract + GSRN before BRS-001 is sent. When RSM-007 arrives, we set `activated_at` and create the supply period.
+
+## Dependencies
+
+- Depends on: #2 (Database schema)
+
+## Acceptance criteria
+
+- [ ] Can create customer, metering point, contract, supply period
+- [ ] Can query active contract for a GSRN
+- [ ] Can activate metering point (set `activated_at`, create supply period)
+- [ ] Integration test: create full portfolio → query back → data correct
+
+## Estimated effort
+
+Small (1 day)
+
+## Reference
+
+[MVP 1 implementation plan — Task 13](../docs/mvp1-implementation-plan.md#task-13-portfolio-management)
+BODY
+)" 2>&1 | tail -1)
+echo "  #13: Portfolio management → $ISSUE_13"
+
+# --- Issue 14 ---
+ISSUE_14=$(gh issue create \
+  --title "Task 14: BRS-001 request builder" \
+  --milestone "MVP 1: Sunshine Scenario" \
+  --label "mvp-1,integration" \
+  --body "$(cat <<'BODY'
+## What
+
+Build and send a BRS-001 (supplier switch) request to DataHub in CIM JSON format.
+
+## CIM JSON structure (outbound)
+
+```json
+{
+  "RequestChangeOfSupplier_MarketDocument": {
+    "mRID": "request-uuid",
+    "process.processType": { "value": "E65" },
+    "sender_MarketParticipant.mRID": { "value": "our-gln", "codingScheme": "A10" },
+    "sender_MarketParticipant.marketRole.type": { "value": "DDQ" },
+    "receiver_MarketParticipant.mRID": { "value": "datahub-gln", "codingScheme": "A10" },
+    "receiver_MarketParticipant.marketRole.type": { "value": "DGL" },
+    "createdDateTime": "2025-01-15T10:00:00Z",
+    "MktActivityRecord": {
+      "mRID": "activity-uuid",
+      "marketEvaluationPoint.mRID": { "value": "571313100000012345", "codingScheme": "A10" },
+      "start_DateAndOrTime.dateTime": "2025-02-01T00:00:00Z",
+      "balanceResponsibleParty_MarketParticipant.mRID": { "value": "brp-gln" },
+      "customer_MarketParticipant.mRID": { "value": "cpr-or-cvr" }
+    }
+  }
+}
+```
+
+## Interface
+
+```csharp
+public interface IBrsRequestBuilder
+{
+    string BuildBrs001(string gsrn, string cprCvr, DateOnly effectiveDate);
+}
+```
+
+Uses `IDataHubClient.SendRequestAsync` to submit and receive the synchronous acknowledgement.
+
+## Dependencies
+
+- Depends on: #3 (IDataHubClient — needs `SendRequestAsync`)
+
+## Acceptance criteria
+
+- [ ] `BuildBrs001` produces valid CIM JSON
+- [ ] Unit test: built JSON has correct structure, GSRN, CPR, effective date
+- [ ] Integration test: send to FakeDataHubClient → get accepted response
+
+## Estimated effort
+
+Small (1 day)
+
+## Reference
+
+[MVP 1 implementation plan — Task 14](../docs/mvp1-implementation-plan.md#task-14-brs-001-request-builder)
+BODY
+)" 2>&1 | tail -1)
+echo "  #14: BRS-001 request builder → $ISSUE_14"
+
+# --- Issue 15 ---
+ISSUE_15=$(gh issue create \
+  --title "Task 15: RSM-009 + RSM-007 parsers" \
+  --milestone "MVP 1: Sunshine Scenario" \
+  --label "mvp-1,integration" \
+  --body "$(cat <<'BODY'
+## What
+
+Parse the two new message types needed for the sunshine flow.
+
+**RSM-009 (BRS-001 response):** Already handled as the synchronous response from `SendRequestAsync`. The `DataHubResponse` record captures accepted/rejected + reason.
+
+**RSM-007 (NotifyMasterData):** Arrives on the MasterData queue after activation. Contains metering point details.
+
+## Key fields from RSM-007
+
+| Field | CIM path | Our use |
+|-------|----------|---------|
+| GSRN | `MarketEvaluationPoint.mRID` | Match to our metering point |
+| Grid area | `MarketEvaluationPoint.linkedMarketEvaluationPoint.mRID` | Update grid area assignment |
+| Type | `MarketEvaluationPoint.type` | E17 = consumption |
+| Settlement method | `MarketEvaluationPoint.settlementMethod` | flex / non-profiled |
+| Supply start | `Period.timeInterval.start` | Our supply period start date |
+| Grid operator GLN | `MarketEvaluationPoint.inDomain.mRID` | Grid company identity |
+
+## Domain object
+
+```csharp
+public record ParsedMasterData(
+    string MessageId,
+    string MeteringPointId,      // GSRN
+    string Type,                 // "E17"
+    string SettlementMethod,     // "D01" (flex) or "E02" (non-profiled)
+    string GridAreaCode,
+    string GridOperatorGln,
+    string PriceArea,            // derived from grid area
+    DateTimeOffset SupplyStart
+);
+```
+
+## Fixture files
+
+| File | Content |
+|------|---------|
+| `rsm007-activation.json` | GSRN 571313100000012345, grid area 344, flex settlement, supply start 2025-01-01 |
+| `rsm009-accepted.json` | BRS-001 accepted (if needed as separate message) |
+
+## Dependencies
+
+- Depends on: #3 (IDataHubClient), #4 (CIM parser foundation)
+
+## Acceptance criteria
+
+- [ ] `CimJsonParser.ParseRsm007(string json)` returns `ParsedMasterData`
+- [ ] Fixture `rsm007-activation.json` parses correctly
+- [ ] Unit tests: all fields extracted, unknown fields tolerated
+- [ ] Queue poller routes MasterData messages to RSM-007 parser
+
+## Estimated effort
+
+Medium (1.5 days)
+
+## Reference
+
+[MVP 1 implementation plan — Task 15](../docs/mvp1-implementation-plan.md#task-15-rsm-009-response-parser--rsm-007-master-data-parser)
+BODY
+)" 2>&1 | tail -1)
+echo "  #15: RSM-009 + RSM-007 parsers → $ISSUE_15"
+
+# --- Issue 16 ---
+ISSUE_16=$(gh issue create \
+  --title "Task 16: Process state machine (BRS-001)" \
+  --milestone "MVP 1: Sunshine Scenario" \
+  --label "mvp-1,integration,portfolio" \
+  --body "$(cat <<'BODY'
+## What
+
+Track the lifecycle of a BRS-001 request through the system. Sunshine path only — no rejections or cancellations.
+
+## State transitions
+
+```
+[*] → Pending (CRM creates request)
+Pending → SentToDataHub (BRS-001 sent)
+SentToDataHub → Acknowledged (RSM-009 accepted)
+Acknowledged → EffectuationPending (Awaiting activation)
+EffectuationPending → Completed (RSM-007 received)
+```
+
+## Implementation
+
+```csharp
+public class ProcessStateMachine
+{
+    public ProcessRequest CreateRequest(string gsrn, string processType, DateOnly effectiveDate);
+    public void MarkSent(ProcessRequest request, string correlationId);
+    public void MarkAcknowledged(ProcessRequest request);
+    public void MarkCompleted(ProcessRequest request);
+    // MVP 2 adds: MarkRejected, MarkCancelled
+}
+```
+
+Each state transition creates a `ProcessEvent` (event sourcing for audit trail).
+
+## Integration with other tasks
+
+- Task 14 (BRS-001 builder) calls `MarkSent` after successful send
+- Task 15 (RSM-009 parser) calls `MarkAcknowledged` on acceptance
+- Task 15 (RSM-007 parser) calls `MarkCompleted` when master data arrives
+
+## Dependencies
+
+- Depends on: #13 (Portfolio), #14 (BRS-001 builder), #15 (RSM parsers)
+
+## Acceptance criteria
+
+- [ ] State machine enforces valid transitions (Pending → Sent → Acknowledged → EffectuationPending → Completed)
+- [ ] Invalid transition throws exception
+- [ ] Each transition creates an immutable `ProcessEvent`
+- [ ] Unit test: full sunshine path transitions
+- [ ] Integration test: process request stored + events recorded in DB
+
+## Estimated effort
+
+Small (1 day)
+
+## Reference
+
+[MVP 1 implementation plan — Task 16](../docs/mvp1-implementation-plan.md#task-16-process-state-machine-brs-001)
+BODY
+)" 2>&1 | tail -1)
+echo "  #16: Process state machine → $ISSUE_16"
+
+# --- Issue 17 ---
+ISSUE_17=$(gh issue create \
+  --title "Task 17: Standalone HTTP simulator" \
+  --milestone "MVP 1: Sunshine Scenario" \
+  --label "mvp-1,foundation,integration" \
+  --body "$(cat <<'BODY'
+## What
+
+Upgrade from in-process fake to a standalone HTTP server (Docker) that mimics the DataHub B2B API. Supports the sunshine scenario.
+
+## Endpoints
+
+```
+POST /oauth2/v2.0/token              → returns fake JWT
+GET  /v1.0/cim/Timeseries            → peek RSM-012 from queue
+GET  /v1.0/cim/MasterData            → peek RSM-007 from queue
+GET  /v1.0/cim/Charges               → peek tariff update from queue
+DELETE /v1.0/cim/dequeue/{id}        → acknowledge message
+POST /v1.0/cim/requestchangeofsupplier → accept BRS-001, return RSM-009
+
+POST /admin/scenario/sunshine        → load sunshine scenario
+POST /admin/enqueue                  → add message to any queue
+POST /admin/reset                    → clear all state
+GET  /admin/requests                 → inspect received BRS requests
+```
+
+## Sunshine scenario behavior
+
+1. System sends BRS-001 to `/cim/requestchangeofsupplier`
+2. Simulator validates format, returns RSM-009 (accepted) synchronously
+3. Simulator auto-enqueues RSM-007 on MasterData queue
+4. Simulator auto-enqueues 30 × RSM-012 (one per day) on Timeseries queue
+5. System polls queues → processes all messages
+
+## Implementation
+
+ASP.NET Minimal API, Docker container, reads fixture files from disk.
+
+## Dependencies
+
+- Depends on: #9 (Queue Poller — needs to work against HTTP), #16 (State machine — needs the full flow)
+
+## Acceptance criteria
+
+- [ ] `docker compose up` starts simulator alongside TimescaleDB
+- [ ] Simulator serves OAuth2 token endpoint
+- [ ] Sunshine scenario: BRS-001 → auto-enqueues RSM-007 + 30 × RSM-012
+- [ ] Admin API: `/admin/scenario/sunshine`, `/admin/reset`, `/admin/requests`
+- [ ] Integration test: full sunshine flow against HTTP simulator
+
+## Estimated effort
+
+Medium (2 days)
+
+## Reference
+
+[MVP 1 implementation plan — Task 17](../docs/mvp1-implementation-plan.md#task-17-standalone-http-simulator)
+BODY
+)" 2>&1 | tail -1)
+echo "  #17: Standalone HTTP simulator → $ISSUE_17"
+
+# --- Issue 18 ---
+ISSUE_18=$(gh issue create \
+  --title "Task 18: Sunshine scenario end-to-end test" \
+  --milestone "MVP 1: Sunshine Scenario" \
+  --label "mvp-1,settlement" \
+  --body "$(cat <<'BODY'
+## What
+
+The capstone test — runs the entire sunshine scenario and verifies the result matches the golden master.
+
+## Test flow
+
+```
+1. Seed: product, tariffs, spot prices, electricity tax in DB
+2. Act: create customer + contract via portfolio service
+3. Act: submit BRS-001 → simulator accepts
+4. Assert: process state = Acknowledged
+5. Act: poll MasterData queue → RSM-007 → activate metering point
+6. Assert: metering point activated, supply period created, process state = Completed
+7. Act: poll Timeseries queue → 30 × RSM-012 → store metering data
+8. Assert: 30 days × 24 hours = 720 rows in metering_data (or 744 for Jan)
+9. Act: run settlement engine for the period
+10. Assert: settlement lines match Golden Master #1 exactly
+```
+
+## This test validates the full chain
+
+CRM → portfolio → BRS-001 → simulator → RSM-009 → RSM-007 → RSM-012 → settlement → golden master
+
+## Dependencies
+
+- Depends on: #11 (Golden master tests), #17 (Standalone simulator)
+
+## Acceptance criteria
+
+- [ ] End-to-end test passes with Golden Master #1 amounts
+- [ ] Test runs against standalone HTTP simulator (Docker)
+- [ ] Test is idempotent (can re-run with `/admin/reset`)
+- [ ] Test is part of the integration test suite in CI/CD
+
+## Estimated effort
+
+Small (1 day)
+
+## Reference
+
+[MVP 1 implementation plan — Task 18](../docs/mvp1-implementation-plan.md#task-18-sunshine-scenario-end-to-end-test)
+BODY
+)" 2>&1 | tail -1)
+echo "  #18: Sunshine scenario E2E test → $ISSUE_18"
+
 echo ""
-echo "Done! Created 12 issues in milestone 'MVP 1: One Correct Invoice'."
+echo "Done! Created 18 issues in milestone 'MVP 1: Sunshine Scenario'."
 echo ""
 echo "View the backlog:"
-echo "  gh issue list --milestone 'MVP 1: One Correct Invoice'"
+echo "  gh issue list --milestone 'MVP 1: Sunshine Scenario'"
 echo ""
 echo "View the milestone:"
-echo "  gh issue list --milestone 'MVP 1: One Correct Invoice' --state all"
+echo "  gh issue list --milestone 'MVP 1: Sunshine Scenario' --state all"
