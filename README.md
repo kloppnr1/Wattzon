@@ -18,14 +18,15 @@ scripts/                       Backlog and utility scripts
 DataHub.Settlement/            .NET 9 solution
 ├── src/
 │   ├── DataHub.Settlement.Domain/          Domain entities and value objects
-│   ├── DataHub.Settlement.Application/     Use cases and interfaces
-│   ├── DataHub.Settlement.Infrastructure/  DB access, CIM parsing, HTTP clients
+│   ├── DataHub.Settlement.Application/     Use cases and interfaces (IDataHubClient)
+│   ├── DataHub.Settlement.Infrastructure/  DB migrations, CIM parsing, HTTP clients
 │   ├── DataHub.Settlement.Worker/          Background services (queue polling, settlement)
-│   └── DataHub.Settlement.Api/             REST API (minimal in MVP 1)
+│   ├── DataHub.Settlement.Api/             REST API (minimal in MVP 1)
+│   └── DataHub.Settlement.Web/             Blazor Server dashboard
 ├── tests/
-│   ├── DataHub.Settlement.UnitTests/
+│   ├── DataHub.Settlement.UnitTests/       Unit tests + FakeDataHubClient
 │   └── DataHub.Settlement.IntegrationTests/
-├── fixtures/                  CIM JSON test fixtures
+├── fixtures/                  CIM JSON test fixtures (planned)
 └── docker-compose.yml         TimescaleDB + Aspire Dashboard
 ```
 
@@ -70,6 +71,21 @@ Once `docker compose up -d` is running and the worker is started, open **http://
 | Testing | xunit + FluentAssertions |
 | CI/CD | GitHub Actions |
 | Containerization | Docker Compose |
+
+## Database
+
+21 tables across 6 schemas, managed by [DbUp](https://dbup.readthedocs.io/) migrations that run automatically at Worker startup.
+
+| Schema | Tables |
+|--------|--------|
+| `portfolio` | `grid_area`, `customer`, `metering_point`, `product`, `supply_period`, `contract` |
+| `metering` | `metering_data` (TimescaleDB hypertable), `spot_price` |
+| `tariff` | `grid_tariff`, `tariff_rate`, `subscription`, `electricity_tax` |
+| `settlement` | `billing_period`, `settlement_run`, `settlement_line` |
+| `datahub` | `inbound_message`, `processed_message_id`, `dead_letter`, `outbound_request` |
+| `lifecycle` | `process_request`, `process_event` |
+
+`metering_data` is a TimescaleDB hypertable with monthly partitioning, automatic compression after 3 months, and 5-year retention. SQL migration files live in `src/DataHub.Settlement.Infrastructure/Migrations/`.
 
 ## Documentation
 

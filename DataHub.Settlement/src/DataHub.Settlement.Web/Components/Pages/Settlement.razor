@@ -1,0 +1,64 @@
+@page "/settlement"
+
+<h1>Settlement Results</h1>
+
+@if (_runs.Count == 0)
+{
+    <div class="empty-state">No settlement runs yet. Complete the sunshine scenario to see results.</div>
+}
+else
+{
+    @foreach (var run in _runs)
+    {
+        <div class="card" style="margin-bottom: 1.5rem;">
+            <div class="label">Settlement Run #@run.RunId — @run.Period</div>
+            <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">
+                GSRN: <code>@run.Gsrn</code> &middot; @run.CustomerName &middot; @run.ExecutedAt.ToString("yyyy-MM-dd HH:mm")
+            </div>
+        </div>
+
+        <table style="margin-bottom: 2rem;">
+            <thead>
+                <tr>
+                    <th>Charge Type</th>
+                    <th class="amount">Quantity (kWh)</th>
+                    <th class="amount">Rate</th>
+                    <th class="amount">Amount (DKK)</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var line in run.Lines)
+                {
+                    <tr class="@(line.IsSubtotal ? "subtotal-row" : "") @(line.IsTotal ? "total-row" : "")">
+                        <td>@line.ChargeType</td>
+                        <td class="amount">@(line.Quantity.HasValue ? line.Quantity.Value.ToString("N3") : "")</td>
+                        <td class="amount">@(line.Rate.HasValue ? line.Rate.Value.ToString("N4") : "")</td>
+                        <td class="amount">@line.Amount.ToString("N2")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+}
+
+@code {
+    private List<SettlementRunView> _runs = new();
+
+    // TODO: inject repositories and load from settlement.settlement_run + settlement_line
+
+    private record SettlementRunView(
+        int RunId,
+        string Period,
+        string Gsrn,
+        string CustomerName,
+        DateTimeOffset ExecutedAt,
+        List<SettlementLineView> Lines);
+
+    private record SettlementLineView(
+        string ChargeType,
+        decimal? Quantity,
+        decimal? Rate,
+        decimal Amount,
+        bool IsSubtotal = false,
+        bool IsTotal = false);
+}

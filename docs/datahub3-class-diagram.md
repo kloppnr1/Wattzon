@@ -18,7 +18,7 @@ classDiagram
         class GridArea
     }
 
-    namespace Product {
+    namespace Pricing {
         class Product
         class EnergyModel
     }

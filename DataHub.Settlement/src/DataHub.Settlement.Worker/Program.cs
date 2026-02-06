@@ -1,4 +1,7 @@
+using DataHub.Settlement.Infrastructure.Database;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using Npgsql;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
@@ -22,7 +25,7 @@ builder.Services.AddOpenTelemetry()
     {
         tracing
             .AddSource(serviceName)
-            .AddNpgsqlInstrumentation()
+            .AddNpgsql()
             .AddOtlpExporter();
     })
     .WithMetrics(metrics =>
@@ -33,7 +36,13 @@ builder.Services.AddOpenTelemetry()
     });
 
 // TODO: Task 9 — add BackgroundService for queue polling
-// TODO: Task 2 — add database connection and migration
 
 var host = builder.Build();
+
+// Run database migrations before starting the host
+var connectionString = builder.Configuration.GetConnectionString("SettlementDb")
+    ?? "Host=localhost;Port=5432;Database=datahub_settlement;Username=settlement;Password=settlement";
+var migrationLogger = host.Services.GetRequiredService<ILoggerFactory>().CreateLogger("DatabaseMigrator");
+DatabaseMigrator.Migrate(connectionString, migrationLogger);
+
 host.Run();
