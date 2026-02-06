@@ -89,7 +89,7 @@ Once `docker compose up -d` is running and the worker is started, open **http://
 
 ## Documentation
 
-All documentation is in the `docs/` folder (written in Danish):
+All documentation is in the `docs/` folder:
 
 - [Implementation plan](docs/datahub3-implementation-plan.md) — MVP overview and phasing
 - [MVP 1 plan](docs/mvp1-implementation-plan.md) — Sunshine scenario tasks and golden master
