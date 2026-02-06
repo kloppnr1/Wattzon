@@ -1,4 +1,6 @@
 @page "/processes"
+@using DataHub.Settlement.Infrastructure.Dashboard
+@inject DashboardQueryService Queries
 
 <h1>Process Tracker</h1>
 
@@ -34,14 +36,10 @@ else
 }
 
 @code {
-    private List<ProcessEntry> _processes = new();
+    private List<DashboardQueryService.ProcessEntry> _processes = new();
 
-    // TODO: inject repositories and load from lifecycle.process_request + process_event
-
-    private record ProcessEntry(
-        string Gsrn,
-        string ProcessType,
-        string Status,
-        DateOnly EffectiveDate,
-        DateTimeOffset LastUpdated);
+    protected override async Task OnInitializedAsync()
+    {
+        _processes = (await Queries.GetProcessesAsync()).ToList();
+    }
 }

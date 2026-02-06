@@ -1,4 +1,6 @@
 @page "/messages"
+@using DataHub.Settlement.Infrastructure.Dashboard
+@inject DashboardQueryService Queries
 
 <h1>Messages</h1>
 
@@ -37,10 +39,10 @@ else
             @foreach (var msg in _messages)
             {
                 <tr>
-                    <td><code>@msg.MessageId[..12]...</code></td>
+                    <td><code>@(msg.MessageId.Length > 12 ? msg.MessageId[..12] + "..." : msg.MessageId)</code></td>
                     <td>@msg.MessageType</td>
                     <td>@msg.Queue</td>
-                    <td><span class="badge badge-@msg.Status.ToLowerInvariant().Replace("-", "-")">@msg.Status</span></td>
+                    <td><span class="badge badge-@msg.Status.ToLowerInvariant()">@msg.Status</span></td>
                     <td>@msg.ReceivedAt.ToString("yyyy-MM-dd HH:mm:ss")</td>
                 </tr>
             }
@@ -52,14 +54,15 @@ else
     private int _totalReceived;
     private int _processed;
     private int _deadLetters;
-    private List<MessageEntry> _messages = new();
+    private List<DashboardQueryService.MessageEntry> _messages = new();
 
-    // TODO: inject repositories and load from datahub.inbound_message + processed_message_id + dead_letter
+    protected override async Task OnInitializedAsync()
+    {
+        var counts = await Queries.GetMessageCountsAsync();
+        _totalReceived = counts.TotalReceived;
+        _processed = counts.Processed;
+        _deadLetters = counts.DeadLetters;
 
-    private record MessageEntry(
-        string MessageId,
-        string MessageType,
-        string Queue,
-        string Status,
-        DateTimeOffset ReceivedAt);
+        _messages = (await Queries.GetMessagesAsync()).ToList();
+    }
 }

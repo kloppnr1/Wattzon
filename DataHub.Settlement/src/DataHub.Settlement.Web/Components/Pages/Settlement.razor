@@ -1,4 +1,6 @@
 @page "/settlement"
+@using DataHub.Settlement.Infrastructure.Dashboard
+@inject DashboardQueryService Queries
 
 <h1>Settlement Results</h1>
 
@@ -11,7 +13,7 @@ else
     @foreach (var run in _runs)
     {
         <div class="card" style="margin-bottom: 1.5rem;">
-            <div class="label">Settlement Run #@run.RunId — @run.Period</div>
+            <div class="label">Settlement Run — @run.Period</div>
             <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">
                 GSRN: <code>@run.Gsrn</code> &middot; @run.CustomerName &middot; @run.ExecutedAt.ToString("yyyy-MM-dd HH:mm")
             </div>
@@ -22,7 +24,6 @@ else
                 <tr>
                     <th>Charge Type</th>
                     <th class="amount">Quantity (kWh)</th>
-                    <th class="amount">Rate</th>
                     <th class="amount">Amount (DKK)</th>
                 </tr>
             </thead>
@@ -31,8 +32,7 @@ else
                 {
                     <tr class="@(line.IsSubtotal ? "subtotal-row" : "") @(line.IsTotal ? "total-row" : "")">
                         <td>@line.ChargeType</td>
-                        <td class="amount">@(line.Quantity.HasValue ? line.Quantity.Value.ToString("N3") : "")</td>
-                        <td class="amount">@(line.Rate.HasValue ? line.Rate.Value.ToString("N4") : "")</td>
+                        <td class="amount">@(line.Quantity > 0 ? line.Quantity.ToString("N3") : "")</td>
                         <td class="amount">@line.Amount.ToString("N2")</td>
                     </tr>
                 }
@@ -44,20 +44,57 @@ else
 @code {
     private List<SettlementRunView> _runs = new();
 
-    // TODO: inject repositories and load from settlement.settlement_run + settlement_line
+    protected override async Task OnInitializedAsync()
+    {
+        var runs = await Queries.GetSettlementRunsAsync();
+        foreach (var run in runs)
+        {
+            var lines = await Queries.GetSettlementLinesAsync(run.RunId);
+            var gsrn = lines.FirstOrDefault()?.MeteringPointId ?? "N/A";
+            var customerName = await Queries.GetCustomerNameForMeteringPointAsync(gsrn) ?? "Unknown";
+
+            var period = $"{run.PeriodStart:yyyy-MM-dd} to {run.PeriodEnd:yyyy-MM-dd}";
+
+            var viewLines = new List<SettlementLineView>();
+            decimal subtotal = 0;
+            foreach (var line in lines)
+            {
+                viewLines.Add(new SettlementLineView(
+                    FormatChargeType(line.ChargeType), line.TotalKwh, line.TotalAmount));
+                subtotal += line.TotalAmount;
+            }
+
+            var vatAmount = Math.Round(subtotal * 0.25m, 2);
+            viewLines.Add(new SettlementLineView("Subtotal", 0, subtotal, IsSubtotal: true));
+            viewLines.Add(new SettlementLineView("VAT (25%)", 0, vatAmount));
+            viewLines.Add(new SettlementLineView("Total", 0, subtotal + vatAmount, IsTotal: true));
+
+            _runs.Add(new SettlementRunView(period, gsrn, customerName, run.ExecutedAt, viewLines));
+        }
+    }
+
+    private static string FormatChargeType(string chargeType) => chargeType switch
+    {
+        "energy" => "Energy",
+        "grid_tariff" => "Grid Tariff",
+        "system_tariff" => "System Tariff",
+        "transmission_tariff" => "Transmission Tariff",
+        "electricity_tax" => "Electricity Tax",
+        "grid_subscription" => "Grid Subscription",
+        "supplier_subscription" => "Supplier Subscription",
+        _ => chargeType,
+    };
 
     private record SettlementRunView(
-        int RunId,
         string Period,
         string Gsrn,
         string CustomerName,
-        DateTimeOffset ExecutedAt,
+        DateTime ExecutedAt,
         List<SettlementLineView> Lines);
 
     private record SettlementLineView(
         string ChargeType,
-        decimal? Quantity,
-        decimal? Rate,
+        decimal Quantity,
         decimal Amount,
         bool IsSubtotal = false,
         bool IsTotal = false);
