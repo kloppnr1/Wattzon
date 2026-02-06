@@ -118,7 +118,7 @@ The simulator is powered by **CIM JSON fixture files** — real-format messages 
 **Where do fixtures come from?**
 
 1. **Energinet documentation** — the CIM EDI Guide (Dok. 15/00718-191) and RSM Guide contain example messages
-2. **Energinet's open source repos** — [opengeh-edi](https://github.com/Energinet-DataHub/opengeh-edi) contains test data
+2. **Energinet's open source repos** — [Energinet-DataHub](https://github.com/Energinet-DataHub) org on GitHub (note: the `opengeh-edi` repo is now private)
 3. **Actor Test captures** — once we have access, capture real messages and anonymize them
 4. **Hand-crafted** — for edge cases not covered by the above
 

@@ -599,5 +599,5 @@ Source: CIM EDI Guide page 256
 
 ### GitHub
 
-- [Energinet-DataHub/opengeh-edi](https://github.com/Energinet-DataHub/opengeh-edi) — Open-source EDI implementation
+- [Energinet-DataHub](https://github.com/Energinet-DataHub) — Energinet's open-source DataHub repositories (note: the `opengeh-edi` repo is now private)
 - [Energinet-DataHub/ARCHIVED-geh-post-office](https://github.com/Energinet-DataHub/ARCHIVED-geh-post-office) — Message hub (archived, but documents queue architecture)

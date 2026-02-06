@@ -281,7 +281,7 @@ Parse CIM JSON messages (RSM-012 / NotifyValidatedMeasureData) into domain objec
 | `rsm012-missing-quantity.json` | One point has quality A02 (missing) | Missing data handling |
 | `charges-tariff-update.json` | Grid tariff rates for grid area 344 | Tariff parsing |
 
-Fixture source: Energinet CIM EDI Guide examples + [opengeh-edi](https://github.com/Energinet-DataHub/opengeh-edi) test data.
+Fixture source: Energinet CIM EDI Guide examples.
 
 ## Dependencies
 

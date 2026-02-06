@@ -131,7 +131,7 @@ All fixtures are version-controlled. Values chosen for hand-calculability.
 | `charges-system-tariff.json` | System 0.054, transmission 0.049 DKK/kWh |
 | `spot-prices-january.json` | 744 hours with time-differentiated prices |
 
-Fixtures follow the CIM EDI Guide structure (Dok. 15/00718-191) and are cross-referenced with Energinet's [opengeh-edi](https://github.com/Energinet-DataHub/opengeh-edi) test data.
+Fixtures follow the CIM EDI Guide structure (Dok. 15/00718-191).
 
 ---
 
