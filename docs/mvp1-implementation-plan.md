@@ -31,6 +31,27 @@ The `IDataHubClient` abstraction means the transition from fake → HTTP simulat
 
 ---
 
+## Observability
+
+MVP 1 includes the **.NET Aspire Dashboard** for runtime monitoring — no custom UI code needed.
+
+The Aspire Dashboard runs as a Docker container alongside TimescaleDB. The .NET worker and API services export telemetry via OpenTelemetry (OTLP), and the dashboard collects and displays it.
+
+**What it provides:**
+- **Structured logs** — all services, filterable and searchable
+- **Distributed traces** — follow a message from queue poll through parsing, storage, and settlement
+- **Metrics** — queue poll rates, message processing times, settlement durations
+
+**Setup:**
+- Add `mcr.microsoft.com/dotnet/aspire-dashboard` to `docker-compose.yml`
+- Add `OpenTelemetry.Extensions.Hosting` + OTLP exporter NuGet packages to the .NET worker
+- Configure `OTEL_EXPORTER_OTLP_ENDPOINT` to point at the dashboard container
+- Dashboard accessible at `http://localhost:18888`
+
+This replaces the need for any custom UI in MVP 1. When the system runs, you open the dashboard to see what's happening — which messages are being processed, how long settlement takes, and any errors.
+
+---
+
 ## Build Order
 
 Tasks are ordered by dependency. Each produces a testable result before the next starts. Tasks 1-11 are the settlement core, tasks 13-17 add the customer flow.
@@ -67,7 +88,7 @@ flowchart TD
 
 | # | Component | What it proves |
 |---|-----------|---------------|
-| 1 | **Solution structure + Docker Compose** | .NET solution builds, TimescaleDB starts, CI pipeline runs |
+| 1 | **Solution structure + Docker Compose** | .NET solution builds, TimescaleDB starts, Aspire Dashboard shows logs/traces, CI pipeline runs |
 | 2 | **Database schema (MVP 1 subset)** | Migrations create all needed tables, hypertable enabled |
 | 3 | **IDataHubClient + FakeDataHubClient** | Peek/dequeue lifecycle works, BRS-001 accepted, fixture loading |
 | 4 | **CIM JSON parser (RSM-012)** | Raw CIM JSON → domain model (GSRN, period, resolution, points) |
@@ -167,7 +188,8 @@ A second golden master covers a partial period (16 days, mid-month start) to ver
 
 ## Exit Criteria
 
-- [ ] `docker compose up` starts TimescaleDB
+- [ ] `docker compose up` starts TimescaleDB and Aspire Dashboard
+- [ ] Aspire Dashboard accessible at `http://localhost:18888` with logs, traces, and metrics
 - [ ] FakeDataHubClient delivers RSM-012, RSM-007, Charges fixtures
 - [ ] CIM parser handles all fixture files correctly
 - [ ] Ingestion pipeline: 31 days ingested, all messages dequeued, no dead letters

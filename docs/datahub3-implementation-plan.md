@@ -213,7 +213,7 @@ Run against Energinet's Actor Test or Preprod with real credentials. These tests
 
 | Area | Task | Test approach |
 |------|------|---------------|
-| **Foundation** | .NET solution structure, CI/CD pipeline, Docker Compose (PostgreSQL + TimescaleDB) | Verify container starts, CI runs |
+| **Foundation** | .NET solution structure, CI/CD pipeline, Docker Compose (PostgreSQL + TimescaleDB + Aspire Dashboard). OpenTelemetry for structured logs, traces, metrics | Verify containers start, dashboard shows telemetry, CI runs |
 | **Simulator** | In-process `FakeDataHubClient` loaded with CIM JSON fixtures. Sunshine scenario: BRS-001 → RSM-009 (accepted) → RSM-007 → RSM-012 (31 days). No HTTP — all in-process. | Unit + integration |
 | **Auth** | OAuth2 Auth Manager — token fetch, cache, proactive renewal, 401 retry | Unit: mock token endpoint |
 | **Ingestion** | Queue Poller (Timeseries + MasterData), CIM JSON Parser (RSM-012 + RSM-007), time series storage (`metering_data` hypertable) | Unit: parse fixtures. Integration: parse → store → query roundtrip |
@@ -259,7 +259,7 @@ Golden Master #2: Partial period (mid-month start)
 
 ### Exit criteria
 
-- `docker compose up` starts the database and all services
+- `docker compose up` starts TimescaleDB, Aspire Dashboard, and all services
 - Sunshine scenario works end-to-end: BRS-001 → RSM-009 → RSM-007 → RSM-012 → settlement → golden master match
 - Portfolio: customer + metering point + contract + supply period created correctly
 - State machine: BRS-001 process goes Pending → SentToDataHub → Acknowledged → Completed

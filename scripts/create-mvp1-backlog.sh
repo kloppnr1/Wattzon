@@ -89,7 +89,14 @@ DataHub.Settlement/
 
 ## Docker Compose
 
-TimescaleDB (PostgreSQL 16 + TimescaleDB extension) for both time series and relational data.
+- **TimescaleDB** (PostgreSQL 16 + TimescaleDB extension) for both time series and relational data
+- **.NET Aspire Dashboard** (`mcr.microsoft.com/dotnet/aspire-dashboard`) for runtime monitoring — structured logs, distributed traces, and metrics via OpenTelemetry
+
+## OpenTelemetry
+
+- Add `OpenTelemetry.Extensions.Hosting` + OTLP exporter NuGet packages to the Worker project
+- Configure `OTEL_EXPORTER_OTLP_ENDPOINT` pointing at the Aspire Dashboard container
+- Dashboard accessible at `http://localhost:18888`
 
 ## Dependencies
 
@@ -99,12 +106,14 @@ None — this is the first task.
 
 - [ ] `dotnet build` succeeds
 - [ ] `docker compose up` starts TimescaleDB and it accepts connections
+- [ ] `docker compose up` starts Aspire Dashboard accessible at `http://localhost:18888`
+- [ ] Worker service logs and traces visible in the Aspire Dashboard
 - [ ] All projects reference each other correctly (Domain has no dependencies, Application references Domain, Infrastructure references Application)
 - [ ] `.gitignore` for .NET projects
 
 ## Estimated effort
 
-Small (1 day)
+Small (1.5 days)
 
 ## Reference
 
