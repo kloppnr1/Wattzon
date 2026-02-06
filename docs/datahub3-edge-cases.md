@@ -1,6 +1,6 @@
 # DataHub 3: Edge Cases and Error Handling
 
-All edge cases, error scenarios, and recovery procedures collected in one place. Covers metering data corrections, erroneous processes, cancellations, reconciliation discrepancies, system errors, and customer disputes.
+All edge cases, error scenarios, and recovery procedures collected in one place. Covers metering data corrections, erroneous processes, cancellations, reconciliation discrepancies, system errors, customer disputes, electrical heating, and solar panel production.
 
 ---
 
@@ -319,6 +319,143 @@ The grid company (netvirksomheden) changes tariff rates effective mid-month:
 
 ---
 
+## 9. Electrical Heating (Elvarme)
+
+Customers with electrical heating as their primary heat source are eligible for a **reduced electricity tax (elafgift)** rate on consumption above a yearly threshold. This affects the settlement calculation.
+
+### How it works
+
+- The Danish electricity tax (elafgift) has two rates: a **standard rate** and a **reduced rate** for registered electrical heating customers (WARNING: VERIFY — as of 2025, the elafgift has been reduced significantly; confirm whether the elvarme distinction still produces a meaningful rate difference)
+- The reduced rate applies to consumption **above 4,000 kWh/year** (WARNING: VERIFY current threshold)
+- The customer's metering point must be registered as electrical heating eligible in DataHub
+
+### Data flow
+
+| Step | Source | Detail |
+|------|--------|--------|
+| 1 | RSM-007 (master data) | Contains a heating indicator or tax reduction flag for the metering point (WARNING: VERIFY exact field name in CIM format) |
+| 2 | Our system | Stores the heating flag on `metering_point` |
+| 3 | Settlement engine | Tracks cumulative annual kWh for the metering point |
+| 4 | Settlement engine | Once the threshold is exceeded, applies the reduced rate to the remaining consumption |
+
+### System design implications
+
+- **Annual tracking:** The settlement engine must track cumulative consumption per metering point per calendar year to determine when the 4,000 kWh threshold is crossed
+- **Threshold crossing mid-period:** If the threshold is crossed within a billing period, that period has a **split rate** — standard rate up to the threshold, reduced rate above
+- **Year boundary:** The threshold resets on 1 January — the first billing period of the year always starts at the standard rate
+- **Master data change:** If a customer installs or removes electrical heating, RSM-004 (master data change) updates the flag — settlement must apply the correct rate from the change date
+- **Corrections:** If metering data is corrected for a period that crosses the threshold, the threshold calculation must be re-evaluated and the tax difference recalculated
+- **Database:** Consider adding a `heating_type` column to `portfolio.metering_point` (e.g., `standard`, `electrical_heating`) and a yearly accumulator table or query
+
+### Possible values (WARNING: VERIFY)
+
+| Attribute | Values | Source |
+|-----------|--------|--------|
+| Heating type | Standard / Electrical heating (elvarme) | RSM-007 master data |
+| Standard elafgift rate | ~0.008 DKK/kWh (2025) | Legislation |
+| Reduced elafgift rate | ~0.005 DKK/kWh (2025) (WARNING: VERIFY) | Legislation |
+| Yearly threshold | 4,000 kWh (WARNING: VERIFY) | Legislation |
+
+---
+
+## 10. Solar Panels and Production Metering Points
+
+Customers with solar panels (solceller) have both a **consumption metering point (E17)** and a **production metering point (E18)**. This introduces net settlement (nettoafregning) schemes and production credit handling.
+
+### How DataHub models solar customers
+
+- The solar installation is represented as a **separate metering point** with type **E18** (production)
+- The customer's main consumption point remains **E17**
+- Both metering points are associated with the same customer and the same grid area
+- We receive **RSM-012 data for both** metering points — consumption _and_ production
+
+### Net settlement schemes (nettoafregningsgrupper)
+
+Denmark has several net settlement schemes, depending on when the installation was registered (WARNING: VERIFY current scheme details):
+
+| Scheme | Applies to | How it works |
+|--------|-----------|-------------|
+| **Hourly net settlement** (timeafregning) | Most new installations (post-2012) | Production is netted against consumption **per hour**. Excess production within an hour is credited at spot price. Consumption exceeding production is billed normally. |
+| **Annual net settlement** (årsafregning) | Legacy installations (WARNING: VERIFY cutoff date) | Production is accumulated and netted against consumption over a full year. Far more favorable for the customer. |
+| **Instant net settlement** | Very small installations (WARNING: VERIFY) | Production offsets consumption instantly — effectively the meter "runs backwards" |
+
+The net settlement group is indicated in DataHub master data (WARNING: VERIFY exact field in RSM-007 or CIM format).
+
+### Impact on settlement
+
+**Hourly net settlement (most common):**
+
+```
+For each hour:
+  net_consumption = consumption_kwh - production_kwh
+
+  If net_consumption > 0:
+    → Customer pays: net_consumption × (spot + margin + tariffs + tax)
+    → Normal settlement calculation applies
+
+  If net_consumption < 0 (excess production):
+    → Customer is credited: |net_consumption| × spot price
+    → No tariffs/tax on excess production credit (WARNING: VERIFY)
+```
+
+**Annual net settlement (legacy):**
+
+```
+Over the full year:
+  net_consumption = total_consumption - total_production
+
+  If net_consumption > 0:
+    → Customer pays for net_consumption (settled annually)
+
+  If net_consumption < 0:
+    → Customer is credited for excess production
+```
+
+### System design implications
+
+- **Paired metering points:** The system must link the E17 (consumption) and E18 (production) metering points for the same customer. Consider a `parent_gsrn` or `linked_gsrn` column on `portfolio.metering_point`
+- **RSM-012 for E18:** Production data arrives via the same Timeseries queue as consumption data. The `MeteringPointType` field in the message distinguishes them. The metering data ingestion pipeline must handle both types
+- **Net settlement group:** Store the customer's net settlement group (from RSM-007) to determine the correct settlement logic
+- **Settlement engine branching:** The settlement engine must check for linked production metering points and apply the correct netting scheme before calculating invoice lines
+- **Spot price credit:** Excess production is typically credited at the **spot price only** (no margin, no tariffs). This creates a new invoice line type
+- **Grid tariff exemption:** Excess production fed into the grid is typically exempt from grid tariffs and electricity tax — only the net consumption is subject to these charges (WARNING: VERIFY)
+- **Negative settlement lines:** The production credit results in a negative invoice line, reducing the total amount. Handle gracefully in invoice generation
+- **Corrections:** If production or consumption data is corrected, the netting calculation for the entire period must be re-evaluated
+
+### Database considerations
+
+```sql
+-- Suggested additions to portfolio.metering_point:
+-- heating_type TEXT CHECK (heating_type IN ('standard', 'electrical_heating'))
+-- net_settlement_group TEXT  -- e.g., 'hourly', 'annual', 'instant', NULL
+-- linked_gsrn TEXT REFERENCES portfolio.metering_point(gsrn)  -- for E17↔E18 pairing
+```
+
+### Data flow for solar customer
+
+```
+DataHub                    Our system                  Settlement
+  │                           │                            │
+  │ RSM-012 (E17, consumption)│                            │
+  ├──────────────────────────►│ Store in metering_data     │
+  │                           │ (type = consumption)       │
+  │ RSM-012 (E18, production) │                            │
+  ├──────────────────────────►│ Store in metering_data     │
+  │                           │ (type = production)        │
+  │                           │                            │
+  │                           │ At billing period end ────►│
+  │                           │                            │ For each hour:
+  │                           │                            │   net = E17 - E18
+  │                           │                            │   if net > 0: charge
+  │                           │                            │   if net < 0: credit
+  │                           │                            │
+  │                           │◄──── Settlement result ────│
+  │                           │   Invoice with net amounts │
+  │                           │   + production credit line │
+```
+
+---
+
 ## Deadline Overview
 
 | Process | Deadline | Source |
@@ -342,4 +479,5 @@ The grid company (netvirksomheden) changes tariff rates effective mid-month:
 - [RSM-012 reference](rsm-012-datahub3-measure-data.md) — correction flow for metering data
 - [Settlement overview](datahub3-settlement-overview.md) — corrections as edge case
 - [System architecture](datahub3-proposed-architecture.md) — error handling and dead-letter
-- [Database model](datahub3-database-model.md) — dead_letter table
+- [Database model](datahub3-database-model.md) — dead_letter table, metering_point schema
+- [Product structure and billing](datahub3-product-and-billing.md) — invoice lines and settlement calculation
