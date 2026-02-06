@@ -1,0 +1,47 @@
+@page "/processes"
+
+<h1>Process Tracker</h1>
+
+@if (_processes.Count == 0)
+{
+    <div class="empty-state">No processes yet. Submit a BRS-001 to start tracking.</div>
+}
+else
+{
+    <table>
+        <thead>
+            <tr>
+                <th>GSRN</th>
+                <th>Type</th>
+                <th>Status</th>
+                <th>Effective Date</th>
+                <th>Last Updated</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var process in _processes)
+            {
+                <tr>
+                    <td><code>@process.Gsrn</code></td>
+                    <td>@process.ProcessType</td>
+                    <td><span class="badge badge-@process.Status.ToLowerInvariant()">@process.Status</span></td>
+                    <td>@process.EffectiveDate.ToString("yyyy-MM-dd")</td>
+                    <td>@process.LastUpdated.ToString("yyyy-MM-dd HH:mm:ss")</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<ProcessEntry> _processes = new();
+
+    // TODO: inject repositories and load from lifecycle.process_request + process_event
+
+    private record ProcessEntry(
+        string Gsrn,
+        string ProcessType,
+        string Status,
+        DateOnly EffectiveDate,
+        DateTimeOffset LastUpdated);
+}

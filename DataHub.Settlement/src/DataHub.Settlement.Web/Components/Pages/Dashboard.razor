@@ -1,0 +1,63 @@
+@page "/"
+
+<h1>Dashboard</h1>
+
+<div class="cards">
+    <div class="card">
+        <div class="label">Customers</div>
+        <div class="value">@_customerCount</div>
+    </div>
+    <div class="card">
+        <div class="label">Messages Processed</div>
+        <div class="value">@_messagesProcessed</div>
+    </div>
+    <div class="card">
+        <div class="label">Active Processes</div>
+        <div class="value">@_activeProcesses</div>
+    </div>
+    <div class="card">
+        <div class="label">Settlement Runs</div>
+        <div class="value">@_settlementRuns</div>
+    </div>
+</div>
+
+<h1>Recent Activity</h1>
+
+@if (_recentActivity.Count == 0)
+{
+    <div class="empty-state">No activity yet. Run the sunshine scenario to see data here.</div>
+}
+else
+{
+    <table>
+        <thead>
+            <tr>
+                <th>Time</th>
+                <th>Event</th>
+                <th>Details</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var activity in _recentActivity)
+            {
+                <tr>
+                    <td>@activity.Timestamp.ToString("HH:mm:ss")</td>
+                    <td>@activity.Event</td>
+                    <td>@activity.Details</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private int _customerCount;
+    private int _messagesProcessed;
+    private int _activeProcesses;
+    private int _settlementRuns;
+    private List<ActivityEntry> _recentActivity = new();
+
+    // TODO: inject repositories and load real data from database
+
+    private record ActivityEntry(DateTimeOffset Timestamp, string Event, string Details);
+}

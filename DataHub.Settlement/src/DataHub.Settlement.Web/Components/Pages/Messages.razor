@@ -1,0 +1,65 @@
+@page "/messages"
+
+<h1>Messages</h1>
+
+<div class="cards">
+    <div class="card">
+        <div class="label">Total Received</div>
+        <div class="value">@_totalReceived</div>
+    </div>
+    <div class="card">
+        <div class="label">Processed</div>
+        <div class="value">@_processed</div>
+    </div>
+    <div class="card">
+        <div class="label">Dead Letters</div>
+        <div class="value">@_deadLetters</div>
+    </div>
+</div>
+
+@if (_messages.Count == 0)
+{
+    <div class="empty-state">No messages yet. Start the worker to poll DataHub queues.</div>
+}
+else
+{
+    <table>
+        <thead>
+            <tr>
+                <th>Message ID</th>
+                <th>Type</th>
+                <th>Queue</th>
+                <th>Status</th>
+                <th>Received At</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var msg in _messages)
+            {
+                <tr>
+                    <td><code>@msg.MessageId[..12]...</code></td>
+                    <td>@msg.MessageType</td>
+                    <td>@msg.Queue</td>
+                    <td><span class="badge badge-@msg.Status.ToLowerInvariant().Replace("-", "-")">@msg.Status</span></td>
+                    <td>@msg.ReceivedAt.ToString("yyyy-MM-dd HH:mm:ss")</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private int _totalReceived;
+    private int _processed;
+    private int _deadLetters;
+    private List<MessageEntry> _messages = new();
+
+    // TODO: inject repositories and load from datahub.inbound_message + processed_message_id + dead_letter
+
+    private record MessageEntry(
+        string MessageId,
+        string MessageType,
+        string Queue,
+        string Status,
+        DateTimeOffset ReceivedAt);
+}
