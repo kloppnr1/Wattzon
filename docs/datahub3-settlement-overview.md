@@ -66,23 +66,40 @@ Beregningen sker **pr. time** for hele faktureringsperioden (~720 timer/måned):
 kWh (fra DataHub) × pris (fra forskellige kilder) = beløb
 ```
 
-En faktura består af disse lag:
+En faktura består af disse lag — hver med sin egen priskilde:
 
 ```
-┌─────────────────────────────────────────────┐
-│  Energi       kWh × spotpris + vores margin │  ← Selve strømmen
-├─────────────────────────────────────────────┤
-│  Nettarif     kWh × netvirksomhedens sats   │  ← Transport gennem nettet
-├─────────────────────────────────────────────┤
-│  Afgifter     kWh × lovbestemte satser      │  ← Elafgift m.m.
-├─────────────────────────────────────────────┤
-│  Abonnementer faste månedlige gebyrer       │  ← Net + vores eget
-├─────────────────────────────────────────────┤
-│  Moms         25% af alt ovenstående        │
-└─────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────┐
+│  Energi          kWh × (spotpris + vores margin)                    │
+│                  Kilde: Nordpool + kontraktvilkår                   │
+├─────────────────────────────────────────────────────────────────────┤
+│  Nettarif        kWh × netvirksomhedens sats (tidsdifferentieret)  │
+│  Systemtarif     kWh × Energinets systemtarif                      │
+│  Transmissions-  kWh × Energinets transmissionstarif               │
+│  tarif           Kilde: Charges-kø (DataHub)                       │
+├─────────────────────────────────────────────────────────────────────┤
+│  Elafgift        kWh × lovbestemt sats (staten)                    │
+│                  Kilde: Lovgivning (opdateres typisk årligt)       │
+├─────────────────────────────────────────────────────────────────────┤
+│  Abonnementer    faste månedlige gebyrer (net + vores eget)        │
+│                  Kilde: Charges-kø + kontraktvilkår                │
+├─────────────────────────────────────────────────────────────────────┤
+│  Moms            25% af alt ovenstående                            │
+│                  Kilde: Staten                                     │
+└─────────────────────────────────────────────────────────────────────┘
 ```
 
-Hvert lag har sin egen priskilde, men de ganges alle med det **samme forbrug** fra RSM-012.
+### Hvem fastsætter priserne?
+
+| Priskilde | Hvad de bestemmer | Hvordan vi får det |
+|-----------|-------------------|--------------------|
+| **Nordpool** (elbørsen) | Spotpris pr. time | Ekstern markedsdata-feed |
+| **Netvirksomheden** (DDM) | Nettarif (transport i lokalt net) + netabonnement | Charges-kø via DataHub |
+| **Energinet** (TSO) | Systemtarif + transmissionstarif | Charges-kø via DataHub |
+| **Staten** | Elafgift + moms (25%) | Lovgivning — vi vedligeholder satserne manuelt |
+| **Os selv** (Verdo) | Verdo-margin + produkttillæg + eget abonnement | Kontraktvilkår / produktplan |
+
+Alle kWh-baserede priser ganges med det **samme forbrug** fra RSM-012.
 
 ---
 
