@@ -1,6 +1,6 @@
 # Foreslået arkitektur: Afregningssystem til DataHub 3
 
-Overordnet arkitektur for et nyt afregningssystem der opererer som elleverandør (DDQ) i Energinet DataHub 3, med ca. 80.000 kunder.
+Overordnet arkitektur for et open source-afregningssystem der opererer som elleverandør (DDQ) i Energinet DataHub 3. Eksemplerne nedenfor er dimensioneret til ~80.000 kunder.
 
 ## Datavolumen-estimater
 
@@ -210,6 +210,8 @@ Standard relationel database til strukturerede domænedata:
 | DataHub | InboundMessage (log), OutboundRequest, PendingCorrelation |
 | System | DeadLetter, ProcessedMessageId (idempotens) |
 
+→ Detaljer: [Klassediagram](datahub3-class-diagram.md)
+
 ### Præ-aggregeringspipeline
 
 For effektiv håndtering af afregningsforespørgsler over 230M rækker/måned:
@@ -271,6 +273,8 @@ Enkelt indgangspunkt for alle interne og eksterne forbrugere.
 - CPR/CVR-data krypteret at rest (GDPR)
 - Rollebaseret adgangskontrol på API-endpoints
 - Auditlog for alle tilstandsændrende operationer
+
+→ Detaljer: [Autentificering og sikkerhed](datahub3-authentication-security.md)
 
 ### Konfiguration
 

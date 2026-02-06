@@ -12,10 +12,10 @@ Enhanced the customer lifecycle document with:
 2. **Proces-til-fase-mapping table** — 4 columns: BRS/RSM, Fase, Rolle, Faktureringskonsekvens
 
 3. **Fakturaberegning section** — how to build a correct invoice:
-   - Energi: Nordpool spotpris + Verdo-margin = `CalculatedPrice`
+   - Energi: Nordpool spotpris + leverandørmargin = `CalculatedPrice`
    - Nettariffer: time-differentiated grid tariffs from netvirksomhed
    - Produktmargin: per-kWh product plan charges
-   - Faste gebyrer: subscriptions (net + Verdo)
+   - Faste gebyrer: subscriptions (net + leverandør)
    - Afgifter + moms (25%)
    - Verification checklist
 
@@ -23,7 +23,7 @@ Enhanced the customer lifecycle document with:
 
 ### Invoice calculation (from Xellent codebase)
 - `PowerExchangePrice` = raw Nordpool spot price (DKK/kWh)
-- `CalculatedPrice` = spot + Verdo-margin (pre-calculated in billing history)
+- `CalculatedPrice` = spot + leverandørmargin (pre-calculated in billing history)
 - `TimeValue` = kWh consumed in that hour
 - Tariffs: `PriceElementRates` table (Price, Price2..Price24 for hours 1-24)
 - Product margin: `ExuRateTable` based on product type

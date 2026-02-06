@@ -11,13 +11,13 @@ Pilretning: `→` = vi sender til DataHub, `←` = vi modtager fra DataHub.
 ```
 FASE 1: ONBOARDING                                              ~15 hverdage
 ─────────────────────────────────────────────────────────────────────────────
-Trigger:      Kontrakt underskrevet — kunde vælger Verdo som leverandør
+Trigger:      Kontrakt underskrevet — kunde vælger os som leverandør
 DataHub:      → BRS-001 (leverandørskifte) med GSRN + ønsket dato + CPR/CVR
               → BRS-043 (kort varsel) eller → BRS-009 (tilflytning)
               → BRS-015 (indsend kundestamdata)
               → BRS-003 (annullér hvis kunden fortryder)
 Fakturering:  Opret kundepost, vælg produkt-/tarifplan
-              Opsæt faktureringsplan (månedlig/kvartalsvis/årlig)
+              Opsæt faktureringsplan (månedlig/kvartalsvis)
               Beregn aconto-estimat baseret på forventet årsforbrug
                                     │
                                     ▼
@@ -37,7 +37,7 @@ Trigger:      Første faktureringsperiode afsluttet
 DataHub:      ← RSM-012 (løbende timemåledata — dagligt for flex)
               ← RSM-014 (aggregerede data til afstemning)
 Fakturering:  Afregningskørsel pr. time for hele perioden:
-                energi        = kWh × (Nordpool spot + Verdo-margin)
+                energi        = kWh × (Nordpool spot + leverandørmargin)
                 nettarif      = kWh × tarifsats (tidsdiff. dag/nat/spids)
                 produktmargin = kWh × produktsats
                 + abonnement (dagssats) + elafgift (kWh) + moms (25%)
@@ -56,12 +56,12 @@ DataHub:      ← RSM-012 (daglige timemåledata)
 Fakturering:  Periodisk fakturering (månedligt/kvartalsvist)
               Engrosafstemning: egen beregning vs. DataHub (RSM-014/BRS-027)
               Tarifopdateringer ved nye satser fra netvirksomhed
-              Aconto-årsopgørelse: faktisk forbrug vs. betalte estimater
+              Acontoopgørelse: faktisk forbrug vs. acontobetalinger (hvert kvartal)
                                     │
                                     ▼
 FASE 5: OFFBOARDING                                              ~15 hverdage
 ─────────────────────────────────────────────────────────────────────────────
-Trigger:      Kunde opsiger / fraflytter / anden leverandør overtager
+Trigger:      Kunde fraflytter / anden leverandør overtager / manglende betaling
 DataHub:      → BRS-002 (leveranceophør — vi opsiger, scenarie B/D)
               → BRS-010 (fraflytning — scenarie C)
               → BRS-044 (annullér ophør ved fortrydelse)
@@ -124,25 +124,25 @@ SÆRTILFÆLDE (kan forekomme i enhver fase)
 
 En faktura beregnes pr. time (flexafregning) for hele faktureringsperioden. Hver time har sit eget forbrug (kWh fra RSM-012) og sin egen spotpris fra Nordpool.
 
-### Energi (Nordpool spot + Verdo-margin)
+### Energi (Nordpool spot + leverandørmargin)
 
 Energiprisen pr. time sammensættes af to dele:
 
 | Komponent | Kilde | Beskrivelse |
 |-----------|-------|-------------|
 | Nordpool spotpris | Elbørsen via markedsdata | Timepris i DKK/kWh, varierer time for time |
-| Verdo-margin (tillæg) | Produktplan / kontraktvilkår | Fast øre/kWh-tillæg oven på spotprisen |
+| leverandørmargin (tillæg) | Produktplan / kontraktvilkår | Fast øre/kWh-tillæg oven på spotprisen |
 
 ```
-Energi pr. time = kWh × (spotpris + Verdo-margin)
+Energi pr. time = kWh × (spotpris + leverandørmargin)
 ```
 
 I Xellent er dette forudberegnet:
 - `PowerExchangePrice` = ren Nordpool spotpris
-- `CalculatedPrice` = spotpris + Verdo-margin (allerede sammenlagt)
+- `CalculatedPrice` = spotpris + leverandørmargin (allerede sammenlagt)
 - `TimeValue` = kWh forbrugt i timen
 
-Verdo-marginen er den fortjeneste Verdo tager pr. kWh oven på indkøbsprisen fra Nordpool. Størrelsen afhænger af kundens produktplan (f.eks. fast tillæg på X øre/kWh).
+Leverandørmarginen er den fortjeneste leverandøren tager pr. kWh oven på indkøbsprisen fra Nordpool. Størrelsen afhænger af kundens produktplan (f.eks. fast tillæg på X øre/kWh).
 
 ### Nettariffer (transport)
 
@@ -173,7 +173,7 @@ Produktmargin pr. time = kWh × produktsats
 | Gebyr | Kilde | Beregning |
 |-------|-------|-----------|
 | Netabonnement | Netvirksomhed | Fast månedligt beløb, fordelt pr. dag |
-| Eget abonnement (Verdo) | Produktplan | Fast månedligt beløb, fordelt pr. dag |
+| Eget abonnement (leverandør) | Produktplan | Fast månedligt beløb, fordelt pr. dag |
 
 ### Afgifter og moms
 
@@ -186,7 +186,7 @@ Produktmargin pr. time = kWh × produktsats
 
 ```
 For hver time i faktureringsperioden:
-  energi        = kWh × (Nordpool spotpris + Verdo-margin)
+  energi        = kWh × (Nordpool spotpris + leverandørmargin)
   nettarif      = kWh × tarifsats_for_timen
   produktmargin = kWh × produktsats
   elafgift      = kWh × afgiftssats
@@ -201,7 +201,7 @@ Fakturatotal  = sum af alle linjer + moms
 
 1. Hent RSM-012-måledata for perioden (kWh pr. time)
 2. Hent Nordpool-spotpriser for samme timer
-3. Bekræft at `CalculatedPrice ≈ spotpris + aftalt Verdo-margin` for hver time
+3. Bekræft at `CalculatedPrice ≈ spotpris + aftalt leverandørmargin` for hver time
 4. Hent gældende tarifsatser fra netvirksomheden for perioden
 5. Beregn hver komponent pr. time og summér
 6. Sammenlign med engrosopgørelse (RSM-014 / BRS-027) for afstemning
@@ -263,8 +263,8 @@ Fakturatotal  = sum af alle linjer + moms
 2. Registrér leveranceperiodens startdato
 3. Tildel produkt-/tarifplan til målepunktet
 4. Indlæs nettariffer for målepunktets netområde (fra Charges-kø-data)
-5. Opsæt faktureringsplan (månedlig, kvartalsvis eller årlig — jf. kontrakt)
-6. Ved acontofakturering: beregn estimeret månedligt beløb baseret på forventet årsforbrug
+5. Opsæt faktureringsplan (månedlig eller kvartalsvis — jf. kontrakt)
+6. Ved acontofakturering: beregn estimeret kvartalsvist acontobeløb baseret på forventet årsforbrug
 7. Kunden er nu synlig i kundeportalen
 
 ### Nøgledata modtaget ved aktivering
@@ -327,7 +327,7 @@ For et **profilafregnet** målepunkt:
 
 | Model | Beskrivelse | Afstemning |
 |-------|-------------|------------|
-| **Aconto** | Kunden betaler fast månedligt estimat. Årsopgørelse afstemmer mod faktisk forbrug. | Én gang årligt (eller ved offboarding) |
+| **Aconto** | Kunden betaler fast kvartalsvist estimat. Acontoopgørelse afstemmer mod faktisk forbrug. | Hvert kvartal (ved faktureringsperiode-slut) |
 | **Faktisk** | Kunden betaler baseret på faktisk målt forbrug hver periode. | Hver faktura er endelig (ingen afstemning nødvendig) |
 
 ### Interne trin
@@ -358,7 +358,7 @@ Kunden er aktiv. Følgende sker løbende:
 |----------|----------|---------|---------|
 | Fakturagenerering | Månedligt / kvartalsvist | — | Afregningskørsel → faktura → send til kunde |
 | Engrosopgørelsesafstemning | Månedligt ⚠ VERIFICÉR | RSM-014 (BRS-027) | Sammenlign egen afregning med DataHub-aggregering |
-| Aconto-årsopgørelse | Årligt (ved aconto) | — | Beregn faktisk vs. estimeret, udsted kredit-/debitnota |
+| Acontoopgørelse | Kvartalsvist (ved aconto) | — | Beregn faktisk vs. acontobetalinger, net på kvartalsfaktura |
 | Produkt-/prisændringer | Jf. kontrakt | — | Opdatér produktsatser, underret kunde |
 | Nettarifændringer | Typisk årligt | Charges-kø | Opdatér satstabeller, genberegn fremtidige estimater |
 | Skift af balanceansvarlig | Sjældent | BRS-006-notifikation | Opdatér porteføljeregistre |
@@ -454,13 +454,14 @@ Uanset offboarding-årsag er afslutningsprocessen den samme:
 2. Kør afregning for den delvise faktureringsperiode (periodens start → leverancens slutdato)
 3. Beregn alle komponenter: energi, nettarif, abonnementer (forholdsmæssigt), afgifter
 
-### For acontokunder: årsopgørelse
+### For acontokunder: slutopgørelse
 
-1. Beregn samlet faktisk forbrug for hele leveranceperioden (eller siden sidste årsopgørelse)
-2. Sammenlign med samlede acontobetalinger modtaget
-3. Generér afstemningsopgørelse:
+1. Beregn faktisk forbrug fra kvartalets start til leverancens slutdato (delvis periode)
+2. Sammenlign med acontobetalinger modtaget for denne periode
+3. Generér slutfaktura med afstemning:
    - Hvis kunden har betalt for meget → kreditnota / tilbagebetaling
    - Hvis kunden har betalt for lidt → slutfaktura med restbeløb
+4. Frist: inden 4 uger efter leverancens ophør (jf. elleveringsbekendtgørelsen)
 
 ### Slutfaktura
 
