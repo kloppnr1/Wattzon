@@ -71,6 +71,21 @@ Once `docker compose up -d` is running and the worker is started, open **http://
 | CI/CD | GitHub Actions |
 | Containerization | Docker Compose |
 
+## Database
+
+21 tables across 6 schemas, managed by [DbUp](https://dbup.readthedocs.io/) migrations that run automatically at Worker startup.
+
+| Schema | Tables |
+|--------|--------|
+| `portfolio` | `grid_area`, `customer`, `metering_point`, `product`, `supply_period`, `contract` |
+| `metering` | `metering_data` (TimescaleDB hypertable), `spot_price` |
+| `tariff` | `grid_tariff`, `tariff_rate`, `subscription`, `electricity_tax` |
+| `settlement` | `billing_period`, `settlement_run`, `settlement_line` |
+| `datahub` | `inbound_message`, `processed_message_id`, `dead_letter`, `outbound_request` |
+| `lifecycle` | `process_request`, `process_event` |
+
+`metering_data` is a TimescaleDB hypertable with monthly partitioning, automatic compression after 3 months, and 5-year retention. SQL migration files live in `src/DataHub.Settlement.Infrastructure/Migrations/`.
+
 ## Documentation
 
 All documentation is in the `docs/` folder (written in Danish):
