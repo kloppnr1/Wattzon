@@ -1,207 +1,208 @@
-# Afregning og DataHub: Overblik for udviklere
+# Settlement and DataHub: Developer Overview
 
-## Hvad handler projektet om?
+## What is this project about?
 
-Vi er en elleverandør (DDQ). Vi skal bygge et open source-system der:
+We are an electricity supplier (DDQ, "elleverandør"). We are building an open source system that:
 
-1. **Modtager data** fra Energinets centrale datahub (DataHub 3)
-2. **Beregner fakturaer** ud fra forbrug, markedspriser og tariffer
-3. **Afstemmer** vores beregninger mod DataHubs kontroltal
+1. **Receives data** from Energinet's central data hub (DataHub 3)
+2. **Calculates invoices** based on consumption, market prices, and tariffs
+3. **Reconciles** our calculations against DataHub's control figures
 
-Alt foregår via en REST API med JSON-køer, sikret med OAuth2.
+Everything happens via a REST API with JSON queues, secured with OAuth2.
 
 ---
 
-## Aktørerne
+## The Actors
 
 ```
 ┌──────────────┐     ┌──────────────┐     ┌──────────────┐     ┌──────────┐
-│ Netvirksomhed│     │   DataHub    │     │  Leverandør  │     │  Kunde   │
-│ (måler strøm)│────→│ (central hub)│────→│ (os/systemet)│────→│          │
+│ Grid company │     │   DataHub    │     │  Supplier    │     │ Customer │
+│ (reads meter)│────→│ (central hub)│────→│ (us/system)  │────→│          │
 └──────────────┘     └──────────────┘     └──────────────┘     └──────────┘
-  Aflæser målere       Validerer og         Beregner og          Modtager
-  Leverer tariffer     videresender         fakturerer           faktura
+  Reads meters        Validates and        Calculates and       Receives
+  Provides tariffs    forwards             invoices             invoice
 ```
 
-- **Netvirksomheden** ejer elnettet og aflæser målerne. Vi styrer dem ikke.
-- **DataHub** er Energinets centrale platform. Al markedskommunikation går igennem den.
-- **Leverandøren (os)** modtager data og fakturerer kunden.
-- Vi kommunikerer **aldrig direkte** med netvirksomheden — DataHub er altid mellemmand.
+- **The grid company (netvirksomheden)** owns the power grid and reads the meters. We do not control them.
+- **DataHub** is Energinet's central platform. All market communication goes through it.
+- **The supplier (us, leverandøren)** receives data and invoices the customer.
+- We **never communicate directly** with the grid company — DataHub is always the intermediary.
 
 ---
 
-## De tre datastrømme vi bygger systemet omkring
+## The Three Data Streams We Build the System Around
 
 ```mermaid
 flowchart LR
     DH[DataHub]
 
-    DH -->|"① Måledata (dagligt)"| MD["RSM-012\nkWh pr. time pr. kunde"]
-    DH -->|"② Tariffer (periodisk)"| T["Charges\nNettarifsatser"]
-    DH -->|"③ Kontroltal (månedligt)"| K["RSM-014\nAggregeret engrosopgørelse"]
+    DH -->|"① Metering data (daily)"| MD["RSM-012\nkWh per hour per customer"]
+    DH -->|"② Tariffs (periodic)"| T["Charges\nGrid tariff rates"]
+    DH -->|"③ Control figures (monthly)"| K["RSM-014\nAggregated wholesale settlement"]
 
-    MD --> Afregning
-    T --> Afregning
-    Afregning -->|Faktura| Kunde
-    K -->|Afstemning| Afregning
+    MD --> Settlement
+    T --> Settlement
+    Settlement -->|Invoice| Customer
+    K -->|Reconciliation| Settlement
 ```
 
-| # | Hvad | Frekvens | Indhold |
-|---|------|----------|---------|
-| ① | **Måledata** (RSM-012) | Dagligt | kWh pr. time for hvert målepunkt |
-| ② | **Tariffer** (Charges-kø) | Typisk årligt | Netvirksomhedens priser for transport af strøm |
-| ③ | **Kontroltal** (RSM-014) | Månedligt | DataHubs egen opgørelse — vi afstemmer mod denne |
+| # | What | Frequency | Content |
+|---|------|-----------|---------|
+| ① | **Metering data** (RSM-012) | Daily | kWh per hour for each metering point |
+| ② | **Tariffs** (Charges queue) | Typically annually | Grid company prices for electricity transport |
+| ③ | **Control figures** (RSM-014) | Monthly | DataHub's own settlement — we reconcile against this |
 
-Derudover henter vi **Nordpool-spotpriser** (timepris for strøm fra elbørsen) fra en ekstern markedsdata-feed.
+In addition, we fetch **Nordpool spot prices** (hourly electricity price from the power exchange) from an external market data feed.
 
 ---
 
-## Hvad afregning faktisk er
+## What Settlement Actually Is
 
-Afregning = beregn hvad kunden skylder for sin strøm i en periode.
+Settlement (afregning) = calculate what the customer owes for their electricity in a period.
 
-Beregningen sker **pr. time** for hele faktureringsperioden (~720 timer/måned):
+The calculation happens **per hour** for the entire billing period (~720 hours/month):
 
 ```
-kWh (fra DataHub) × pris (fra forskellige kilder) = beløb
+kWh (from DataHub) × price (from various sources) = amount
 ```
 
-En faktura består af disse lag — hver med sin egen priskilde:
+An invoice consists of these layers — each with its own price source:
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│  Energi          kWh × (spotpris + vores margin)                    │
-│                  Kilde: Nordpool + kontraktvilkår                   │
+│  Energy          kWh × (spot price + our margin)                    │
+│                  Source: Nordpool + contract terms                   │
 ├─────────────────────────────────────────────────────────────────────┤
-│  Nettarif        kWh × netvirksomhedens sats (tidsdifferentieret)  │
-│  Systemtarif     kWh × Energinets systemtarif                      │
-│  Transmissions-  kWh × Energinets transmissionstarif               │
-│  tarif           Kilde: Charges-kø (DataHub)                       │
+│  Grid tariff     kWh × grid company rate (time-differentiated)      │
+│  (nettarif)                                                         │
+│  System tariff   kWh × Energinet system tariff (systemtarif)        │
+│  Transmission    kWh × Energinet transmission tariff                │
+│  tariff          Source: Charges queue (DataHub)                     │
 ├─────────────────────────────────────────────────────────────────────┤
-│  Elafgift        kWh × lovbestemt sats (staten)                    │
-│                  Kilde: Lovgivning (opdateres typisk årligt)       │
+│  Electricity tax kWh × statutory rate (state)                       │
+│  (elafgift)      Source: Legislation (typically updated annually)    │
 ├─────────────────────────────────────────────────────────────────────┤
-│  Abonnementer    faste månedlige gebyrer (net + vores eget)        │
-│                  Kilde: Charges-kø + kontraktvilkår                │
+│  Subscriptions   fixed monthly fees (grid + our own)                │
+│                  Source: Charges queue + contract terms              │
 ├─────────────────────────────────────────────────────────────────────┤
-│  Moms            25% af alt ovenstående                            │
-│                  Kilde: Staten                                     │
+│  VAT (moms)      25% of all the above                               │
+│                  Source: The state                                   │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
-### Hvem fastsætter priserne?
+### Who Sets the Prices?
 
-| Priskilde | Hvad de bestemmer | Hvordan vi får det |
+| Price source | What they determine | How we obtain it |
 |-----------|-------------------|--------------------|
-| **Nordpool** (elbørsen) | Spotpris pr. time | Ekstern markedsdata-feed |
-| **Netvirksomheden** (DDM) | Nettarif (transport i lokalt net) + netabonnement | Charges-kø via DataHub |
-| **Energinet** (TSO) | Systemtarif + transmissionstarif | Charges-kø via DataHub |
-| **Staten** | Elafgift + moms (25%) | Lovgivning — vi vedligeholder satserne manuelt |
-| **Os selv** (leverandøren) | Leverandørmargin + produkttillæg + eget abonnement | Kontraktvilkår / produktplan |
+| **Nordpool** (power exchange) | Spot price per hour | External market data feed |
+| **Grid company** (DDM) | Grid tariff (transport in local grid) + grid subscription | Charges queue via DataHub |
+| **Energinet** (TSO) | System tariff (systemtarif) + transmission tariff (transmissionstarif) | Charges queue via DataHub |
+| **The state** | Electricity tax (elafgift) + VAT (25%) | Legislation — we maintain the rates manually |
+| **Us** (the supplier) | Supplier margin + product surcharge + own subscription | Contract terms / product plan |
 
-Alle kWh-baserede priser ganges med det **samme forbrug** fra RSM-012.
+All kWh-based prices are multiplied by the **same consumption** from RSM-012.
 
 ---
 
-## Systemets livscyklus — hvad sker hvornår
+## System Lifecycle — What Happens When
 
 ```mermaid
 sequenceDiagram
     autonumber
-    participant Net as Netvirksomhed
+    participant Net as Grid company
     participant DH as DataHub
-    participant V as Vores system
-    participant K as Kunde
+    participant V as Our system
+    participant K as Customer
 
     rect rgb(230, 245, 255)
-        Note over Net,V: DAGLIGT
-        Net->>DH: Måleraflæsninger (BRS-021)
-        DH->>V: RSM-012: kWh pr. time
-        V->>V: Gem i tidsserie-DB
-        V->>DH: Kvittér (dequeue)
+        Note over Net,V: DAILY
+        Net->>DH: Meter readings (BRS-021)
+        DH->>V: RSM-012: kWh per hour
+        V->>V: Store in time-series DB
+        V->>DH: Acknowledge (dequeue)
     end
 
     rect rgb(230, 255, 230)
-        Note over DH,K: MÅNEDLIGT — fakturering
-        V->>V: Afregningskørsel:<br/>forbrug × priser for alle timer
-        V->>K: Faktura
+        Note over DH,K: MONTHLY — billing
+        V->>V: Settlement run:<br/>consumption × prices for all hours
+        V->>K: Invoice
     end
 
     rect rgb(255, 245, 230)
-        Note over DH,V: MÅNEDLIGT — afstemning
-        DH->>V: RSM-014: Aggregeret engrosopgørelse
-        V->>V: Sammenlign med egen beregning
-        alt Afvigelse
-            V->>V: Undersøg og korriger
+        Note over DH,V: MONTHLY — reconciliation
+        DH->>V: RSM-014: Aggregated wholesale settlement
+        V->>V: Compare with own calculation
+        alt Discrepancy
+            V->>V: Investigate and correct
         end
     end
 ```
 
 ---
 
-## Korrektioner — den vigtigste edge case
+## Corrections — The Most Important Edge Case
 
-Netvirksomheden kan indsende **rettede målinger** for en allerede faktureret periode. Der er **ingen eksplicit markering** — systemet skal selv sammenligne med gemte data og beregne differencen.
+The grid company can submit **corrected meter readings** for an already invoiced period. There is **no explicit flag** — the system must compare with stored data on its own and calculate the difference.
 
-→ Detaljer: [Særtilfælde og fejlhåndtering](datahub3-edge-cases.md#1-korrektioner-af-måledata) (detektionslogik, formler, årsager)
+> Details: [Edge cases and error handling](datahub3-edge-cases.md#1-korrektioner-af-måledata) (detection logic, formulas, causes)
 
 ---
 
-## Kundens livscyklus (kort)
+## Customer Lifecycle (Brief)
 
-Afregning er kun én del af systemet. Vi skal også håndtere kundens fulde livscyklus via DataHub:
+Settlement is only one part of the system. We also need to handle the customer's full lifecycle via DataHub:
 
-| Fase | Hvad sker | Nøgleproces |
+| Phase | What happens | Key process |
 |------|-----------|-------------|
-| **Onboarding** | Kunde vælger os som leverandør | BRS-001 (leverandørskifte) |
-| **Aktivering** | Vi modtager stamdata + første måledata | RSM-007 + RSM-012 |
-| **Drift** | Daglig datamodtagelse, månedlig fakturering | RSM-012 + afregning |
-| **Offboarding** | Kunde skifter leverandør eller fraflytter | BRS-002 / BRS-010 |
-| **Afslutning** | Slutafregning + acontoopgørelse | Slutfaktura |
+| **Onboarding** | Customer chooses us as supplier | BRS-001 (supplier switch / leverandørskifte) |
+| **Activation** | We receive master data + first metering data | RSM-007 + RSM-012 |
+| **Operation** | Daily data reception, monthly billing | RSM-012 + settlement |
+| **Offboarding** | Customer switches supplier or moves out | BRS-002 / BRS-010 |
+| **Termination** | Final settlement + aconto settlement (acontoopgørelse) | Final invoice |
 
-→ Detaljer: [Kundelivscyklus](datahub3-customer-lifecycle.md)
+> Details: [Customer lifecycle](datahub3-customer-lifecycle.md)
 
 ---
 
-## Teknisk integration med DataHub
+## Technical Integration with DataHub
 
-DataHub eksponerer en REST API med **kø-baseret kommunikation**:
+DataHub exposes a REST API with **queue-based communication**:
 
 ```
-Vi poller → DataHub returnerer næste besked → vi kvitterer
+We poll → DataHub returns next message → we acknowledge
 
-GET  /v1.0/cim/Timeseries     → peek (hent næste besked)
-DELETE /v1.0/cim/dequeue/{id}  → acknowledge (fjern fra kø)
-POST /v1.0/cim/{process}      → send anmodning (f.eks. leverandørskifte)
+GET  /v1.0/cim/Timeseries     → peek (fetch next message)
+DELETE /v1.0/cim/dequeue/{id}  → acknowledge (remove from queue)
+POST /v1.0/cim/{process}      → send request (e.g. supplier switch)
 ```
 
-Fire køer med forskellige meddelelsestyper:
+Four queues with different message types:
 
-| Kø | Indhold | Vi bruger det til |
+| Queue | Content | We use it for |
 |----|---------|-------------------|
-| **Timeseries** | Måledata (RSM-012) + aggregeringer (RSM-014) | Afregning + afstemning |
-| **Charges** | Tarifsatser fra netvirksomhed | Opdatering af pristabeller |
-| **MasterData** | Stamdata for målepunkter (RSM-007) | Porteføljestyring |
-| **Aggregations** | Aggregerede engrosdata (RSM-014) | Engrosopgørelse |
+| **Timeseries** | Metering data (RSM-012) + aggregations (RSM-014) | Settlement + reconciliation |
+| **Charges** | Tariff rates from grid company | Updating price tables |
+| **MasterData** | Master data for metering points (RSM-007) | Portfolio management |
+| **Aggregations** | Aggregated wholesale data (RSM-014) | Wholesale settlement (engrosopgørelse) |
 
-Autentificering: OAuth2 Client Credentials (Azure AD). Token udløber efter 1 time.
+Authentication: OAuth2 Client Credentials (Azure AD). Token expires after 1 hour.
 
 ---
 
-## Scope: Hvad skal vi bygge?
+## Scope: What Do We Need to Build?
 
 ```
 ┌──────────────────────────────────────────────────────────┐
-│                    Vores system                          │
+│                    Our system                             │
 │                                                          │
 │  ┌─────────────────┐  ┌───────────────┐  ┌────────────┐ │
-│  │ DataHub         │  │ Afregnings-   │  │ Kunde- &   │ │
-│  │ Integration     │  │ motor         │  │ Portefølje │ │
+│  │ DataHub         │  │ Settlement    │  │ Customer & │ │
+│  │ Integration     │  │ Engine        │  │ Portfolio  │ │
 │  │                 │  │               │  │            │ │
-│  │ • Kø-polling    │  │ • Beregning   │  │ • Stamdata │ │
-│  │ • OAuth2        │  │ • Fakturering │  │ • Skifte   │ │
-│  │ • CIM-parsing   │  │ • Korrektion  │  │ • On/off   │ │
-│  │ • Idempotens    │  │ • Afstemning  │  │ • Tilstand │ │
+│  │ • Queue polling │  │ • Calculation │  │ • Master   │ │
+│  │ • OAuth2        │  │ • Invoicing   │  │   data     │ │
+│  │ • CIM parsing   │  │ • Correction  │  │ • Switch   │ │
+│  │ • Idempotency   │  │ • Reconcil.   │  │ • On/off   │ │
 │  └────────┬────────┘  └───────┬───────┘  └─────┬──────┘ │
 │           └───────────────────┼──────────────────┘       │
 │                               │                          │
@@ -212,46 +213,46 @@ Autentificering: OAuth2 Client Credentials (Azure AD). Token udløber efter 1 ti
 └──────────────────────────────────────────────────────────┘
          │                                        │
          ▼                                        ▼
-   DataHub 3 API                          Backoffice / ERP
+   DataHub 3 API                          Back office / ERP
 ```
 
-Tre kerneservices:
+Three core services:
 
-1. **DataHub Integration** — henter og sender data, håndterer auth og køer
-2. **Afregningsmotor** — beregner hvad kunderne skylder, håndterer korrektioner
-3. **Kunde- & Porteføljeservice** — styrer målepunkter, leveranceperioder, livscyklus
+1. **DataHub Integration** — fetches and sends data, handles auth and queues
+2. **Settlement Engine** (afregningsmotor) — calculates what customers owe, handles corrections
+3. **Customer & Portfolio Service** — manages metering points, supply periods, lifecycle
 
-→ Detaljer: [Foreslået arkitektur](datahub3-proposed-architecture.md)
+> Details: [Proposed architecture](datahub3-proposed-architecture.md)
 
 ---
 
-## Nøglebegreber
+## Key Concepts
 
-| Begreb | Forklaring |
+| Concept | Explanation |
 |--------|------------|
-| **DataHub** | Energinets centrale platform — al kommunikation går igennem den |
-| **DDQ** | Elleverandør (os) |
-| **GSRN** | 18-cifret ID for et målepunkt (en måler) |
-| **RSM-012** | Besked med kWh-forbrugsdata pr. time |
-| **RSM-014** | Besked med aggregerede data (til afstemning) |
-| **BRS-001** | Leverandørskifte-proces |
-| **Spotpris** | Nordpool-børsens timepris for strøm |
-| **Nettarif** | Netvirksomhedens gebyr for transport |
-| **Flex-afregning** | Afregning på faktisk timeforbrug (de fleste kunder) |
-| **Aconto** | Kunden betaler fast estimat, afstemmes ved hver faktureringsperiode |
+| **DataHub** | Energinet's central platform — all communication goes through it |
+| **DDQ** | Electricity supplier (us) |
+| **GSRN** | 18-digit ID for a metering point (a meter) |
+| **RSM-012** | Message with kWh consumption data per hour |
+| **RSM-014** | Message with aggregated data (for reconciliation) |
+| **BRS-001** | Supplier switch process (leverandørskifte) |
+| **Spot price** | Nordpool exchange hourly price for electricity |
+| **Grid tariff (nettarif)** | Grid company fee for transport |
+| **Flex settlement** | Settlement based on actual hourly consumption (most customers) |
+| **Aconto** | Customer pays a fixed estimate; settled at each billing period (faktureringsperiode) |
 
 ---
 
-## Videre læsning
+## Further Reading
 
-| Dokument | Hvad det dækker |
+| Document | What it covers |
 |----------|-----------------|
-| [Kundelivscyklus](datahub3-customer-lifecycle.md) | Detaljeret gennemgang af alle 6 faser |
-| [Sekvensdiagrammer](datahub3-sequence-diagrams.md) | Mermaid-diagrammer for hvert BRS/RSM-flow |
-| [Forretningsprocesser](datahub3-ddq-business-processes.md) | Reference for alle BRS/RSM-processer |
-| [RSM-012 reference](rsm-012-datahub3-measure-data.md) | Teknisk detalje om måledata-formatet |
-| [Systemarkitektur](datahub3-proposed-architecture.md) | Teknologivalg, datamodel, driftsomkostninger |
-| [Autentificering og sikkerhed](datahub3-authentication-security.md) | OAuth2, credentials, GDPR, auditlog |
-| [Klassediagram](datahub3-class-diagram.md) | Domænemodel med entiteter og relationer |
-| [Databasemodel](datahub3-database-model.md) | PostgreSQL/TimescaleDB-skema med DDL |
-| [Særtilfælde og fejlhåndtering](datahub3-edge-cases.md) | Korrektioner, annulleringer, afstemningsafvigelser, systemfejl |
+| [Customer lifecycle](datahub3-customer-lifecycle.md) | Detailed walkthrough of all 6 phases |
+| [Sequence diagrams](datahub3-sequence-diagrams.md) | Mermaid diagrams for each BRS/RSM flow |
+| [Business processes](datahub3-ddq-business-processes.md) | Reference for all BRS/RSM processes |
+| [RSM-012 reference](rsm-012-datahub3-measure-data.md) | Technical detail on metering data format |
+| [System architecture](datahub3-proposed-architecture.md) | Technology choices, data model, operating costs |
+| [Authentication and security](datahub3-authentication-security.md) | OAuth2, credentials, GDPR, audit log |
+| [Class diagram](datahub3-class-diagram.md) | Domain model with entities and relations |
+| [Database model](datahub3-database-model.md) | PostgreSQL/TimescaleDB schema with DDL |
+| [Edge cases and error handling](datahub3-edge-cases.md) | Corrections, cancellations, reconciliation discrepancies, system errors |

@@ -1,10 +1,10 @@
-# DataHub 3: Autentificering og sikkerhed
+# DataHub 3: Authentication and Security
 
-Denne guide dækker alt hvad der kræves for at autentificere mod DataHub 3 B2B API'et og overholde sikkerhedskravene som markedsaktør.
+This guide covers everything required to authenticate against the DataHub 3 B2B API and comply with the security requirements as a market participant (markedsaktør).
 
 ---
 
-## Overblik
+## Overview
 
 ```
 ┌──────────────────┐    OAuth2 token    ┌──────────────┐    B2B API     ┌──────────┐
@@ -16,10 +16,10 @@ Denne guide dækker alt hvad der kræves for at autentificere mod DataHub 3 B2B 
 └──────────────────┘                                                  └──────────┘
 ```
 
-Al kommunikation med DataHub 3 kræver:
-1. **OAuth2 access token** fra Azure AD (Client Credentials Grant)
-2. **HTTPS** — al trafik er krypteret i transit
-3. **Aktør-identifikation** — GLN-nummer identificerer hvem vi er
+All communication with DataHub 3 requires:
+1. **OAuth2 access token** from Azure AD (Client Credentials Grant)
+2. **HTTPS** — all traffic is encrypted in transit
+3. **Actor identification** (aktør-identifikation) — GLN number identifies who we are
 
 ---
 
@@ -27,7 +27,7 @@ Al kommunikation med DataHub 3 kræver:
 
 ### Flow
 
-DataHub 3 bruger **OAuth 2.0 Client Credentials Grant**. Der er ingen brugerlogin — systemet autentificerer sig selv med et client ID og en client secret.
+DataHub 3 uses **OAuth 2.0 Client Credentials Grant**. There is no user login — the system authenticates itself with a client ID and a client secret.
 
 ```mermaid
 sequenceDiagram
@@ -47,7 +47,7 @@ sequenceDiagram
     Note over Sys,AAD: Token udløber → hent nyt
 ```
 
-### Token-anmodning
+### Token Request (token-anmodning)
 
 ```http
 POST https://login.microsoftonline.com/{tenant-id}/oauth2/v2.0/token
@@ -59,7 +59,7 @@ grant_type=client_credentials
 &scope={scope}/.default
 ```
 
-**Svar:**
+**Response:**
 ```json
 {
   "access_token": "eyJ0eXAiOiJKV1Q...",
@@ -68,46 +68,46 @@ grant_type=client_credentials
 }
 ```
 
-- `expires_in: 3599` = token er gyldigt i ~1 time
-- `scope` angives med `/.default` suffix — den præcise scope-værdi fås fra aktørportalen
+- `expires_in: 3599` = token is valid for ~1 hour
+- `scope` is specified with a `/.default` suffix — the exact scope value is obtained from the actor portal (aktørportalen)
 
-### Miljøspecifikke parametre
+### Environment-Specific Parameters (miljøspecifikke parametre)
 
-| Miljø | Tenant ID | API-host |
-|-------|-----------|----------|
-| **Aktørtest** | `5a396c36-d56e-4db4-880b-c7894f2d9966` | `api.itlev.datahub.dk` |
+| Environment | Tenant ID | API Host |
+|-------------|-----------|----------|
+| **Actor Test** (Aktørtest) | `5a396c36-d56e-4db4-880b-c7894f2d9966` | `api.itlev.datahub.dk` |
 | **Preprod** | `20e7a6b4-86e0-4e7a-a34d-6dc5a75d1982` | `preprod.b2b.datahub3.dk` |
-| **Produktion** | `4b8c3f88-6cca-480c-af02-b2d2f220913f` | `b2b.datahub3.dk` |
+| **Production** (Produktion) | `4b8c3f88-6cca-480c-af02-b2d2f220913f` | `b2b.datahub3.dk` |
 
-Hvert miljø har **separate credentials** — client ID og secret fra ét miljø virker ikke i et andet.
+Each environment has **separate credentials** — a client ID and secret from one environment will not work in another.
 
 ---
 
-## Credential-administration
+## Credential Management (credential-administration)
 
-### Oprettelse
+### Creation (oprettelse)
 
-Credentials oprettes i **DataHub aktørportalen** under fanen "B2B adgang":
+Credentials are created in the **DataHub actor portal** (aktørportalen) under the "B2B adgang" tab:
 
-1. Log ind på aktørportalen med MitID (person med fuldmagt til aktøren)
-2. Vælg den aktør (GLN) du vil oprette credentials for
-3. Gå til "B2B adgang" → opret ny client
-4. Systemet genererer `client_id` og `client_secret`
-5. **Gem secret med det samme** — den kan ikke hentes igen bagefter
+1. Log in to the actor portal with MitID (a person authorized to act on behalf of the actor)
+2. Select the actor (GLN) you want to create credentials for
+3. Go to "B2B adgang" and create a new client
+4. The system generates a `client_id` and `client_secret`
+5. **Save the secret immediately** — it cannot be retrieved later
 
-### Levetid og rotation
+### Lifetime and Rotation (levetid og rotation)
 
-| Egenskab | Værdi |
+| Property | Value |
 |----------|-------|
-| Client secret levetid | **12 måneder** fra oprettelse |
-| Antal aktive secrets | Op til 2 samtidige (muliggør rotation uden nedetid) |
-| Påmindelse | Aktørportalen sender e-mail inden udløb |
+| Client secret lifetime | **12 months** from creation |
+| Number of active secrets | Up to 2 simultaneously (enables rotation without downtime) |
+| Reminder | The actor portal sends an email before expiry |
 
-**Rotationsstrategi:**
-1. Opret ny secret (secret B) mens den gamle (secret A) stadig er gyldig
-2. Opdatér systemets konfiguration til at bruge secret B
-3. Verificér at systemet autentificerer korrekt med secret B
-4. Slet secret A i aktørportalen
+**Rotation strategy:**
+1. Create a new secret (secret B) while the old one (secret A) is still valid
+2. Update the system configuration to use secret B
+3. Verify that the system authenticates correctly with secret B
+4. Delete secret A in the actor portal
 
 ```
 Tid ──────────────────────────────────────────────→
@@ -118,9 +118,9 @@ Secret B:                    █████████████████
                     Skift her (overlap-periode)
 ```
 
-### Konfiguration i systemet
+### Configuration in the System (konfiguration i systemet)
 
-Credentials skal **aldrig** hardcodes i kildekoden. Anbefalet tilgang:
+Credentials must **never** be hardcoded in the source code. Recommended approach:
 
 ```
 ┌─────────────────────────────────────────────────┐
@@ -147,15 +147,15 @@ Credentials skal **aldrig** hardcodes i kildekoden. Anbefalet tilgang:
 
 ---
 
-## Token-håndtering i praksis
+## Token Handling in Practice (token-håndtering i praksis)
 
-### Caching og proaktiv fornyelse
+### Caching and Proactive Renewal
 
-Man skal **ikke** hente nyt token til hver API-kald. I stedet:
+You should **not** fetch a new token for every API call. Instead:
 
-1. **Cache** det aktive token i hukommelsen
-2. **Forny proaktivt** inden det udløber (f.eks. med 5 minutters margin)
-3. **Håndtér 401** som fallback — hvis DataHub returnerer 401, hent nyt token og genforsøg
+1. **Cache** the active token in memory
+2. **Renew proactively** before it expires (e.g., with a 5-minute margin)
+3. **Handle 401** as a fallback — if DataHub returns 401, fetch a new token and retry
 
 ```
 Token-livscyklus:
@@ -167,110 +167,110 @@ Token-livscyklus:
                                                     (t=55 min)
 ```
 
-**Implementeringsanbefaling (.NET):**
+**Implementation recommendation (.NET):**
 
-Brug en `DelegatingHandler` i `HttpClientFactory` der automatisk indsætter Bearer token og fornyer det:
+Use a `DelegatingHandler` in `HttpClientFactory` that automatically inserts the Bearer token and renews it:
 
 ```
 HttpClient-pipeline:
   Request → [TokenHandler: indsæt/forny Bearer] → [RetryHandler] → DataHub API
 ```
 
-### Fejlscenarier
+### Error Scenarios (fejlscenarier)
 
-| HTTP-kode | Betydning | Handling |
-|-----------|-----------|---------|
-| **401 Unauthorized** | Token udløbet eller ugyldigt | Hent nyt token, genforsøg |
-| **403 Forbidden** | Forkert aktør-rolle eller manglende rettighed | Tjek credentials og GLN i aktørportalen |
-| **429 Too Many Requests** | Rate limit overskredet | Vent og genforsøg med backoff |
-| **5xx** | DataHub-serverfejl | Genforsøg med eksponentiel backoff |
+| HTTP Code | Meaning | Action |
+|-----------|---------|--------|
+| **401 Unauthorized** | Token expired or invalid | Fetch new token, retry |
+| **403 Forbidden** | Incorrect actor role or missing permission | Check credentials and GLN in the actor portal |
+| **429 Too Many Requests** | Rate limit exceeded | Wait and retry with backoff |
+| **5xx** | DataHub server error | Retry with exponential backoff |
 
 ---
 
-## Autorisationsmodel
+## Authorization Model (autorisationsmodel)
 
-### Aktør-identitet
+### Actor Identity (aktør-identitet)
 
-DataHub identificerer aktører via **GLN** (Global Location Number, 13 cifre). Aktørens markedsrolle bestemmer hvilke data der er tilgængelige:
+DataHub identifies actors via **GLN** (Global Location Number, 13 digits). The actor's market role determines which data is accessible:
 
-| Markedsrolle | Kode | Adgang |
-|-------------|------|--------|
-| **Elleverandør** | DDQ | Måledata + stamdata for egne målepunkter |
-| **Netvirksomhed** | DDM | Måledata + stamdata for eget netområde |
-| **Måledataansvarlig** | MDR | Indrapportering af måledata |
-| **Balanceansvarlig** | DDK | Aggregerede data for egen balance |
+| Market Role (markedsrolle) | Code | Access |
+|----------------------------|------|--------|
+| **Electricity supplier** (Elleverandør) | DDQ | Metering data + master data for own metering points |
+| **Grid company** (Netvirksomhed) | DDM | Metering data + master data for own grid area |
+| **Metered data responsible** (Måledataansvarlig) | MDR | Submission of metering data |
+| **Balance responsible party** (Balanceansvarlig) | DDK | Aggregated data for own balance |
 
-Som elleverandør (DDQ) kan vi kun:
-- **Læse** måledata (RSM-012) for målepunkter hvor vi er aktiv leverandør
-- **Læse** stamdata (RSM-007) for egne målepunkter
-- **Sende** leverandørskifte-anmodninger (BRS-001) og ophør (BRS-002)
-- **Læse** aggregerede engrosdata (RSM-014) for egne netområder
+As an electricity supplier (DDQ) we can only:
+- **Read** metering data (RSM-012) for metering points where we are the active supplier
+- **Read** master data (RSM-007) for our own metering points
+- **Send** supplier switch requests (BRS-001) and terminations (BRS-002)
+- **Read** aggregated wholesale data (RSM-014) for our own grid areas
 
-Vi kan **ikke** tilgå data for målepunkter der tilhører andre leverandører.
+We **cannot** access data for metering points belonging to other suppliers.
 
 ### Delegation
 
-En IT-leverandør kan godkendes til at kommunikere med DataHub **på vegne af** en eller flere aktører:
+An IT vendor can be authorized to communicate with DataHub **on behalf of** one or more actors:
 
-1. Aktøren (f.eks. en elleverandør) logger ind på aktørportalen
-2. Under "B2B adgang" oprettes en delegation til IT-leverandørens CVR
-3. IT-leverandøren får egne credentials der giver adgang til aktørens data
-4. Delegationen kan tilbagekaldes når som helst
+1. The actor (e.g., an electricity supplier) logs in to the actor portal
+2. Under "B2B adgang" a delegation is created for the IT vendor's CVR number
+3. The IT vendor receives their own credentials granting access to the actor's data
+4. The delegation can be revoked at any time
 
-Dette gør det muligt for ét system at håndtere flere aktørers DataHub-kommunikation.
-
----
-
-## Databeskyttelse og GDPR
-
-### Personfølsomme data
-
-Følgende data fra DataHub indeholder personoplysninger:
-
-| Data | Type | Kilde |
-|------|------|-------|
-| **CPR-nummer** | Direkte personhenførbar | BRS-001 (leverandørskifte) |
-| **CVR-nummer** | Virksomhedsidentifikation | BRS-001 |
-| **Kundenavn** | Persondata | RSM-007 (stamdata) |
-| **Adresse** | Persondata | RSM-007 |
-| **Forbrugsdata** | Indirekte personhenførbar | RSM-012 (kan afsløre adfærdsmønstre) |
-
-### Krav til håndtering
-
-| Krav | Implementering |
-|------|---------------|
-| **Kryptering at rest** | CPR/CVR krypteres i databasen (column-level encryption eller transparent data encryption) |
-| **Kryptering in transit** | Al kommunikation via HTTPS/TLS |
-| **Adgangskontrol** | Kun autoriserede systemkomponenter kan tilgå persondata |
-| **Logning** | Al adgang til persondata logges med bruger/system-identitet og tidspunkt |
-| **Dataopbevaring** | Maksimalt 5 år efter kundeforholdets ophør (elleveringsbekendtgørelsen) |
-| **Dataminimering** | Gem kun hvad der er nødvendigt for afregning og lovkrav |
-| **Sletning** | Automatisk sletning af persondata efter opbevaringsperioden |
-
-### GSRN er ikke persondata
-
-GSRN-numre (målepunkts-ID) er **ikke** direkte personhenførbare — de identificerer en fysisk tilslutning, ikke en person. Men kombineret med kundedata kan de indirekte identificere personer, så de bør behandles med omhu.
+This makes it possible for a single system to handle DataHub communication for multiple actors.
 
 ---
 
-## Auditlog
+## Data Protection and GDPR (databeskyttelse og GDPR)
 
-### Hvad skal logges
+### Personal Data (personfølsomme data)
 
-Som markedsaktør er man underlagt regulatoriske krav (Forskrift C1, ISAE 3402 Type 2). Systemet bør logge:
+The following data from DataHub contains personal information:
 
-| Hændelse | Logindhold |
-|----------|------------|
-| **Token-hentning** | Tidspunkt, miljø, succes/fejl |
-| **API-kald til DataHub** | Tidspunkt, endpoint, HTTP-status, CorrelationId |
-| **Modtagne beskeder** | MessageId, MessageType, GSRN, tidspunkt |
-| **Afregningsberegninger** | GSRN, periode, beregningsresultat, tidspunkt |
-| **Dataændringer** | Hvad blev ændret, af hvem/hvad, gammelt vs. nyt |
-| **Credential-rotation** | Hvornår, af hvem (ikke selve secret'en!) |
+| Data | Type | Source |
+|------|------|--------|
+| **CPR number** (civil registration number) | Directly personally identifiable | BRS-001 (supplier switch) |
+| **CVR number** (business registration number) | Business identification | BRS-001 |
+| **Customer name** | Personal data | RSM-007 (master data / stamdata) |
+| **Address** | Personal data | RSM-007 |
+| **Consumption data** (forbrugsdata) | Indirectly personally identifiable | RSM-012 (can reveal behavioral patterns) |
+
+### Handling Requirements (krav til håndtering)
+
+| Requirement | Implementation |
+|-------------|---------------|
+| **Encryption at rest** | CPR/CVR is encrypted in the database (column-level encryption or transparent data encryption) |
+| **Encryption in transit** | All communication via HTTPS/TLS |
+| **Access control** (adgangskontrol) | Only authorized system components can access personal data |
+| **Logging** (logning) | All access to personal data is logged with user/system identity and timestamp |
+| **Data retention** (dataopbevaring) | Maximum 5 years after end of customer relationship (per the electricity supply regulation / elleveringsbekendtgørelsen) |
+| **Data minimization** (dataminimering) | Store only what is necessary for settlement and legal requirements |
+| **Deletion** (sletning) | Automatic deletion of personal data after the retention period |
+
+### GSRN Is Not Personal Data
+
+GSRN numbers (metering point IDs) are **not** directly personally identifiable — they identify a physical connection point, not a person. However, when combined with customer data they can indirectly identify individuals, so they should be handled with care.
+
+---
+
+## Audit Log (auditlog)
+
+### What Should Be Logged
+
+As a market participant you are subject to regulatory requirements (Forskrift C1, ISAE 3402 Type 2). The system should log:
+
+| Event | Log Content |
+|-------|-------------|
+| **Token retrieval** | Timestamp, environment, success/failure |
+| **API calls to DataHub** | Timestamp, endpoint, HTTP status, CorrelationId |
+| **Received messages** (modtagne beskeder) | MessageId, MessageType, GSRN, timestamp |
+| **Settlement calculations** (afregningsberegninger) | GSRN, period, calculation result, timestamp |
+| **Data changes** (dataændringer) | What was changed, by whom/what, old vs. new |
+| **Credential rotation** | When, by whom (not the secret itself!) |
 
 ### CorrelationId
 
-DataHub inkluderer en `CorrelationId` header i alle API-svar. **Gem denne altid** — den bruges til fejlsøgning med Energinets support:
+DataHub includes a `CorrelationId` header in all API responses. **Always save this** — it is used for troubleshooting with Energinet support:
 
 ```
 GET /v1.0/cim/Timeseries
@@ -282,68 +282,68 @@ GET /v1.0/cim/Timeseries
 
 ---
 
-## Testmiljøer
+## Test Environments (testmiljøer)
 
-### Aktørtest (ATS)
+### Actor Test (Aktørtest / ATS)
 
-Aktørtestmiljøet bruges til integration og test inden produktion:
+The actor test environment is used for integration and testing before production:
 
-| Egenskab | Detalje |
-|----------|---------|
-| **Formål** | Test af B2B-integration, BRS/RSM-flows |
-| **Adgang** | Kræver separat godkendelse fra Energinet |
-| **Credentials** | Separate fra produktion (egen client_id/secret) |
-| **Data** | Testdata — ikke rigtige kundedata |
+| Property | Detail |
+|----------|--------|
+| **Purpose** | Testing of B2B integration, BRS/RSM flows |
+| **Access** | Requires separate approval from Energinet |
+| **Credentials** | Separate from production (own client_id/secret) |
+| **Data** | Test data — not real customer data |
 | **Tenant ID** | `5a396c36-d56e-4db4-880b-c7894f2d9966` |
-| **API-host** | `api.itlev.datahub.dk` |
+| **API Host** | `api.itlev.datahub.dk` |
 
-### Godkendelsesproces
+### Approval Process (godkendelsesproces)
 
-For at få adgang til DataHub B2B API (også testmiljø):
+To gain access to the DataHub B2B API (including the test environment):
 
-1. **Aktørregistrering** — virksomheden skal være registreret som markedsaktør hos Energinet
-2. **Aktørportal-adgang** — en person med fuldmagt logger ind med MitID
-3. **B2B-godkendelse** — anmod om B2B-adgang i aktørportalen
-4. **Credential-oprettelse** — opret client credentials under "B2B adgang"
-5. **Testverifikation** — Energinet kan kræve gennemført integrationstest inden produktionsadgang
+1. **Actor registration** (aktørregistrering) — the company must be registered as a market participant with Energinet
+2. **Actor portal access** — an authorized person logs in with MitID
+3. **B2B approval** (B2B-godkendelse) — request B2B access in the actor portal
+4. **Credential creation** (credential-oprettelse) — create client credentials under "B2B adgang"
+5. **Test verification** (testverifikation) — Energinet may require completed integration testing before granting production access
 
 ### Preprod
 
-Preprod-miljøet ligger tættere på produktion og bruges til sluttest:
+The preprod environment is closer to production and is used for final testing:
 
-| Egenskab | Detalje |
-|----------|---------|
+| Property | Detail |
+|----------|--------|
 | **Tenant ID** | `20e7a6b4-86e0-4e7a-a34d-6dc5a75d1982` |
-| **API-host** | `preprod.b2b.datahub3.dk` |
-| **Data** | Mere produktionslignende testdata |
+| **API Host** | `preprod.b2b.datahub3.dk` |
+| **Data** | More production-like test data |
 
 ---
 
-## Sikkerhedstjekliste
+## Security Checklist (sikkerhedstjekliste)
 
-Tjekliste for at sikre at systemet overholder sikkerhedskravene:
+Checklist to ensure the system complies with security requirements:
 
-- [ ] OAuth2 credentials gemt i vault (ikke i kildekode eller config-filer)
-- [ ] Token caches i hukommelsen og fornyes proaktivt
-- [ ] 401-svar håndteres med automatisk token-fornyelse
-- [ ] Separate credentials pr. miljø (test/preprod/prod)
-- [ ] Credential-rotation planlagt (mindst hvert 12. måned)
-- [ ] CPR/CVR-data krypteret at rest
-- [ ] Al kommunikation over HTTPS
-- [ ] Auditlog for alle API-kald og dataændringer
-- [ ] CorrelationId gemt fra alle DataHub-svar
-- [ ] Adgangskontrol: kun nødvendige komponenter kan tilgå persondata
-- [ ] Automatisk sletning af persondata efter opbevaringsperioden
-- [ ] ISAE 3402-krav identificeret og dokumenteret
+- [ ] OAuth2 credentials stored in a vault (not in source code or config files)
+- [ ] Token is cached in memory and renewed proactively
+- [ ] 401 responses are handled with automatic token renewal
+- [ ] Separate credentials per environment (test/preprod/prod)
+- [ ] Credential rotation planned (at least every 12 months)
+- [ ] CPR/CVR data encrypted at rest
+- [ ] All communication over HTTPS
+- [ ] Audit log for all API calls and data changes
+- [ ] CorrelationId saved from all DataHub responses
+- [ ] Access control: only necessary components can access personal data
+- [ ] Automatic deletion of personal data after the retention period
+- [ ] ISAE 3402 requirements identified and documented
 
 ---
 
-## Kilder
+## Sources (kilder)
 
 - CIM Webservice Interface (Dok. 22/03077-1)
 - CIM EDI Guide (Dok. 15/00718-191)
-- [Foreslået systemarkitektur](datahub3-proposed-architecture.md) — OAuth2-integration og konfiguration
-- [Forretningsprocesser](datahub3-ddq-business-processes.md) — API-endpoints og autentificeringsdetaljer
-- [RSM-012 reference](rsm-012-datahub3-measure-data.md) — autentificering og API-kald i praksis
-- [Afregningsoverblik](datahub3-settlement-overview.md) — teknisk integration med DataHub
-- Energinet Forskrift C1 — krav til IT-sikkerhed for markedsaktører
+- [Proposed system architecture](datahub3-proposed-architecture.md) — OAuth2 integration and configuration
+- [Business processes](datahub3-ddq-business-processes.md) — API endpoints and authentication details
+- [RSM-012 reference](rsm-012-datahub3-measure-data.md) — authentication and API calls in practice
+- [Settlement overview](datahub3-settlement-overview.md) — technical integration with DataHub
+- Energinet Forskrift C1 — IT security requirements for market participants

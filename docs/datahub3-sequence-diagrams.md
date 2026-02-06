@@ -1,280 +1,280 @@
-# DataHub 3: Sekvensdiagrammer for meddelelsesflows
+# DataHub 3: Sequence Diagrams for Message Flows
 
-Diagrammerne viser kommunikationen mellem aktører i de vigtigste forretningsprocesser. Bruges som supplement til [Kundelivscyklus](datahub3-customer-lifecycle.md).
+The diagrams show the communication between actors in the most important business processes. Used as a supplement to [Customer Lifecycle](datahub3-customer-lifecycle.md).
 
-**Aktører:**
-- **Leverandør (DDQ)** — elleverandør
-- **DataHub** — Energinets centrale datahub
-- **Netvirk (DDM/MDR)** — netvirksomhed / måledataansvarlig
-- **Gammel DDQ** — den fratrædende leverandør (ved skifte)
-- **Ny DDQ** — den tiltrædende leverandør (ved indgående skifte)
-- **Settl** — internt afregningssystem
-- **D365** — Dynamics 365 (fakturering/ERP)
+**Actors:**
+- **Supplier (DDQ)** — electricity supplier (elleverandor)
+- **DataHub** — Energinet's central data hub
+- **GridOp (DDM/MDR)** — grid operator / metered data responsible (netvirksomhed / maledataansvarlig)
+- **Old DDQ** — the outgoing supplier (during a switch)
+- **New DDQ** — the incoming supplier (during an incoming switch)
+- **Settl** — internal settlement system (afregningssystem)
+- **D365** — Dynamics 365 (billing/ERP)
 
 ---
 
-## 1. BRS-001: Leverandørskifte (vi overtager kunde)
+## 1. BRS-001: Supplier Switch (we take over a customer)
 
-Det mest almindelige onboarding-flow. Kunden har valgt os som ny leverandør.
+The most common onboarding flow. The customer has chosen us as their new supplier.
 
 ```mermaid
 sequenceDiagram
     autonumber
-    participant Salg as Salg/CRM
-    participant DDQ as Leverandør (DDQ)
+    participant Salg as Sales/CRM
+    participant DDQ as Supplier (DDQ)
     participant DH as DataHub
-    participant GmlDDQ as Gammel DDQ
-    participant Netvirk as Netvirk (DDM)
+    participant GmlDDQ as Old DDQ
+    participant Netvirk as GridOp (DDM)
 
-    Note over Salg,DDQ: Kunde underskriver kontrakt
+    Note over Salg,DDQ: Customer signs contract
 
-    Salg->>DDQ: Opret kundepost + GSRN
-    DDQ->>DH: BRS-001 (RSM-001)<br/>GSRN + ikrafttrædelsesdato + CPR/CVR
-    DH-->>DDQ: Kvittering (RSM-009): accepteret/afvist
+    Salg->>DDQ: Create customer record + GSRN
+    DDQ->>DH: BRS-001 (RSM-001)<br/>GSRN + effective date + CPR/CVR
+    DH-->>DDQ: Receipt (RSM-009): accepted/rejected
 
-    alt Afvist
-        DH-->>DDQ: Afvisningsårsag (forkert GSRN, CPR-mismatch, konflikt)
-        DDQ->>Salg: Fejl — ret data og genindsend
+    alt Rejected
+        DH-->>DDQ: Rejection reason (incorrect GSRN, CPR mismatch, conflict)
+        DDQ->>Salg: Error — correct data and resubmit
     end
 
-    DH->>GmlDDQ: Notifikation: målepunkt skifter leverandør
-    Note over DH: Venter til ikrafttrædelsesdato
+    DH->>GmlDDQ: Notification: metering point changing supplier
+    Note over DH: Waiting until effective date
 
-    DH->>DDQ: RSM-007 (MasterData-kø)<br/>Stamdata-snapshot: type, afregningsmetode,<br/>netområde, GLN, tilslutningsstatus
-    DH->>DDQ: RSM-012 (Timeseries-kø)<br/>Første måledata (evt. historiske)
+    DH->>DDQ: RSM-007 (MasterData queue)<br/>Master data snapshot: type, settlement method,<br/>grid area, GLN, connection status
+    DH->>DDQ: RSM-012 (Timeseries queue)<br/>First meter data (possibly historical)
 
-    DDQ->>DDQ: Tildel tariffer (baseret på netområde)<br/>Aktiver målepunkt i portefølje<br/>Opsæt faktureringsplan + aconto
+    DDQ->>DDQ: Assign tariffs (based on grid area)<br/>Activate metering point in portfolio<br/>Set up billing plan + aconto
 ```
 
-**Tidsfrister:** Min. 15 hverdage varsel (BRS-001) eller 1 hverdag (BRS-043 kort varsel).
+**Deadlines:** Min. 15 business days notice (BRS-001) or 1 business day (BRS-043 short notice).
 
-**Annullering:** Kunden fortryder → send BRS-003 inden ikrafttrædelsesdato.
+**Cancellation:** Customer withdraws → send BRS-003 before effective date.
 
 ---
 
-## 2. RSM-012: Dagligt måledataflow (drift)
+## 2. RSM-012: Daily Meter Data Flow (operations)
 
-Det daglige heartbeat — netvirksomheden aflæser målere, DataHub validerer og videresender.
+The daily heartbeat — the grid operator reads meters, DataHub validates and forwards.
 
 ```mermaid
 sequenceDiagram
     autonumber
-    participant Netvirk as Netvirk (MDR)
+    participant Netvirk as GridOp (MDR)
     participant DH as DataHub
-    participant DDQ as Leverandør (DDQ)
-    participant Settl as Afregningsmotor
+    participant DDQ as Supplier (DDQ)
+    participant Settl as Settlement Engine
 
-    loop Dagligt (for hvert målepunkt)
-        Netvirk->>DH: BRS-021: Validerede måledata<br/>(kWh pr. time/kvarter)
-        DH->>DH: Validering + skemacheck
-        DH->>DDQ: RSM-012 (Timeseries-kø, E66)<br/>ProcessType: E23 (periodisk) eller D42 (flex)
+    loop Daily (for each metering point)
+        Netvirk->>DH: BRS-021: Validated meter data<br/>(kWh per hour/quarter)
+        DH->>DH: Validation + schema check
+        DH->>DDQ: RSM-012 (Timeseries queue, E66)<br/>ProcessType: E23 (periodic) or D42 (flex)
     end
 
-    DDQ->>DDQ: GET /cim/Timeseries → peek besked
+    DDQ->>DDQ: GET /cim/Timeseries → peek message
     DDQ->>DDQ: Parse CIM JSON:<br/>MeteringPointId, period, resolution,<br/>Point[] (position + quantity + quality)
-    DDQ->>DDQ: Gem i tidsserie-lager
+    DDQ->>DDQ: Store in time series storage
     DDQ->>DH: DELETE /cim/dequeue/{MessageId}
 
-    Note over DDQ,Settl: Ved faktureringsperiode-slut
+    Note over DDQ,Settl: At billing period end (faktureringsperiode)
 
-    Settl->>Settl: Afregningskørsel:<br/>energi = kWh × (spot + margin)<br/>nettarif = kWh × tarifsats<br/>produktmargin = kWh × produktsats<br/>+ abonnement + afgifter + moms
+    Settl->>Settl: Settlement run:<br/>energy = kWh × (spot + margin)<br/>grid tariff (nettarif) = kWh × tariff rate<br/>product margin = kWh × product rate<br/>+ subscription + charges + VAT
 ```
 
-**Vigtige felter i RSM-012:**
-- `Series/MarketEvaluationPoint/mRID` = GSRN (18 cifre)
-- `Series/Period/resolution` = PT15M, PT1H eller P1M
-- `Series/Period/Point/quantity` = kWh (max 3 decimaler)
+**Important fields in RSM-012:**
+- `Series/MarketEvaluationPoint/mRID` = GSRN (18 digits)
+- `Series/Period/resolution` = PT15M, PT1H or P1M
+- `Series/Period/Point/quantity` = kWh (max 3 decimals)
 - `Series/Period/Point/quality` = A01/A02/A03/A06
 
 ---
 
-## 3. BRS-002: Leveranceophør (vi opsiger)
+## 3. BRS-002: End of Supply (we terminate)
 
-Kunden opsiger eller fraflytter. Vi initierer ophøret.
+The customer cancels or moves out. We initiate the termination.
 
 ```mermaid
 sequenceDiagram
     autonumber
-    participant DDQ as Leverandør (DDQ)
+    participant DDQ as Supplier (DDQ)
     participant DH as DataHub
-    participant Netvirk as Netvirk (DDM)
-    participant Settl as Afregningsmotor
-    participant D365 as D365 (fakturering)
+    participant Netvirk as GridOp (DDM)
+    participant Settl as Settlement Engine
+    participant D365 as D365 (billing)
 
-    Note over DDQ: Beslutning: leveranceophør<br/>(kundeopsigelse / manglende betaling / fraflytning)
+    Note over DDQ: Decision: end of supply<br/>(customer cancellation / non-payment / move-out)
 
-    DDQ->>DH: BRS-002 (RSM-005)<br/>GSRN + ikrafttrædelsesdato + årsag
-    DH-->>DDQ: Kvittering (RSM-009)
+    DDQ->>DH: BRS-002 (RSM-005)<br/>GSRN + effective date + reason
+    DH-->>DDQ: Receipt (RSM-009)
 
-    alt Kunden fortryder / betaler
-        DDQ->>DH: BRS-044: Annuller leveranceophør
-        DH-->>DDQ: Kvittering: ophør annulleret
-        Note over DDQ: Leverance fortsætter
+    alt Customer withdraws / pays
+        DDQ->>DH: BRS-044: Cancel end of supply
+        DH-->>DDQ: Receipt: termination cancelled
+        Note over DDQ: Supply continues
     end
 
-    Note over DH: Ikrafttrædelsesdato nået
+    Note over DH: Effective date reached
 
-    DH->>DDQ: RSM-012 (Timeseries-kø)<br/>Endelige måledata op til slutdato
+    DH->>DDQ: RSM-012 (Timeseries queue)<br/>Final meter data up to end date
 
-    DDQ->>DDQ: Markér målepunkt inaktivt<br/>Registrér leveranceperiodens slutdato
+    DDQ->>DDQ: Mark metering point inactive<br/>Register supply period end date
 
-    Settl->>Settl: Slutafregning: delvis periode<br/>energi + tarif + abonnement (forholdsmæssigt)
+    Settl->>Settl: Final settlement: partial period<br/>energy + tariff + subscription (pro-rated)
 
-    alt Acontokunde
-        Settl->>Settl: Acontoopgørelse:<br/>faktisk forbrug vs. acontobetalinger
-        Settl->>D365: Kredit (overbetalt) eller<br/>debit (underbetalt)
+    alt Aconto customer
+        Settl->>Settl: Aconto settlement (acontoopgorelse):<br/>actual consumption vs. aconto payments
+        Settl->>D365: Credit (overpaid) or<br/>debit (underpaid)
     end
 
-    Settl->>D365: Slutfaktura
-    D365->>D365: Send til kunde (e-Boks/e-mail)
+    Settl->>D365: Final invoice
+    D365->>D365: Send to customer (e-Boks/email)
 
-    Note over DDQ: Arkivér kundepost (5 år)<br/>Bevar måledata (3+ år)
+    Note over DDQ: Archive customer record (5 years)<br/>Retain meter data (3+ years)
 ```
 
-**Offboarding-scenarier:**
-- **Scenarie A:** Anden leverandør sender BRS-001 for vores målepunkt → vi modtager, ikke initierer
-- **Scenarie B/D:** Vi sender BRS-002 (opsigelse / manglende betaling)
-- **Scenarie C:** Fraflytning → BRS-010
+**Offboarding scenarios:**
+- **Scenario A:** Another supplier sends BRS-001 for our metering point → we receive, not initiate
+- **Scenario B/D:** We send BRS-002 (cancellation / non-payment)
+- **Scenario C:** Move-out → BRS-010
 
 ---
 
-## 4. BRS-001 indgående: Leverandørskifte (vi mister kunde)
+## 4. BRS-001 Incoming: Supplier Switch (we lose a customer)
 
-En anden leverandør overtager vores kunde. Vi er den passive part.
+Another supplier takes over our customer. We are the passive party.
 
 ```mermaid
 sequenceDiagram
     autonumber
-    participant NyDDQ as Ny DDQ (anden leverandør)
+    participant NyDDQ as New DDQ (other supplier)
     participant DH as DataHub
-    participant DDQ as Leverandør (DDQ)
-    participant Settl as Afregningsmotor
-    participant D365 as D365 (fakturering)
+    participant DDQ as Supplier (DDQ)
+    participant Settl as Settlement Engine
+    participant D365 as D365 (billing)
 
-    NyDDQ->>DH: BRS-001 (RSM-001)<br/>Anmod om vores målepunkt
-    DH->>DDQ: Notifikation: målepunkt skifter<br/>Ikrafttrædelsesdato: DD-MM-YYYY
+    NyDDQ->>DH: BRS-001 (RSM-001)<br/>Request our metering point
+    DH->>DDQ: Notification: metering point switching<br/>Effective date: DD-MM-YYYY
 
-    Note over DDQ: Vi kan ikke blokere skiftet
+    Note over DDQ: We cannot block the switch
 
-    Note over DH: Ikrafttrædelsesdato nået
+    Note over DH: Effective date reached
 
-    DH->>DDQ: RSM-012: Endelige måledata<br/>op til skiftedato
+    DH->>DDQ: RSM-012: Final meter data<br/>up to switch date
 
-    DDQ->>DDQ: Markér målepunkt inaktivt
+    DDQ->>DDQ: Mark metering point inactive
 
-    Settl->>Settl: Slutafregning (delvis periode)
-    Settl->>D365: Slutfaktura + acontoopgørelse
-    D365->>D365: Send slutfaktura til kunde
+    Settl->>Settl: Final settlement (partial period)
+    Settl->>D365: Final invoice + aconto settlement (acontoopgorelse)
+    D365->>D365: Send final invoice to customer
 ```
 
 ---
 
-## 5. Engrosopgørelse og afstemning (BRS-027)
+## 5. Wholesale Settlement and Reconciliation (BRS-027)
 
-Månedlig afstemning af vores egne afregningsberegninger mod DataHubs engrosopgørelse.
+Monthly reconciliation of our own settlement calculations against DataHub's wholesale settlement (engrosopgorelse).
 
 ```mermaid
 sequenceDiagram
     autonumber
     participant DH as DataHub
-    participant DDQ as Leverandør (DDQ)
-    participant Settl as Afregningsmotor
+    participant DDQ as Supplier (DDQ)
+    participant Settl as Settlement Engine
 
-    Note over DH: Månedlig engrosopgørelse kører
+    Note over DH: Monthly wholesale settlement runs
 
-    DH->>DDQ: RSM-014 (Aggregations-kø, E31)<br/>Aggregerede data pr. netområde
+    DH->>DDQ: RSM-014 (Aggregations queue, E31)<br/>Aggregated data per grid area
 
     DDQ->>DDQ: Peek + parse RSM-014
 
-    Settl->>Settl: Sammenlign:<br/>Egen afregning vs. DataHub-aggregering
+    Settl->>Settl: Compare:<br/>Own settlement vs. DataHub aggregation
 
-    alt Afvigelse fundet
-        Settl->>Settl: Identificér afvigende målepunkter
-        DDQ->>DH: RSM-016: Anmod detaljerede<br/>aggregerede data for perioden
-        DH->>DDQ: RSM-014 (svar med<br/>OriginalTransactionReference)
-        Settl->>Settl: Analyser afvigelse:<br/>manglende måledata? forkerte satser?
+    alt Deviation found
+        Settl->>Settl: Identify deviating metering points
+        DDQ->>DH: RSM-016: Request detailed<br/>aggregated data for the period
+        DH->>DDQ: RSM-014 (response with<br/>OriginalTransactionReference)
+        Settl->>Settl: Analyze deviation:<br/>missing meter data? incorrect rates?
 
-        alt Manglende måledata
-            DDQ->>DH: RSM-015: Anmod historiske<br/>validerede data for målepunkt
-            DH->>DDQ: RSM-012 (ProcessType E30)<br/>Historiske data
-            Settl->>Settl: Genberegn berørte perioder
+        alt Missing meter data
+            DDQ->>DH: RSM-015: Request historical<br/>validated data for metering point
+            DH->>DDQ: RSM-012 (ProcessType E30)<br/>Historical data
+            Settl->>Settl: Recalculate affected periods
         end
-    else Ingen afvigelse
-        Note over Settl: ✓ Afstemning OK
+    else No deviation
+        Note over Settl: ✓ Reconciliation OK
     end
 
     DDQ->>DH: DELETE /cim/dequeue/{MessageId}
 ```
 
-**Aggregeringstyper (⚠ VERIFICÉR koder):**
-- D03 = Foreløbig aggregering
-- D04 = Korrigeret aggregering
-- D05 = Endelig aggregering
+**Aggregation types (Warning: VERIFY codes):**
+- D03 = Preliminary aggregation (forelobig)
+- D04 = Corrected aggregation (korrigeret)
+- D05 = Final aggregation (endelig)
 
 ---
 
-## 6. Tarifopdatering (Charges-kø)
+## 6. Tariff Update (Charges Queue)
 
-Netvirksomheden ændrer tarifsatser — påvirker fremtidige afregningsberegninger.
+The grid operator changes tariff rates — affects future settlement calculations.
 
 ```mermaid
 sequenceDiagram
     autonumber
-    participant Netvirk as Netvirk (DDM)
+    participant Netvirk as GridOp (DDM)
     participant DH as DataHub
-    participant DDQ as Leverandør (DDQ)
-    participant Settl as Afregningsmotor
+    participant DDQ as Supplier (DDQ)
+    participant Settl as Settlement Engine
 
-    Netvirk->>DH: Opdaterede tarifsatser<br/>(typisk årligt, 1. jan / 1. apr / 1. okt)
-    DH->>DDQ: Charges-kø: Nye tarifsatser<br/>Netområde + gyldighedsperiode + satser
+    Netvirk->>DH: Updated tariff rates<br/>(typically annually, 1 Jan / 1 Apr / 1 Oct)
+    DH->>DDQ: Charges queue: New tariff rates<br/>Grid area + validity period + rates
 
-    DDQ->>DDQ: Peek + parse Charges-besked
-    DDQ->>DDQ: Opdatér PriceElementRates:<br/>Price, Price2..Price24 (timer 1-24)<br/>+ gyldighedsdatoer
+    DDQ->>DDQ: Peek + parse Charges message
+    DDQ->>DDQ: Update PriceElementRates:<br/>Price, Price2..Price24 (hours 1-24)<br/>+ validity dates
 
-    Note over DDQ,Settl: Fra gyldighedsdato
+    Note over DDQ,Settl: From validity date
 
-    Settl->>Settl: Nye afregningskørsler bruger<br/>opdaterede satser automatisk
+    Settl->>Settl: New settlement runs use<br/>updated rates automatically
 
-    Note over Settl: Eksisterende fakturaer<br/>berøres IKKE (medmindre<br/>korrektion modtages)
+    Note over Settl: Existing invoices<br/>are NOT affected (unless<br/>a correction is received)
 
     DDQ->>DH: DELETE /cim/dequeue/{MessageId}
 ```
 
 ---
 
-## 7. Overblik: Kø-routing
+## 7. Overview: Queue Routing
 
-Oversigt over hvilke meddelelser der ankommer i hvilke køer:
+Overview of which messages arrive in which queues:
 
 ```mermaid
 flowchart LR
     DH[DataHub B2B API]
 
-    DH -->|GET /cim/Timeseries| TS[Timeseries-kø]
-    DH -->|GET /cim/Aggregations| AG[Aggregations-kø]
-    DH -->|GET /cim/MasterData| MD[MasterData-kø]
-    DH -->|GET /cim/Charges| CH[Charges-kø]
+    DH -->|GET /cim/Timeseries| TS[Timeseries queue]
+    DH -->|GET /cim/Aggregations| AG[Aggregations queue]
+    DH -->|GET /cim/MasterData| MD[MasterData queue]
+    DH -->|GET /cim/Charges| CH[Charges queue]
 
-    TS --> RSM012[RSM-012: Måledata<br/>E66 / E23,D42,E30]
-    TS --> RSM014a[RSM-014: Aggregerede data<br/>E31]
+    TS --> RSM012[RSM-012: Meter data<br/>E66 / E23,D42,E30]
+    TS --> RSM014a[RSM-014: Aggregated data<br/>E31]
 
-    AG --> RSM014b[RSM-014: Aggregerede data<br/>E31]
+    AG --> RSM014b[RSM-014: Aggregated data<br/>E31]
 
-    MD --> RSM007[RSM-007: Stamdata-snapshot]
-    MD --> RSM004[RSM-004: Stamdataændring]
+    MD --> RSM007[RSM-007: Master data snapshot]
+    MD --> RSM004[RSM-004: Master data change]
 
-    CH --> Tarif[Tarif-/prisopdateringer]
+    CH --> Tarif[Tariff/price updates]
 ```
 
 ---
 
-## Kilder
+## Sources
 
-- [Kundelivscyklus: Onboarding til offboarding](datahub3-customer-lifecycle.md)
-- [Særtilfælde og fejlhåndtering](datahub3-edge-cases.md)
-- [DataHub 3 DDQ Forretningsproces-reference](datahub3-ddq-business-processes.md)
-- [RSM-012 Måledata-reference](rsm-012-datahub3-measure-data.md)
-- [Foreslået systemarkitektur](datahub3-proposed-architecture.md)
-- [Autentificering og sikkerhed](datahub3-authentication-security.md)
-- CIM Webservice Interface (Dok. 22/03077-1)
-- CIM EDI Guide (Dok. 15/00718-191)
+- [Customer Lifecycle: Onboarding to Offboarding](datahub3-customer-lifecycle.md)
+- [Edge Cases and Error Handling](datahub3-edge-cases.md)
+- [DataHub 3 DDQ Business Process Reference](datahub3-ddq-business-processes.md)
+- [RSM-012 Meter Data Reference](rsm-012-datahub3-measure-data.md)
+- [Proposed System Architecture](datahub3-proposed-architecture.md)
+- [Authentication and Security](datahub3-authentication-security.md)
+- CIM Webservice Interface (Doc. 22/03077-1)
+- CIM EDI Guide (Doc. 15/00718-191)

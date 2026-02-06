@@ -1,377 +1,377 @@
-# Produktopbygning og fakturering: Privatkunde
+# Product Structure and Billing: Residential Customer
 
-Hvad bestemmer en privatkunde's faktura? Denne guide gennemgår alle parametre der påvirker beløbet — fra produktvalg til acontoopgørelse.
-
----
-
-## Kundens produkt = en samling af prisparametre
-
-Når en privatkunde tegner en aftale, vælger de et **produkt** (f.eks. "Spot", "Grøn", "Fastpris"). Produktet bestemmer de variable parametre vi selv kontrollerer. Resten er bestemt af eksterne parter.
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│  PRODUKTET (det vi selv bestemmer)                           │
-│                                                              │
-│  • Energimodel:      Spot / fast pris / blanding            │
-│  • Leverandørmargin: X øre/kWh oven på spotpris             │
-│  • Produkttillæg:    Ekstra øre/kWh (f.eks. grøn energi)   │
-│  • Abonnement:       Fast månedligt gebyr (kr./md.)         │
-│  • Faktureringsfrekvens:  Månedligt / kvartalsvist          │
-│  • Betalingsmodel:   Aconto / faktisk forbrug               │
-│  • Bindingsperiode:  Ingen / 3 mdr. / 6 mdr. / 12 mdr.    │
-│  • Betalingsfrist:   Netto 14 / 30 dage                    │
-└─────────────────────────────────────────────────────────────┘
-
-┌─────────────────────────────────────────────────────────────┐
-│  EKSTERNE PARAMETRE (bestemt af andre — ens for alle)        │
-│                                                              │
-│  • Nordpool spotpris:       Varierer time for time          │
-│  • Nettarif:                Bestemt af kundens netvirksomhed│
-│  • Systemtarif:             Bestemt af Energinet            │
-│  • Transmissionstarif:      Bestemt af Energinet            │
-│  • Netabonnement:           Fast gebyr fra netvirksomheden  │
-│  • Elafgift:                Lovbestemt (staten)             │
-│  • Moms:                    25% (staten)                    │
-└─────────────────────────────────────────────────────────────┘
-```
-
-Produktet styrer altså kun **en del** af fakturaen. Resten er gennemfakturering af eksterne omkostninger.
+What determines a residential customer's invoice? This guide walks through all the parameters that affect the amount — from product selection to aconto settlement (acontoopgørelse).
 
 ---
 
-## Alle fakturalinjer for en privatkunde
+## The customer's product = a collection of price parameters
 
-En typisk månedsfaktura for en privatkunde på spotprodukt (bagudbetaling):
+When a residential customer signs an agreement, they choose a **product** (e.g. "Spot", "Green", "Fixed Price"). The product determines the variable parameters we control ourselves. The rest is determined by external parties.
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  THE PRODUCT (what we control)                               │
+│                                                              │
+│  • Energy model:       Spot / fixed price / blend            │
+│  • Supplier margin:    X øre/kWh on top of spot price        │
+│  • Product surcharge:  Extra øre/kWh (e.g. green energy)     │
+│  • Subscription:       Fixed monthly fee (DKK/month)         │
+│  • Billing frequency:  Monthly / quarterly                   │
+│  • Payment model:      Aconto / actual consumption           │
+│  • Commitment period:  None / 3 mo. / 6 mo. / 12 mo.        │
+│  • Payment terms:      Net 14 / 30 days                      │
+└─────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────┐
+│  EXTERNAL PARAMETERS (set by others — same for everyone)     │
+│                                                              │
+│  • Nord Pool spot price:      Varies hour by hour            │
+│  • Grid tariff (nettarif):    Set by customer's grid company │
+│  • System tariff (systemtarif):  Set by Energinet            │
+│  • Transmission tariff (transmissionstarif): Set by Energinet│
+│  • Grid subscription (netabonnement): Fixed fee from grid co.│
+│  • Electricity tax (elafgift):   Statutory (the state)       │
+│  • VAT (moms):                   25% (the state)             │
+└─────────────────────────────────────────────────────────────┘
+```
+
+The product therefore controls only **a portion** of the invoice. The rest is pass-through billing of external costs.
+
+---
+
+## All invoice lines for a residential customer
+
+A typical monthly invoice for a residential customer on a spot product (arrears billing):
 
 ```
 ┌───────────────────────────────────────────────────────────────────────┐
-│  FAKTURA — januar 2025                                                │
-│  Kunde: Anders Hansen, GSRN 571313100000012345                       │
-│  Periode: 01-01-2025 → 31-01-2025 (744 timer)                       │
+│  INVOICE — January 2025                                                │
+│  Customer: Anders Hansen, GSRN 571313100000012345                     │
+│  Period: 01-01-2025 → 31-01-2025 (744 hours)                         │
 ├───────────────────────────────────────────────────────────────────────┤
 │                                                                       │
-│  ENERGI                                                               │
-│  Elforsyning (spot + margin)          450 kWh × gns. 0,92 kr.  414,00│
+│  ENERGY                                                               │
+│  Electricity supply (spot + margin)  450 kWh × avg. 0.92 DKK  414.00│
 │                                                                       │
-│  TRANSPORT OG SYSTEMOMKOSTNINGER                                      │
-│  Nettarif (netvirksomhed)              450 kWh × gns. 0,14 kr.   63,00│
-│  Systemtarif (Energinet)              450 kWh × 0,054 kr.        24,30│
-│  Transmissionstarif (Energinet)       450 kWh × 0,049 kr.        22,05│
+│  TRANSPORT AND SYSTEM COSTS                                           │
+│  Grid tariff (nettarif, grid co.)     450 kWh × avg. 0.14 DKK   63.00│
+│  System tariff (Energinet)           450 kWh × 0.054 DKK        24.30│
+│  Transmission tariff (Energinet)     450 kWh × 0.049 DKK        22.05│
 │                                                                       │
-│  AFGIFTER                                                             │
-│  Elafgift                             450 kWh × 0,008 kr.         3,60│
+│  TAXES AND DUTIES                                                     │
+│  Electricity tax (elafgift)          450 kWh × 0.008 DKK         3.60│
 │                                                                       │
-│  ABONNEMENTER                                                         │
-│  Netabonnement (netvirksomhed)                                    49,00│
-│  Leverandørabonnement                                             39,00│
+│  SUBSCRIPTIONS                                                        │
+│  Grid subscription (netabonnement)                                49.00│
+│  Supplier subscription                                            39.00│
 │                                                                       │
 │  ────────────────────────────────────────────────────────────         │
-│  Subtotal                                                     614,95│
-│  Moms (25%)                                                   153,74│
+│  Subtotal                                                     614.95│
+│  VAT (25%)                                                    153.74│
 │  ────────────────────────────────────────────────────────────         │
-│  AT BETALE                                                    768,69│
+│  AMOUNT DUE                                                   768.69│
 │                                                                       │
 └───────────────────────────────────────────────────────────────────────┘
 ```
 
-For acontokunder: denne beregning sker bag scenen. Kunden ser den først som del af den kombinerede kvartalsfaktura (se [aconto-sektionen](#den-kombinerede-kvartalsfaktura)).
+For aconto customers: this calculation happens behind the scenes. The customer only sees it as part of the combined quarterly invoice (see the [aconto section](#the-combined-quarterly-invoice)).
 
-### Linje for linje
+### Line by line
 
-| # | Fakturalinje | Beregning | Hvem bestemmer prisen | Variabel/fast |
+| # | Invoice line | Calculation | Who sets the price | Variable/fixed |
 |---|-------------|-----------|----------------------|---------------|
-| 1 | **Elforsyning** | kWh × (spotpris + leverandørmargin) pr. time, summeret | Nordpool + os | Variabel (time for time) |
-| 2 | **Nettarif** | kWh × netvirksomhedens sats pr. time | Netvirksomheden | Variabel (tidsdifferentieret) |
-| 3 | **Systemtarif** | kWh × Energinets sats | Energinet | Variabel (kWh-baseret, men sats sjældent ændres) |
-| 4 | **Transmissionstarif** | kWh × Energinets sats | Energinet | Variabel (kWh-baseret, men sats sjældent ændres) |
-| 5 | **Elafgift** | kWh × lovbestemt sats | Staten | Variabel (kWh-baseret, sats ændres årligt) |
-| 6 | **Netabonnement** | Fast kr./måned | Netvirksomheden | Fast |
-| 7 | **Leverandørabonnement** | Fast kr./måned | Os | Fast |
-| 8 | **Moms** | 25% af linje 1-7 | Staten | Beregnet |
+| 1 | **Electricity supply** | kWh × (spot price + supplier margin) per hour, summed | Nord Pool + us | Variable (hour by hour) |
+| 2 | **Grid tariff (nettarif)** | kWh × grid company's rate per hour | Grid company (netvirksomhed) | Variable (time-differentiated) |
+| 3 | **System tariff (systemtarif)** | kWh × Energinet's rate | Energinet | Variable (kWh-based, but rate rarely changes) |
+| 4 | **Transmission tariff (transmissionstarif)** | kWh × Energinet's rate | Energinet | Variable (kWh-based, but rate rarely changes) |
+| 5 | **Electricity tax (elafgift)** | kWh × statutory rate | The state | Variable (kWh-based, rate changes annually) |
+| 6 | **Grid subscription (netabonnement)** | Fixed DKK/month | Grid company | Fixed |
+| 7 | **Supplier subscription** | Fixed DKK/month | Us | Fixed |
+| 8 | **VAT (moms)** | 25% of lines 1-7 | The state | Calculated |
 
-**Nøglepointe:** Linje 1-5 er alle `kWh × sats` — det er derfor RSM-012 (forbrugsdata) er så central. Uden kWh-data kan vi ikke beregne 5 ud af 8 linjer.
+**Key point:** Lines 1-5 are all `kWh × rate` — that is why RSM-012 (consumption data) is so central. Without kWh data, we cannot calculate 5 out of 8 lines.
 
 ---
 
-## Energimodeller
+## Energy models
 
-Det vigtigste produktvalg er **energimodellen** — hvordan spotprisen håndteres:
+The most important product choice is the **energy model** — how the spot price is handled:
 
-| Model | Hvad kunden betaler | Leverandørens risiko | Typisk for |
+| Model | What the customer pays | Supplier's risk | Typical for |
 |-------|--------------------|--------------| -----------|
-| **Spot** | Nordpool-timepris + fast margin (f.eks. +4 øre/kWh) | Ingen — kunden bærer prisrisiko | De fleste privatkunder |
-| **Fastpris** | Aftalt fast pris pr. kWh (f.eks. 0,95 kr.) for en periode | Leverandøren bærer prisrisiko (hedging nødvendig) | Kunder der vil have forudsigelighed |
-| **Blanding** | Del spot, del fast — eller spotpris med prisloft | Delt risiko | Nicheprodukt |
+| **Spot** | Nord Pool hourly price + fixed margin (e.g. +4 øre/kWh) | None — the customer bears the price risk | Most residential customers |
+| **Fixed price** | Agreed fixed price per kWh (e.g. 0.95 DKK) for a period | Supplier bears the price risk (hedging required) | Customers who want predictability |
+| **Blend** | Part spot, part fixed — or spot price with a price cap | Shared risk | Niche product |
 
-For spot-modellen beregnes energilinjen pr. time:
+For the spot model, the energy line is calculated per hour:
 
 ```
-Time 14:00-15:00:  1,5 kWh × (0,85 kr. spot + 0,04 kr. margin) = 1,335 kr.
-Time 15:00-16:00:  1,2 kWh × (0,72 kr. spot + 0,04 kr. margin) = 0,912 kr.
+Hour 14:00-15:00:  1.5 kWh × (0.85 DKK spot + 0.04 DKK margin) = 1.335 DKK
+Hour 15:00-16:00:  1.2 kWh × (0.72 DKK spot + 0.04 DKK margin) = 0.912 DKK
 ...
-Summeret over 744 timer = energilinjen på fakturaen
+Summed over 744 hours = the energy line on the invoice
 ```
 
-For fastpris-modellen er det simplere: `total kWh × aftalt pris`.
+For the fixed price model, it is simpler: `total kWh × agreed price`.
 
 ---
 
-## Nettariffer — hvad der afhænger af kundens adresse
+## Grid tariffs (nettariffer) — what depends on the customer's address
 
-Nettariffen bestemmes af **hvilken netvirksomhed** der dækker kundens adresse. Når vi modtager stamdata (RSM-007) ved aktivering, får vi et **netområde** og en **netvirksomheds-GLN** — det fortæller os hvilke tariffer der gælder.
+The grid tariff (nettarif) is determined by **which grid company (netvirksomhed)** covers the customer's address. When we receive master data (RSM-007) at activation, we get a **grid area** and a **grid company GLN** — this tells us which tariffs apply.
 
-Danmark har ~40 netvirksomheder, og de har forskellige satser:
+Denmark has ~40 grid companies, and they have different rates:
 
-| Parameter | Eksempel (N1) | Eksempel (Radius) |
+| Parameter | Example (N1) | Example (Radius) |
 |-----------|--------------|-------------------|
-| Nettarif dag (06-21) | 0,18 kr./kWh | 0,15 kr./kWh |
-| Nettarif nat (21-06) | 0,06 kr./kWh | 0,05 kr./kWh |
-| Nettarif spids (17-20) | 0,54 kr./kWh | — |
-| Netabonnement | 49 kr./md. | 45 kr./md. |
+| Grid tariff day (06-21) | 0.18 DKK/kWh | 0.15 DKK/kWh |
+| Grid tariff night (21-06) | 0.06 DKK/kWh | 0.05 DKK/kWh |
+| Grid tariff peak (17-20) | 0.54 DKK/kWh | — |
+| Grid subscription (netabonnement) | 49 DKK/mo. | 45 DKK/mo. |
 
-Nettariffer er typisk **tidsdifferentierede** — forskellige satser for dag, nat og spidslast. Nogle netvirksomheder har 2 zoner (dag/nat), andre har 3 (dag/nat/spids).
+Grid tariffs are typically **time-differentiated** — different rates for day, night, and peak load. Some grid companies have 2 zones (day/night), others have 3 (day/night/peak).
 
-Satserne modtager vi via **Charges-køen** fra DataHub og opdateres typisk 1-2 gange om året.
+We receive the rates via the **Charges queue** from DataHub, and they are typically updated 1-2 times per year.
 
 ---
 
-## Betalingsmodeller: Aconto vs. bagudbetaling
+## Payment models: Aconto vs. arrears billing (bagudbetaling)
 
-En privatkunde kan typisk vælge mellem to betalingsmodeller. Valget påvirker **hvornår og hvordan** kunden betaler — men **ikke hvad** kunden betaler. Den samlede udgift over et år er den samme.
+A residential customer can typically choose between two payment models. The choice affects **when and how** the customer pays — but **not what** the customer pays. The total cost over a year is the same.
 
-| | **Aconto** (forudbetaling) | **Bagudbetaling** (faktisk forbrug) |
+| | **Aconto** (prepayment) | **Arrears billing (bagudbetaling)** (actual consumption) |
 |---|---|---|
-| **Hvad kunden betaler** | Fast estimeret beløb pr. kvartal | Faktisk forbrug for foregående måned |
-| **Faktureringsfrekvens** | Kvartalsvis (4 fakturaer/år) | Månedlig (12 fakturaer/år) |
-| **Opgørelse** | Hvert kvartal: faktisk forbrug vs. aconto | Ingen opgørelse nødvendig — fakturaen ER endelig |
-| **Betalingstidspunkt** | Forud (betaler for kommende periode) | Bagud (betaler for afsluttet periode) |
-| **For leverandøren** | Jævn, forudsigelig cash flow | Leverandøren lægger ud for net/afgifter inden kundens betaling |
-| **For kunden** | Færre fakturaer, men periodevis opgørelse | Fuld gennemsigtighed, ingen overraskelser |
-| **Betalingsgebyr** | 4 × gebyr pr. år | 12 × gebyr pr. år |
+| **What the customer pays** | Fixed estimated amount per quarter | Actual consumption for the preceding month |
+| **Billing frequency** | Quarterly (4 invoices/year) | Monthly (12 invoices/year) |
+| **Settlement** | Every quarter: actual consumption vs. aconto | No settlement needed — the invoice IS final |
+| **Payment timing** | In advance (pays for upcoming period) | In arrears (pays for completed period) |
+| **For the supplier** | Steady, predictable cash flow | Supplier advances grid/tax costs before customer payment |
+| **For the customer** | Fewer invoices, but periodic settlement | Full transparency, no surprises |
+| **Payment fee** | 4 × fee per year | 12 × fee per year |
 
-**Branchetrend:** Flere leverandører (Andel Energi, EWII) har afskaffet aconto helt og tilbyder kun bagudbetaling. Begrundelsen er at fjernaflæste målere gør månedlig afregning på faktisk forbrug mulig, og at aconto i praksis er et rentefrit lån fra kunden til leverandøren.
+**Industry trend:** More suppliers (Andel Energi, EWII) have abolished aconto entirely and only offer arrears billing. The rationale is that remotely read meters make monthly settlement on actual consumption possible, and that aconto in practice is an interest-free loan from the customer to the supplier.
 
 ---
 
-## Aconto: Detaljeret forklaring
+## Aconto: Detailed explanation
 
-### Hvad er aconto?
+### What is aconto?
 
-Aconto er en **forudbetalingsmodel** hvor kunden betaler et **fast estimeret beløb** forud for hver **faktureringsperiode** (typisk kvartal). Ved periodens slutning laves en **acontoopgørelse** der afstemmer det indbetalte acontobeløb mod det faktiske forbrug.
+Aconto is a **prepayment model** where the customer pays a **fixed estimated amount** in advance for each **billing period (faktureringsperiode)** (typically a quarter). At the end of the period, an **aconto settlement (acontoopgørelse)** is performed that reconciles the paid aconto amount against actual consumption.
 
-Alle fire kvartaler følger **samme cyklus** — der er ingen særlig årlig opgørelse.
+All four quarters follow the **same cycle** — there is no special annual settlement.
 
-### Hvorfor aconto?
+### Why aconto?
 
-Acontos primære formål er **cash flow for leverandøren**:
+Aconto's primary purpose is **cash flow for the supplier**:
 
-- Vi modtager penge **forud** uanset sæsonudsving i forbrug og spotpriser
-- Under engrosmodellen betaler vi netvirksomhed, Energinet og stat for kunden — aconto sikrer at vi har likviditet til dette
-- Kunden opnår færre fakturaer (4 vs. 12 pr. år) og lavere betalingsgebyrer
+- We receive money **in advance** regardless of seasonal fluctuations in consumption and spot prices
+- Under the wholesale model (engrosmodellen), we pay the grid company, Energinet, and the state on behalf of the customer — aconto ensures we have liquidity for this
+- The customer benefits from fewer invoices (4 vs. 12 per year) and lower payment fees
 
-### Engrosmodellen og aconto
+### The wholesale model (engrosmodellen) and aconto
 
-Siden 1. april 2016 gælder **engrosmodellen** i Danmark. Kunden modtager **én samlet faktura** fra elleverandøren der dækker alle omkostninger: energi, nettarif, Energinet-tariffer, elafgift, abonnementer og moms.
+Since 1 April 2016, the **wholesale model (engrosmodellen)** applies in Denmark. The customer receives **one consolidated invoice** from the electricity supplier covering all costs: energy, grid tariff (nettarif), Energinet tariffs, electricity tax (elafgift), subscriptions, and VAT.
 
-Acontobeløbet skal derfor dække **hele omkostningsstakken** — ikke kun energiprisen. Det gør beregningen mere kompleks, fordi vi skal estimere fremtidige priser for alle komponenter.
+The aconto amount must therefore cover the **entire cost stack** — not just the energy price. This makes the calculation more complex, because we must estimate future prices for all components.
 
-### Beregning af acontobeløbet
+### Calculating the aconto amount
 
-**Ny kunde (ingen historik):**
-
-```
-Estimeret årsforbrug (kWh)                    ← Fra DataHub, eller standardestimat:
-                                                  Lejlighed: ~2.500 kWh/år
-                                                  Hus:       ~4.000 kWh/år
-× forventet gennemsnitspris (alle komponenter)← Spot + margin + tariffer + afgifter
-+ abonnementer (net + leverandør, 12 måneder)
-+ moms (25%)
-= Estimeret årsomkostning
-÷ 4 kvartaler
-= Kvartalsvis acontobeløb
-```
-
-**Eksisterende kunde (genberegning):**
+**New customer (no history):**
 
 ```
-Faktisk forbrug, seneste 12 måneder (kWh)    ← Fra RSM-012-data i vores DB
-× forventet gennemsnitspris fremadrettet      ← Aktuelle spot-/tarifniveauer
-+ abonnementer + afgifter + moms
-= Nyt estimeret årsbeløb
-÷ 4 kvartaler
-= Nyt kvartalsvis acontobeløb
+Estimated annual consumption (kWh)              ← From DataHub, or standard estimate:
+                                                    Apartment: ~2,500 kWh/year
+                                                    House:     ~4,000 kWh/year
+× expected average price (all components)        ← Spot + margin + tariffs + taxes
++ subscriptions (grid + supplier, 12 months)
++ VAT (25%)
+= Estimated annual cost
+÷ 4 quarters
+= Quarterly aconto amount
 ```
 
-**Genberegning sker:**
-- Automatisk ved hver kvartalsopgørelse
-- Hvis kunden anmoder om det (f.eks. efter køb af elbil, varmepumpe, ny beboer)
-- Hvis forbrugsmønstret afviger væsentligt fra estimatet
+**Existing customer (recalculation):**
 
-**Udfordring ved variable priser:** For spotprodukter skal vi estimere **både** fremtidigt forbrug **og** fremtidige spotpriser. Det gør aconto-estimatet iboende usikkert.
+```
+Actual consumption, last 12 months (kWh)        ← From RSM-012 data in our DB
+× expected average price going forward           ← Current spot/tariff levels
++ subscriptions + taxes + VAT
+= New estimated annual amount
+÷ 4 quarters
+= New quarterly aconto amount
+```
 
-### Den kombinerede kvartalsfaktura
+**Recalculation occurs:**
+- Automatically at each quarterly settlement
+- If the customer requests it (e.g. after purchasing an EV, heat pump, new household member)
+- If the consumption pattern deviates significantly from the estimate
 
-Hver kvartalsfaktura er et **samlet dokument** med to hoveddele:
+**Challenge with variable prices:** For spot products, we must estimate **both** future consumption **and** future spot prices. This makes the aconto estimate inherently uncertain.
+
+### The combined quarterly invoice
+
+Each quarterly invoice is a **single document** with two main parts:
 
 ```
 ┌───────────────────────────────────────────────────────────────────────┐
-│  KVARTALSFAKTURA — maj 2025                                           │
-│  Periode: Q1 opgørelse + Q2 aconto                                    │
+│  QUARTERLY INVOICE — May 2025                                          │
+│  Period: Q1 settlement + Q2 aconto                                     │
 │                                                                       │
 │  ═══════════════════════════════════════════════════════════════       │
-│  DEL 1: OPGØRELSE FOR Q1 (januar-marts)                               │
+│  PART 1: SETTLEMENT FOR Q1 (January-March)                             │
 │  ═══════════════════════════════════════════════════════════════       │
 │                                                                       │
-│  Faktisk forbrug i Q1:                                                │
-│    Energi (spot + margin, beregnet pr. time)         1.350,00 kr.    │
-│    Nettarif (tidsdifferentieret)                        189,00 kr.    │
-│    Systemtarif (Energinet)                               72,90 kr.    │
-│    Transmissionstarif (Energinet)                        66,15 kr.    │
-│    Elafgift                                              10,80 kr.    │
-│    Netabonnement (3 × 49 kr.)                           147,00 kr.    │
-│    Leverandørabonnement (3 × 39 kr.)                     117,00 kr.    │
-│    Moms (25%)                                           488,21 kr.    │
+│  Actual consumption in Q1:                                             │
+│    Energy (spot + margin, calculated per hour)          1,350.00 DKK  │
+│    Grid tariff (nettarif, time-differentiated)            189.00 DKK  │
+│    System tariff (Energinet)                               72.90 DKK  │
+│    Transmission tariff (Energinet)                          66.15 DKK  │
+│    Electricity tax (elafgift)                               10.80 DKK  │
+│    Grid subscription (netabonnement, 3 × 49 DKK)          147.00 DKK  │
+│    Supplier subscription (3 × 39 DKK)                      117.00 DKK  │
+│    VAT (25%)                                               488.21 DKK  │
 │    ───────────────────────────────────────────────                    │
-│    Total faktisk omkostning Q1:                       2.441,06 kr.    │
+│    Total actual cost Q1:                                2,441.06 DKK  │
 │                                                                       │
-│    Aconto indbetalt for Q1:                        − 1.950,00 kr.    │
+│    Aconto paid for Q1:                               − 1,950.00 DKK  │
 │    ───────────────────────────────────────────────                    │
-│    DIFFERENCE Q1:                                   +   491,06 kr.    │
-│    (Du har betalt 491,06 kr. for lidt i Q1)                           │
+│    DIFFERENCE Q1:                                   +    491.06 DKK  │
+│    (You paid 491.06 DKK too little in Q1)                              │
 │                                                                       │
 │  ═══════════════════════════════════════════════════════════════       │
-│  DEL 2: ACONTO FOR Q2 (april-juni)                                    │
+│  PART 2: ACONTO FOR Q2 (April-June)                                    │
 │  ═══════════════════════════════════════════════════════════════       │
 │                                                                       │
-│    Forventet årsforbrug: 4.200 kWh                                    │
-│    Q2-andel (÷4): 1.050 kWh                                          │
-│    Estimeret Q2-omkostning inkl. moms:                1.900,00 kr.    │
+│    Expected annual consumption: 4,200 kWh                              │
+│    Q2 share (÷4): 1,050 kWh                                           │
+│    Estimated Q2 cost incl. VAT:                          1,900.00 DKK  │
 │                                                                       │
-│    Aconto Q2:                                         1.900,00 kr.    │
+│    Aconto Q2:                                            1,900.00 DKK  │
 │                                                                       │
 │  ═══════════════════════════════════════════════════════════════       │
-│  SAMLET BELØB                                                         │
+│  TOTAL AMOUNT                                                          │
 │  ═══════════════════════════════════════════════════════════════       │
 │                                                                       │
-│    Q1 underbetaling:                                +   491,06 kr.    │
-│    Q2 aconto:                                       + 1.900,00 kr.    │
+│    Q1 underpayment:                                 +    491.06 DKK  │
+│    Q2 aconto:                                       + 1,900.00 DKK  │
 │    ───────────────────────────────────────────────                    │
-│    TOTAL AT BETALE:                                   2.391,06 kr.    │
+│    TOTAL AMOUNT DUE:                                  2,391.06 DKK  │
 │                                                                       │
-│    Betalingsfrist: 10. maj 2025                                       │
+│    Payment due: 10 May 2025                                            │
 │                                                                       │
 └───────────────────────────────────────────────────────────────────────┘
 ```
 
-**Nøglepointe:** Over-/underbetaling fra opgørelsen udlignes **på den samlede faktura** — der sendes ikke en separat kreditnota eller debitnota. Kunden betaler ét nettobeløb.
+**Key point:** Over-/underpayment from the settlement is netted **on the combined invoice** — no separate credit note or debit note is sent. The customer pays one net amount.
 
-### De fire identiske kvartaler
+### The four identical quarters
 
-Alle fire kvartaler følger nøjagtig samme cyklus:
+All four quarters follow exactly the same cycle:
 
 ```
               Q1                  Q2                  Q3                  Q4
-          (jan-mar)           (apr-jun)           (jul-sep)           (okt-dec)
+          (Jan-Mar)           (Apr-Jun)           (Jul-Sep)           (Oct-Dec)
               │                   │                   │                   │
               ▼                   ▼                   ▼                   ▼
         ┌────────────┐     ┌────────────┐     ┌────────────┐     ┌────────────┐
-        │ Faktura:   │     │ Faktura:   │     │ Faktura:   │     │ Faktura:   │
-        │ Q4 opgør.  │     │ Q1 opgør.  │     │ Q2 opgør.  │     │ Q3 opgør.  │
+        │ Invoice:   │     │ Invoice:   │     │ Invoice:   │     │ Invoice:   │
+        │ Q4 settl.  │     │ Q1 settl.  │     │ Q2 settl.  │     │ Q3 settl.  │
         │ + Q1 aconto│     │ + Q2 aconto│     │ + Q3 aconto│     │ + Q4 aconto│
-        │ = netbeløb │     │ = netbeløb │     │ = netbeløb │     │ = netbeløb │
+        │ = net amt.  │     │ = net amt.  │     │ = net amt.  │     │ = net amt.  │
         └────────────┘     └────────────┘     └────────────┘     └────────────┘
 ```
 
-Ingen kvartalsfaktura er "speciel" — hver indeholder opgørelse af forrige kvartal + aconto for kommende kvartal.
+No quarterly invoice is "special" — each contains settlement of the previous quarter + aconto for the upcoming quarter.
 
-### Aconto-flowet i systemet
+### The aconto flow in the system
 
 ```mermaid
 sequenceDiagram
     autonumber
-    participant K as Kunde
-    participant V as Vores system
-    participant S as Afregningsmotor
+    participant C as Customer
+    participant V as Our system
+    participant S as Settlement engine
 
-    Note over K,V: VED KVARTALETS START
-    K->>V: Betaler aconto for kvartalet (fast beløb)
-    V->>V: Registrér acontoindbetaling
+    Note over C,V: AT THE START OF THE QUARTER
+    C->>V: Pays aconto for the quarter (fixed amount)
+    V->>V: Register aconto payment
 
-    Note over V,S: BAG SCENEN (løbende)
-    S->>S: Modtag RSM-012 dagligt<br/>Beregn faktisk forbrug pr. time<br/>(præcis som ved bagudbetaling)
-    S->>S: Gem afregningsresultat
+    Note over V,S: BEHIND THE SCENES (ongoing)
+    S->>S: Receive RSM-012 daily<br/>Calculate actual consumption per hour<br/>(exactly as with arrears billing)
+    S->>S: Store settlement result
 
-    Note over K,S: VED KVARTALSSKIFTE
-    S->>S: Acontoopgørelse:<br/>faktisk afregning for kvartalet<br/>vs. acontobetalinger i kvartalet
-    S->>S: Beregn nyt acontobeløb<br/>for kommende kvartal<br/>(baseret på seneste 12 mdr. forbrug)
+    Note over C,S: AT QUARTER CHANGEOVER
+    S->>S: Aconto settlement:<br/>actual settlement for the quarter<br/>vs. aconto payments in the quarter
+    S->>S: Calculate new aconto amount<br/>for the upcoming quarter<br/>(based on last 12 months' consumption)
 
-    S->>V: Generér kombineret faktura:<br/>opgørelse ± difference<br/>+ nyt kvartal aconto<br/>= ét nettobeløb
+    S->>V: Generate combined invoice:<br/>settlement ± difference<br/>+ new quarter aconto<br/>= one net amount
 
-    V->>K: Send kvartalsfaktura
+    V->>C: Send quarterly invoice
 ```
 
-### Slutafregning ved offboarding
+### Final settlement at offboarding
 
-Når en kunde forlader os (leverandørskifte eller fraflytning), laves en **slutafregning** for den delvise periode:
+When a customer leaves us (supplier switch or move-out), a **final settlement (slutafregning)** is performed for the partial period:
 
-1. Afregn faktisk forbrug fra kvartalets start til slutdato
-2. Beregn difference mod indbetalte acontobeløb for perioden
-3. Udsted **slutfaktura** — dette er det eneste tidspunkt hvor en separat kredit- eller debitnota udstedes
-4. Frist: **4 uger** efter kundens afgang (jf. elleveringsbekendtgørelsen, pr. 17. januar 2025)
-5. Hvis kunden har betalt for meget: tilbagebetaling til kundens bankkonto
+1. Settle actual consumption from the quarter's start to the end date
+2. Calculate the difference against aconto amounts paid for the period
+3. Issue a **final invoice** — this is the only time a separate credit or debit note is issued
+4. Deadline: **4 weeks** after the customer's departure (per the Electricity Supply Order (elleveringsbekendtgørelsen), as of 17 January 2025)
+5. If the customer has overpaid: refund to the customer's bank account
 
-### Vigtigt for systemdesign
+### Important for system design
 
-Selv om kunden betaler aconto, kører afregningsberegningen **præcis som normalt** bag scenen. Vi beregner stadig `kWh × pris` pr. time for hver måned — vi sender bare ikke en individuel faktura for det.
+Even though the customer pays aconto, the settlement calculation runs **exactly as normal** behind the scenes. We still calculate `kWh × price` per hour for each month — we simply do not send an individual invoice for it.
 
-Det betyder:
-- **Afregningsmotor** kører altid, uanset betalingsmodel — aconto ændrer intet ved beregningen
-- **Acontobeløbet** er en ren betalings-/cash flow-parameter, ikke en afregningsparameter
-- **Acontoopgørelsen** er en differenceberegning: `faktisk total for perioden − acontobetalinger i perioden`
-- **Den kombinerede faktura** er et præsentationsspørgsmål — to uafhængige beregninger (opgørelse + nyt aconto) samles i ét dokument
-- **Opgørelsesfrekvens** følger faktureringsfrekvensen (typisk kvartalsvis)
-- Ved **offboarding** laves slutafregning for den delvise periode inden for 4 uger
-- **Over-/underbetaling** nettes på den kombinerede faktura — separate kreditnotaer kun ved slutafregning
+This means:
+- **Settlement engine** always runs, regardless of payment model — aconto changes nothing about the calculation
+- **The aconto amount** is purely a payment/cash flow parameter, not a settlement parameter
+- **The aconto settlement (acontoopgørelse)** is a difference calculation: `actual total for the period − aconto payments in the period`
+- **The combined invoice** is a presentation concern — two independent calculations (settlement + new aconto) are combined into one document
+- **Settlement frequency** follows the billing frequency (faktureringsfrekvens) (typically quarterly)
+- At **offboarding**, a final settlement is performed for the partial period within 4 weeks
+- **Over-/underpayment** is netted on the combined invoice — separate credit notes only at final settlement
 
-### Lovmæssige krav
+### Legal requirements
 
-| Krav | Kilde |
+| Requirement | Source |
 |------|-------|
-| Minimum én faktura baseret på faktisk forbrug pr. år | Elleveringsbekendtgørelsen §8 |
-| Månedlig adgang til forbrugsoplysninger (kan være via portal) | Elleveringsbekendtgørelsen §9 |
-| Slutafregning inden 4 uger ved leverandørskifte/fraflytning | Elleveringsbekendtgørelsen §17 |
-| Kontrakten skal specificere afregningsformen (aconto/bagud) | Elleveringsbekendtgørelsen |
-| Aconto er **ikke lovpligtigt** — leverandøren vælger frit | Elforsyningsloven |
+| Minimum one invoice based on actual consumption per year | Electricity Supply Order (elleveringsbekendtgørelsen) §8 |
+| Monthly access to consumption data (can be via portal) | Electricity Supply Order (elleveringsbekendtgørelsen) §9 |
+| Final settlement within 4 weeks upon supplier switch/move-out | Electricity Supply Order (elleveringsbekendtgørelsen) §17 |
+| The contract must specify the settlement form (aconto/arrears) | Electricity Supply Order (elleveringsbekendtgørelsen) |
+| Aconto is **not mandatory** — the supplier chooses freely | Electricity Supply Act (elforsyningsloven) |
 
 ---
 
-## Opsummering: Alle parametre der påvirker fakturaen
+## Summary: All parameters that affect the invoice
 
-| Parameter | Kilde | Ændringsfrekvens | Påvirker |
+| Parameter | Source | Change frequency | Affects |
 |-----------|-------|-----------------|----------|
-| Kundens forbrug (kWh/time) | RSM-012 fra DataHub | Dagligt | Alt kWh-baseret |
-| Nordpool spotpris | Ekstern markedsdata | Time for time | Energilinje |
-| Leverandørmargin | Produktplan/kontrakt | Ved kontraktændring | Energilinje |
-| Produkttillæg | Produktplan | Ved produktskift | Energilinje |
-| Nettarif | Charges-kø (netvirksomhed) | 1-2x årligt | Nettariflinje |
-| Systemtarif | Charges-kø (Energinet) | 1-2x årligt | Systemtariflinje |
-| Transmissionstarif | Charges-kø (Energinet) | 1-2x årligt | Transmissionslinje |
-| Elafgift | Lovgivning | Årligt (1. jan) | Afgiftslinje |
-| Netabonnement | Charges-kø (netvirksomhed) | 1-2x årligt | Abonnementslinje |
-| Leverandørabonnement | Produktplan | Ved kontraktændring | Abonnementslinje |
-| Moms | Lovgivning | Sjældent | Momslinje |
-| Netområde | RSM-007 (ved aktivering) | Ved flytning | Bestemmer hvilke tariffer |
-| Faktureringsfrekvens | Kontrakt | Ved kontraktændring | Periodeinddeling |
-| Betalingsmodel (aconto/faktisk) | Kontrakt | Ved kontraktændring | Betalingsflow |
-| Acontobeløb | Beregnet af os | Ved acontoopgørelse (kan justeres) | Kvartalsvis betaling |
-| Betalingsfrist | Kontrakt | Ved kontraktændring | Betalingsopfølgning |
+| Customer's consumption (kWh/hour) | RSM-012 from DataHub | Daily | Everything kWh-based |
+| Nord Pool spot price | External market data | Hour by hour | Energy line |
+| Supplier margin | Product plan/contract | At contract change | Energy line |
+| Product surcharge | Product plan | At product switch | Energy line |
+| Grid tariff (nettarif) | Charges queue (grid company) | 1-2x yearly | Grid tariff line |
+| System tariff (systemtarif) | Charges queue (Energinet) | 1-2x yearly | System tariff line |
+| Transmission tariff (transmissionstarif) | Charges queue (Energinet) | 1-2x yearly | Transmission line |
+| Electricity tax (elafgift) | Legislation | Annually (1 Jan) | Tax line |
+| Grid subscription (netabonnement) | Charges queue (grid company) | 1-2x yearly | Subscription line |
+| Supplier subscription | Product plan | At contract change | Subscription line |
+| VAT (moms) | Legislation | Rarely | VAT line |
+| Grid area (netområde) | RSM-007 (at activation) | At relocation | Determines which tariffs apply |
+| Billing frequency (faktureringsfrekvens) | Contract | At contract change | Period segmentation |
+| Payment model (aconto/actual) | Contract | At contract change | Payment flow |
+| Aconto amount | Calculated by us | At aconto settlement (adjustable) | Quarterly payment |
+| Payment terms | Contract | At contract change | Payment follow-up |
 
 ---
 
-## Videre læsning
+## Further reading
 
-| Dokument | Hvad det dækker |
+| Document | What it covers |
 |----------|-----------------|
-| [Afregningsoverblik](datahub3-settlement-overview.md) | Systemflow: DataHub → afregning → faktura |
-| [Kundelivscyklus](datahub3-customer-lifecycle.md) | Detaljeret gennemgang af alle 6 faser |
-| [Systemarkitektur](datahub3-proposed-architecture.md) | Teknologivalg og datamodel |
+| [Settlement overview](datahub3-settlement-overview.md) | System flow: DataHub → settlement → invoice |
+| [Customer lifecycle](datahub3-customer-lifecycle.md) | Detailed walkthrough of all 6 phases |
+| [System architecture](datahub3-proposed-architecture.md) | Technology choices and data model |

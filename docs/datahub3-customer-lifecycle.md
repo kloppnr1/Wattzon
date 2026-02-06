@@ -1,465 +1,469 @@
-# Kundelivscyklus: Onboarding til offboarding
+# Customer Lifecycle: Onboarding to Offboarding
 
-End-to-end-gennemgang af en normal privatkunde fra kontraktunderskrivelse til fraflytning. Dækker både DataHub-kommunikation og den interne faktureringsproces.
+End-to-end walkthrough of a typical residential customer from contract signing to move-out. Covers both DataHub communication and the internal billing process.
 
 ---
 
-## Tidslinjeoversigt
+## Timeline Overview
 
-Pilretning: `→` = vi sender til DataHub, `←` = vi modtager fra DataHub.
+Arrow direction: `->` = we send to DataHub, `<-` = we receive from DataHub.
 
 ```
-FASE 1: ONBOARDING                                              ~15 hverdage
+PHASE 1: ONBOARDING                                             ~15 business days
 ─────────────────────────────────────────────────────────────────────────────
-Trigger:      Kontrakt underskrevet — kunde vælger os som leverandør
-DataHub:      → BRS-001 (leverandørskifte) med GSRN + ønsket dato + CPR/CVR
-              → BRS-043 (kort varsel) eller → BRS-009 (tilflytning)
-              → BRS-015 (indsend kundestamdata)
-              → BRS-003 (annullér hvis kunden fortryder)
-Fakturering:  Opret kundepost, vælg produkt-/tarifplan
-              Opsæt faktureringsplan (månedlig/kvartalsvis)
-              Beregn aconto-estimat baseret på forventet årsforbrug
+Trigger:      Contract signed — customer selects us as supplier
+DataHub:      → BRS-001 (supplier switch / leverandørskifte) with GSRN + desired date + CPR/CVR
+              → BRS-043 (short notice) or → BRS-009 (move-in / tilflytning)
+              → BRS-015 (submit customer master data / kundestamdata)
+              → BRS-003 (cancel if the customer withdraws)
+Billing:      Create customer record, select product/tariff plan
+              Set up billing schedule (monthly/quarterly)
+              Calculate aconto estimate based on expected annual consumption
                                     │
                                     ▼
-FASE 2: AKTIVERING                                               ~1 dag
+PHASE 2: ACTIVATION                                              ~1 day
 ─────────────────────────────────────────────────────────────────────────────
-Trigger:      Ikrafttrædelsesdato nået — vi er nu leverandør på målepunktet
-DataHub:      ← RSM-007 (stamdata: afregningsmetode, netområde, GLN, type)
-              ← RSM-012 (første måledata, evt. historiske for overgang)
-Fakturering:  Tildel nettariffer ud fra netområde + netvirksomhedens GLN
-              Indlæs Nordpool spotpris-feed
-              Aktiver målepunkt i porteføljen
+Trigger:      Effective date reached — we are now the supplier on the metering point
+DataHub:      ← RSM-007 (master data: settlement method, grid area, GLN, type)
+              ← RSM-012 (first metering data, possibly historical for the transition)
+Billing:      Assign grid tariffs based on grid area + grid company GLN
+              Load Nordpool spot price feed
+              Activate metering point in the portfolio
                                     │
                                     ▼
-FASE 3: FØRSTE FAKTURA                                           ~1 måned
+PHASE 3: FIRST INVOICE                                           ~1 month
 ─────────────────────────────────────────────────────────────────────────────
-Trigger:      Første faktureringsperiode afsluttet
-DataHub:      ← RSM-012 (løbende timemåledata — dagligt for flex)
-              ← RSM-014 (aggregerede data til afstemning)
-Fakturering:  Afregningskørsel pr. time for hele perioden:
-                energi        = kWh × (Nordpool spot + leverandørmargin)
-                nettarif      = kWh × tarifsats (tidsdiff. dag/nat/spids)
-                produktmargin = kWh × produktsats
-                + abonnement (dagssats) + elafgift (kWh) + moms (25%)
-              Generér faktura → send til kunde (e-Boks/e-mail/post)
+Trigger:      First billing period completed
+DataHub:      ← RSM-012 (ongoing hourly metering data — daily for flex)
+              ← RSM-014 (aggregated data for reconciliation)
+Billing:      Settlement run per hour for the entire period:
+                energy        = kWh × (Nordpool spot + supplier margin)
+                grid tariff   = kWh × tariff rate (time-differentiated day/night/peak)
+                product margin = kWh × product rate
+                + subscription (daily rate) + electricity tax (kWh) + VAT (25%)
+              Generate invoice → send to customer (e-Boks/email/post)
                                     │
                                     ▼
-FASE 4: DRIFT                                                    måneder/år
+PHASE 4: OPERATIONS                                              months/years
 ─────────────────────────────────────────────────────────────────────────────
-Trigger:      Kunden er aktiv — løbende leverance
-DataHub:      ← RSM-012 (daglige timemåledata)
-              ← RSM-014 (månedlige aggregeringer)
-              ← BRS-027 (engrosopgørelse)
-              ← Charges (tarifopdateringer fra netvirksomhed)
-              ← RSM-004/007 (stamdataændringer)
-              → BRS-028/029/030 (on-demand dataforespørgsler)
-Fakturering:  Periodisk fakturering (månedligt/kvartalsvist)
-              Engrosafstemning: egen beregning vs. DataHub (RSM-014/BRS-027)
-              Tarifopdateringer ved nye satser fra netvirksomhed
-              Acontoopgørelse: faktisk forbrug vs. acontobetalinger (hvert kvartal)
+Trigger:      Customer is active — ongoing supply
+DataHub:      ← RSM-012 (daily hourly metering data)
+              ← RSM-014 (monthly aggregations)
+              ← BRS-027 (wholesale settlement / engrosopgørelse)
+              ← Charges (tariff updates from the grid company)
+              ← RSM-004/007 (master data changes)
+              → BRS-028/029/030 (on-demand data requests)
+Billing:      Periodic invoicing (monthly/quarterly)
+              Wholesale reconciliation: own calculation vs. DataHub (RSM-014/BRS-027)
+              Tariff updates when new rates from grid company
+              Aconto settlement (acontoopgørelse): actual consumption vs. aconto payments (each quarter)
                                     │
                                     ▼
-FASE 5: OFFBOARDING                                              ~15 hverdage
+PHASE 5: OFFBOARDING                                             ~15 business days
 ─────────────────────────────────────────────────────────────────────────────
-Trigger:      Kunde fraflytter / anden leverandør overtager / manglende betaling
-DataHub:      → BRS-002 (leveranceophør — vi opsiger, scenarie B/D)
-              → BRS-010 (fraflytning — scenarie C)
-              → BRS-044 (annullér ophør ved fortrydelse)
-              ← BRS-001 (indgående skifte fra anden DDQ — scenarie A)
-Fakturering:  Markér målepunkt inaktivt, registrér slutdato
-              Kør slutafregning for delvis periode
+Trigger:      Customer moves out / another supplier takes over / non-payment
+DataHub:      → BRS-002 (supply termination / leveranceophør — we terminate, scenario B/D)
+              → BRS-010 (move-out / fraflytning — scenario C)
+              → BRS-044 (cancel termination if customer changes mind)
+              ← BRS-001 (incoming switch from another DDQ — scenario A)
+Billing:      Mark metering point inactive, record end date
+              Run final settlement for partial period
                                     │
                                     ▼
-FASE 6: AFSLUTNING                                               ~1 måned
+PHASE 6: CLOSING                                                 ~1 month
 ─────────────────────────────────────────────────────────────────────────────
-Trigger:      Endelige måledata modtaget fra DataHub
-DataHub:      ← RSM-012 (endelige måledata op til slutdato)
-Fakturering:  Slutafregning: energi + tarif + abonnement (forholdsmæssigt)
-              Acontoopgørelse: faktisk forbrug vs. samlede acontobetalinger
-              Slutfaktura: kredit → tilbagebetaling / debit → opkrævning
-              Arkivér kundepost (5 år) + bevar måledata (3+ år)
+Trigger:      Final metering data received from DataHub
+DataHub:      ← RSM-012 (final metering data up to end date)
+Billing:      Final settlement: energy + tariff + subscription (pro-rated)
+              Aconto settlement (acontoopgørelse): actual consumption vs. total aconto payments
+              Final invoice: credit → refund / debit → collection
+              Archive customer record (5 years) + retain metering data (3+ years)
 
 ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─
 
-SÆRTILFÆLDE (kan forekomme i enhver fase)
+SPECIAL CASES (can occur in any phase)
 ─────────────────────────────────────────────────────────────────────────────
-              → BRS-042 (fejlagtigt skifte)    → kreditér alle fakturaer
-              → BRS-011 (fejlagtig flytning)   → genberegn + kredit/debit
-              → RSM-015 (historiske data)      → verifikation ved tvister
-              → RSM-016 (aggregerede data)     → afstemning
-              ← BRS-021 (rettet måledata)      → genberegn berørte perioder
+              → BRS-042 (erroneous switch)    → credit all invoices
+              → BRS-011 (erroneous move)      → recalculate + credit/debit
+              → RSM-015 (historical data)     → verification in disputes
+              → RSM-016 (aggregated data)     → reconciliation
+              ← BRS-021 (corrected metering data)  → recalculate affected periods
 ```
 
 ---
 
-## Proces-til-fase-mapping
+## Process-to-Phase Mapping
 
-| BRS/RSM | Fase | Rolle | Faktureringskonsekvens |
-|---------|------|-------|-----------------------|
-| BRS-001 (leverandørskifte) | 1 - Onboarding | Vi initierer | Opsæt faktureringsplan + acontoberegning |
-| BRS-043 (kort varsel-skifte) | 1 - Onboarding | Vi initierer | Opsæt faktureringsplan + acontoberegning |
-| BRS-009 (tilflytning) | 1 - Onboarding | Vi initierer | Opsæt faktureringsplan + acontoberegning |
-| BRS-015 (kundestamdata) | 1 - Onboarding | Vi indsender | Ingen direkte |
-| BRS-003 (annuller skifte) | 1 - Onboarding | Vi initierer (hvis kunde annullerer før aktivering) | Annuller oprettet faktureringsplan |
-| RSM-007 (stamdata-snapshot) | 2 - Aktivering | Vi modtager | Tildel tariffer og produktplan |
-| RSM-012 (måledata) | 2-6 | Vi modtager (løbende) | Beregningsgrundlag for afregning |
-| RSM-014 (aggregerede data) | 3-4 | Vi modtager (periodisk) | Afstemning mod engrosopgørelse |
-| BRS-027 (engrosopgørelse) | 4 - Drift | Vi modtager | Afstem egen afregning mod DataHub |
-| BRS-028/029/030 (on-demand data) | 4 - Drift | Vi anmoder | Verifikation af afregningskomponenter |
-| BRS-006 (skift af balanceansvarlig) | 4 - Drift | Vi modtager notifikation | Kan påvirke afregningsopsætning |
-| RSM-004 (stamdataændring) | 4 - Drift | Vi modtager | Kan udløse genberegning ved ændret afregningsmetode/netområde |
-| Charges (tarifopdateringer) | 4 - Drift | Vi modtager | Opdatér satstabeller, påvirker fremtidige fakturaer |
-| BRS-002 (leveranceophør) | 5 - Offboarding | Vi initierer (scenarie B, D) | Slutafregning + slutfaktura + acontoopgørelse |
-| BRS-010 (fraflytning) | 5 - Offboarding | Vi eller DDM initierer (scenarie C) | Slutafregning + slutfaktura + acontoopgørelse |
-| BRS-044 (annuller leveranceophør) | 5 - Offboarding | Vi initierer (ved annullering) | Annuller planlagt slutafregning |
-| BRS-001 fra anden DDQ | 5 - Offboarding | Vi modtager (scenarie A) | Slutafregning + slutfaktura + acontoopgørelse |
-| BRS-042 (fejlagtigt skifte) | Særtilfælde | Vi initierer | Kreditér alle fakturaer for fejlperioden |
-| BRS-011 (fejlagtig flytning) | Særtilfælde | Vi initierer | Genberegn berørte perioder, kredit-/debitnotaer |
-| RSM-015 (anmod historiske data) | Særtilfælde | Vi anmoder (tvister, verifikation) | Ingen direkte (verifikation) |
-| RSM-016 (anmod aggregerede data) | Særtilfælde | Vi anmoder (afstemning) | Ingen direkte (afstemning) |
-
----
-
-## Fakturaberegning: Opbygning af en korrekt faktura
-
-En faktura beregnes pr. time (flexafregning) for hele faktureringsperioden. Hver time har sit eget forbrug (kWh fra RSM-012) og sin egen spotpris fra Nordpool.
-
-### Energi (Nordpool spot + leverandørmargin)
-
-Energiprisen pr. time sammensættes af to dele:
-
-| Komponent | Kilde | Beskrivelse |
-|-----------|-------|-------------|
-| Nordpool spotpris | Elbørsen via markedsdata | Timepris i DKK/kWh, varierer time for time |
-| leverandørmargin (tillæg) | Produktplan / kontraktvilkår | Fast øre/kWh-tillæg oven på spotprisen |
-
-```
-Energi pr. time = kWh × (spotpris + leverandørmargin)
-```
-
-I Xellent er dette forudberegnet:
-- `PowerExchangePrice` = ren Nordpool spotpris
-- `CalculatedPrice` = spotpris + leverandørmargin (allerede sammenlagt)
-- `TimeValue` = kWh forbrugt i timen
-
-Leverandørmarginen er den fortjeneste leverandøren tager pr. kWh oven på indkøbsprisen fra Nordpool. Størrelsen afhænger af kundens produktplan (f.eks. fast tillæg på X øre/kWh).
-
-### Nettariffer (transport)
-
-Nettariffer opkræves af netvirksomheden for transport af strøm. Satserne er tidsdifferentierede (forskellige satser for dag/nat/spids).
-
-```
-Nettarif pr. time = kWh × tarifsats_for_timen
-```
-
-- Satser fra `PriceElementRates` (kolonner Price, Price2..Price24 for timer 1-24)
-- Tilknytning via `PriceElementCheckData` (dato-interval for hvornår tariffen gælder)
-- Kun poster med `ChargeTypeCode = 3` er tariffer
-- Netområde (fra RSM-007) bestemmer hvilken netvirksomheds tariffer der gælder
-
-### Produktmargin
-
-Yderligere per-kWh-gebyr defineret i kundens produktplan (f.eks. grøn energi-tillæg, servicetillæg).
-
-```
-Produktmargin pr. time = kWh × produktsats
-```
-
-- Satser fra `ExuRateTable` baseret på produkttype
-- Produkttilknytning via `ProductExtentTable`
-
-### Faste gebyrer (abonnement)
-
-| Gebyr | Kilde | Beregning |
-|-------|-------|-----------|
-| Netabonnement | Netvirksomhed | Fast månedligt beløb, fordelt pr. dag |
-| Eget abonnement (leverandør) | Produktplan | Fast månedligt beløb, fordelt pr. dag |
-
-### Afgifter og moms
-
-| Afgift | Beregning |
-|--------|-----------|
-| Elafgift | kWh × afgiftssats |
-| Moms (25%) | Beregnes af summen af alle ovenstående komponenter |
-
-### Samlet beregning
-
-```
-For hver time i faktureringsperioden:
-  energi        = kWh × (Nordpool spotpris + leverandørmargin)
-  nettarif      = kWh × tarifsats_for_timen
-  produktmargin = kWh × produktsats
-  elafgift      = kWh × afgiftssats
-  abonnement    = dagssats / 24
-
-Fakturalinje  = Σ alle timer for hver komponent
-Moms          = 25% af total
-Fakturatotal  = sum af alle linjer + moms
-```
-
-### Verifikation af en faktura
-
-1. Hent RSM-012-måledata for perioden (kWh pr. time)
-2. Hent Nordpool-spotpriser for samme timer
-3. Bekræft at `CalculatedPrice ≈ spotpris + aftalt leverandørmargin` for hver time
-4. Hent gældende tarifsatser fra netvirksomheden for perioden
-5. Beregn hver komponent pr. time og summér
-6. Sammenlign med engrosopgørelse (RSM-014 / BRS-027) for afstemning
+| BRS/RSM | Phase | Role | Billing Consequence |
+|---------|-------|------|--------------------|
+| BRS-001 (supplier switch / leverandørskifte) | 1 - Onboarding | We initiate | Set up billing plan + aconto calculation |
+| BRS-043 (short-notice switch) | 1 - Onboarding | We initiate | Set up billing plan + aconto calculation |
+| BRS-009 (move-in / tilflytning) | 1 - Onboarding | We initiate | Set up billing plan + aconto calculation |
+| BRS-015 (customer master data / kundestamdata) | 1 - Onboarding | We submit | No direct consequence |
+| BRS-003 (cancel switch) | 1 - Onboarding | We initiate (if customer cancels before activation) | Cancel created billing plan |
+| RSM-007 (master data snapshot) | 2 - Activation | We receive | Assign tariffs and product plan |
+| RSM-012 (metering data / måledata) | 2-6 | We receive (ongoing) | Calculation basis for settlement |
+| RSM-014 (aggregated data) | 3-4 | We receive (periodic) | Reconciliation against wholesale settlement |
+| BRS-027 (wholesale settlement / engrosopgørelse) | 4 - Operations | We receive | Reconcile own settlement against DataHub |
+| BRS-028/029/030 (on-demand data) | 4 - Operations | We request | Verification of settlement components |
+| BRS-006 (change of balance responsible party / balanceansvarlig) | 4 - Operations | We receive notification | May affect settlement configuration |
+| RSM-004 (master data change) | 4 - Operations | We receive | May trigger recalculation if settlement method/grid area changes |
+| Charges (tariff updates) | 4 - Operations | We receive | Update rate tables, affects future invoices |
+| BRS-002 (supply termination / leveranceophør) | 5 - Offboarding | We initiate (scenario B, D) | Final settlement + final invoice + aconto settlement (acontoopgørelse) |
+| BRS-010 (move-out / fraflytning) | 5 - Offboarding | We or DDM initiate (scenario C) | Final settlement + final invoice + aconto settlement (acontoopgørelse) |
+| BRS-044 (cancel supply termination) | 5 - Offboarding | We initiate (upon cancellation) | Cancel planned final settlement |
+| BRS-001 from another DDQ | 5 - Offboarding | We receive (scenario A) | Final settlement + final invoice + aconto settlement (acontoopgørelse) |
+| BRS-042 (erroneous switch) | Special case | We initiate | Credit all invoices for the erroneous period |
+| BRS-011 (erroneous move) | Special case | We initiate | Recalculate affected periods, credit/debit notes |
+| RSM-015 (request historical data) | Special case | We request (disputes, verification) | No direct consequence (verification) |
+| RSM-016 (request aggregated data) | Special case | We request (reconciliation) | No direct consequence (reconciliation) |
 
 ---
 
-## Fase 1: Onboarding (Kontrakt til skifteanmodning)
+## Invoice Calculation: Building a Correct Invoice
 
-**Trigger:** Kunden underskriver leveringsaftale med os.
+An invoice is calculated per hour (flex settlement / flexafregning) for the entire billing period. Each hour has its own consumption (kWh from RSM-012) and its own spot price from Nordpool.
 
-### Interne trin
+### Energy (Nordpool Spot + Supplier Margin)
 
-1. Salg opretter kundepost (navn, CPR/CVR, kontaktoplysninger, kontraktvilkår)
-2. Salg registrerer målepunktets GSRN (18-cifret nummer fra kundens nuværende regning eller via Eloverblik)
-3. Systemet bestemmer den korrekte proces:
-   - **Ny kunde på eksisterende målepunkt** → leverandørskifte (BRS-001 eller BRS-043)
-   - **Kunde flytter ind på ny adresse** → tilflytning (BRS-009)
-4. Systemet vælger produkt-/tarifplan baseret på kontraktvilkår
-5. Onboarding-post oprettes med status `afventer_datahub`
+The energy price per hour is composed of two parts:
 
-### DataHub-kommunikation
-
-| Trin | Retning | BRS/RSM | Hvad sker der |
-|------|---------|---------|---------------|
-| 1 | DDQ → DataHub | **BRS-001** (RSM-001) | Indsend leverandørskifteanmodning med GSRN + ønsket ikrafttrædelsesdato + kundens CPR/CVR |
-| 2 | DataHub → DDQ | Kvittering | DataHub validerer: målepunkt eksisterer, ingen konflikter, CPR/CVR matcher |
-| 3 | DataHub → gammel DDQ | Notifikation | Nuværende leverandør får besked om at de mister målepunktet |
-
-**Ved behov for kort varsel** (f.eks. hastesag), brug **BRS-043** i stedet — samme meddelelse, kortere varselsperiode.
-
-**Ved tilflytning** (ingen nuværende leverandør på adressen), brug **BRS-009** — lignende flow men uden gammel leverandør.
-
-### Tidsfrister
-- BRS-001: minimum 15 hverdages varsel før ikrafttrædelse ⚠ VERIFICÉR
-- BRS-043: 1 hverdags varsel ⚠ VERIFICÉR
-- BRS-009: kan træde i kraft umiddelbart eller på en fremtidig dato ⚠ VERIFICÉR
-
-### Hvad kan gå galt
-- **Afvisning:** DataHub afviser anmodningen (forkert GSRN, konflikterende proces, CPR-mismatch) → ret data og genindsend
-- **Annullering af kunde:** Kunden fortryder → send **BRS-003** for at annullere før ikrafttrædelsesdato
-
----
-
-## Fase 2: Aktivering (Skiftet træder i kraft)
-
-**Trigger:** Ikrafttrædelsesdatoen for leverandørskiftet er nået.
-
-### DataHub-kommunikation
-
-| Trin | Retning | BRS/RSM | Hvad sker der |
-|------|---------|---------|---------------|
-| 1 | DataHub → DDQ | **RSM-007** (MasterData-kø) | Fuldstændig stamdata-snapshot for målepunktet: type, afregningsmetode, netområde, tilslutningsstatus, netvirksomhed |
-| 2 | DataHub → DDQ | **BRS-015** svar | Bekræftelse af kundestamdata ⚠ VERIFICÉR |
-| 3 | DataHub → DDQ | **RSM-012** (Timeseries-kø) | Første måledataleverance — kan inkludere historiske data for overgangsperioden |
-
-### Interne trin
-
-1. Modtag og gem stamdata → målepunkt er nu `aktivt` i porteføljen
-2. Registrér leveranceperiodens startdato
-3. Tildel produkt-/tarifplan til målepunktet
-4. Indlæs nettariffer for målepunktets netområde (fra Charges-kø-data)
-5. Opsæt faktureringsplan (månedlig eller kvartalsvis — jf. kontrakt)
-6. Ved acontofakturering: beregn estimeret kvartalsvist acontobeløb baseret på forventet årsforbrug
-7. Kunden er nu synlig i kundeportalen
-
-### Nøgledata modtaget ved aktivering
-
-| Data | Kilde | Bruges til |
-|------|-------|------------|
-| Målepunktstype (E17 forbrug, E18 produktion) | RSM-007 | Bestemmer afregningsmetode |
-| Afregningsmetode (flex / profil) | RSM-007 | Bestemmer hvordan måledata modtages og afregning beregnes |
-| Netområde | RSM-007 | Mapper til netvirksomhedens tarifplan |
-| Estimeret årsforbrug | RSM-007 ⚠ VERIFICÉR | Beregningsgrundlag for aconto |
-| Netvirksomhedens GLN | RSM-007 | Identificerer hvilke tariffer der gælder |
-
----
-
-## Fase 3: Første faktura
-
-**Trigger:** Første faktureringsperiode afsluttes (typisk 1 måned efter aktivering).
-
-### Måledataflow (løbende fra aktivering)
-
-| Hændelse | Retning | Meddelelse | Frekvens |
-|----------|---------|------------|----------|
-| Netvirksomhed aflæser måler | MDR → DataHub | BRS-021 | Dagligt (flex) eller månedligt (profil) |
-| DataHub videresender til os | DataHub → DDQ | RSM-012 (E66, Timeseries-kø) | Samme frekvens |
-| DataHub kører engrosopgørelse | DataHub → DDQ | RSM-014 (E31, Aggregations-kø) | Månedligt ⚠ VERIFICÉR |
-
-### Fakturaberegning
-
-For et **flexafregnet** målepunkt (mest udbredt for kunder med fjernaflæste målere):
+| Component | Source | Description |
+|-----------|--------|-------------|
+| Nordpool spot price | Power exchange via market data | Hourly price in DKK/kWh, varies hour by hour |
+| Supplier margin (leverandørmargin / markup) | Product plan / contract terms | Fixed øre/kWh markup on top of the spot price |
 
 ```
-For hvert interval i faktureringsperioden:
-  1. Energiomkostning = mængde_kwh × spotpris_for_interval
-  2. Nettarif         = mængde_kwh × nettarifsats_for_interval
-  3. Produktmargin    = mængde_kwh × produktsats_for_interval
-  4. Abonnement       = dagligt_abonnementsgebyr / intervaller_pr_dag
-  5. Afgifter         = mængde_kwh × gældende_afgiftssatser
-
-Fakturalinjetotal = sum af alle intervaller for hver komponent
+Energy per hour = kWh × (spot price + supplier margin)
 ```
 
-For et **profilafregnet** målepunkt:
-- Bruger estimeret forbrugsprofil fordelt på intervaller
-- Faktisk forbrug afstemmes efterfølgende via BRS-020-forbrugsopgørelse
+In Xellent this is pre-calculated:
+- `PowerExchangePrice` = pure Nordpool spot price
+- `CalculatedPrice` = spot price + supplier margin (already combined)
+- `TimeValue` = kWh consumed in the hour
 
-### Fakturakomponenter
+The supplier margin is the profit the supplier charges per kWh on top of the purchase price from Nordpool. The amount depends on the customer's product plan (e.g. a fixed markup of X øre/kWh).
 
-| Linje | Kilde | Beregningsgrundlag |
-|-------|-------|--------------------|
-| Energi (spot + margin) | RSM-012-mængder × markedspris + produktmargin | Pr. interval |
-| Nettarif (transport) | RSM-012-mængder × nettarifsatser | Pr. interval, tidsdifferentieret |
-| Systemtarif | RSM-012-mængder × systemtarifsats | Pr. interval |
-| Abonnement (net) | Netvirksomhedens faste månedlige gebyr | Pr. dag |
-| Abonnement (eget) | Produktplanens faste gebyr | Pr. dag |
-| Elafgift | RSM-012-mængder × afgiftssats | Pr. kWh |
-| PSO / grøn afgift ⚠ VERIFICÉR | RSM-012-mængder × afgiftssats | Pr. kWh |
-| Moms (25%) | Sum af ovenstående | Standard dansk moms |
+### Grid Tariffs (Transport / Nettariffer)
 
-### Aconto vs. faktisk
+Grid tariffs are charged by the grid company (netvirksomhed) for transporting electricity. The rates are time-differentiated (different rates for day/night/peak).
 
-| Model | Beskrivelse | Afstemning |
-|-------|-------------|------------|
-| **Aconto** | Kunden betaler fast kvartalsvist estimat. Acontoopgørelse afstemmer mod faktisk forbrug. | Hvert kvartal (ved faktureringsperiode-slut) |
-| **Faktisk** | Kunden betaler baseret på faktisk målt forbrug hver periode. | Hver faktura er endelig (ingen afstemning nødvendig) |
+```
+Grid tariff per hour = kWh × tariff_rate_for_the_hour
+```
 
-### Interne trin
+- Rates from `PriceElementRates` (columns Price, Price2..Price24 for hours 1-24)
+- Association via `PriceElementCheckData` (date interval for when the tariff applies)
+- Only entries with `ChargeTypeCode = 3` are tariffs
+- Grid area (from RSM-007) determines which grid company's tariffs apply
 
-1. Afregningsmotor kører for faktureringsperioden
-2. Afregningsresultater grupperes efter fakturalinjetyper
-3. Faktura genereres og sendes til kunden (e-mail, e-Boks eller post)
-4. Betalingsopfølgning begynder (betalingsfrist typisk netto 14-30 dage)
-5. Afregningsresultater gemmes til revision og afstemning
+### Product Margin
 
----
+Additional per-kWh charge defined in the customer's product plan (e.g. green energy surcharge, service surcharge).
 
-## Fase 4: Drift (Løbende leverance)
+```
+Product margin per hour = kWh × product_rate
+```
 
-Kunden er aktiv. Følgende sker løbende:
+- Rates from `ExuRateTable` based on product type
+- Product association via `ProductExtentTable`
 
-### Daglige operationer
+### Fixed Charges (Subscription / Abonnement)
 
-| Hændelse | DataHub | Internt |
-|----------|---------|---------|
-| Måledata modtages | RSM-012 via Timeseries-kø | Gemmes i tidsserie-databasen |
-| Tarif-/gebyropdateringer | Charges-kø | Satstabeller opdateres |
-| Stamdataændringer | RSM-004/007 via MasterData-kø | Portefølje opdateres |
+| Charge | Source | Calculation |
+|--------|--------|-------------|
+| Grid subscription (netabonnement) | Grid company (netvirksomhed) | Fixed monthly amount, prorated per day |
+| Own subscription (supplier) | Product plan | Fixed monthly amount, prorated per day |
 
-### Periodiske operationer
+### Taxes and VAT (Afgifter og moms)
 
-| Hændelse | Frekvens | DataHub | Internt |
-|----------|----------|---------|---------|
-| Fakturagenerering | Månedligt / kvartalsvist | — | Afregningskørsel → faktura → send til kunde |
-| Engrosopgørelsesafstemning | Månedligt ⚠ VERIFICÉR | RSM-014 (BRS-027) | Sammenlign egen afregning med DataHub-aggregering |
-| Acontoopgørelse | Kvartalsvist (ved aconto) | — | Beregn faktisk vs. acontobetalinger, net på kvartalsfaktura |
-| Produkt-/prisændringer | Jf. kontrakt | — | Opdatér produktsatser, underret kunde |
-| Nettarifændringer | Typisk årligt | Charges-kø | Opdatér satstabeller, genberegn fremtidige estimater |
-| Skift af balanceansvarlig | Sjældent | BRS-006-notifikation | Opdatér porteføljeregistre |
+| Tax | Calculation |
+|-----|-------------|
+| Electricity tax (elafgift) | kWh × tax rate |
+| VAT (moms, 25%) | Calculated on the sum of all above components |
 
-### Kundeselvbetjening (portal)
+### Total Calculation
 
-- Se forbrugsdata (time-/dags-/månedsgrafer)
-- Se og download fakturaer
-- Opdatér kontaktinformation
-- Se kontraktdetaljer og produktplan
+```
+For each hour in the billing period:
+  energy        = kWh × (Nordpool spot price + supplier margin)
+  grid tariff   = kWh × tariff_rate_for_the_hour
+  product margin = kWh × product_rate
+  electricity tax = kWh × tax_rate
+  subscription  = daily_rate / 24
 
-### Betaling og inkasso
+Invoice line   = Σ all hours for each component
+VAT            = 25% of total
+Invoice total  = sum of all lines + VAT
+```
 
-| Hændelse | Handling |
-|----------|----------|
-| Faktura udstedt | Registrér tilgodehavende, send til kunde |
-| Betaling modtaget | Match til faktura, opdatér saldo |
-| Betaling forfalden | Send rykker (1., 2.) |
-| Vedvarende manglende betaling | Initiér leveranceophør (BRS-002) — se Fase 5 |
+### Verifying an Invoice
+
+1. Retrieve RSM-012 metering data for the period (kWh per hour)
+2. Retrieve Nordpool spot prices for the same hours
+3. Confirm that `CalculatedPrice ≈ spot price + agreed supplier margin` for each hour
+4. Retrieve applicable tariff rates from the grid company for the period
+5. Calculate each component per hour and sum
+6. Compare with wholesale settlement (RSM-014 / BRS-027) for reconciliation
 
 ---
 
-## Fase 5: Offboarding
+## Phase 1: Onboarding (Contract to Switch Request)
 
-En kunde forlader os af en af flere årsager. Hver følger et forskelligt forløb:
+**Trigger:** The customer signs a supply agreement with us.
 
-### Scenarie A: Kunden skifter til anden leverandør
+### Internal Steps
 
-**Trigger:** En anden leverandør indsender BRS-001 for vores målepunkt.
+1. Sales creates customer record (name, CPR/CVR, contact details, contract terms)
+2. Sales registers the metering point's GSRN (18-digit number from the customer's current bill or via Eloverblik)
+3. The system determines the correct process:
+   - **New customer on existing metering point** -> supplier switch (leverandørskifte) (BRS-001 or BRS-043)
+   - **Customer moving into a new address** -> move-in (tilflytning) (BRS-009)
+4. The system selects product/tariff plan based on contract terms
+5. Onboarding record is created with status `awaiting_datahub`
 
-| Trin | Retning | Hvad sker der |
-|------|---------|---------------|
-| 1 | DataHub → DDQ | Vi modtager notifikation om at en ny leverandør har anmodet om vores målepunkt |
-| 2 | (afventer) | Ikrafttrædelsesdatoen nås — leveranceforpligtelsen overgår |
-| 3 | DataHub → DDQ | RSM-012 med endelige måledata op til skiftedatoen |
-| 4 | Internt | Markér målepunkt som `inaktivt`, registrér leveranceperiodens slutdato |
-| 5 | Internt | Kør slutafregning for den delvise periode |
-| 6 | Internt | Generér slutfaktura / kreditnota |
+### DataHub Communication
 
-Vi initierer ikke noget — den tilgående leverandør driver processen.
+| Step | Direction | BRS/RSM | What happens |
+|------|-----------|---------|--------------|
+| 1 | DDQ -> DataHub | **BRS-001** (RSM-001) | Submit supplier switch request with GSRN + desired effective date + customer's CPR/CVR |
+| 2 | DataHub -> DDQ | Acknowledgement | DataHub validates: metering point exists, no conflicts, CPR/CVR matches |
+| 3 | DataHub -> old DDQ | Notification | Current supplier is notified that they are losing the metering point |
 
-### Scenarie B: Kunden opsiger kontrakt
+**If short notice is needed** (e.g. urgent case), use **BRS-043** instead — same message, shorter notice period.
 
-**Trigger:** Kunden meddeler os at de ønsker at ophøre med leverance (flytter til udlandet, skifter til egen produktion osv.).
+**For move-in (tilflytning)** (no current supplier at the address), use **BRS-009** — similar flow but without the old supplier.
 
-| Trin | Retning | BRS/RSM | Hvad sker der |
-|------|---------|---------|---------------|
-| 1 | DDQ → DataHub | **BRS-002** (RSM-005) | Indsend anmodning om leveranceophør med ikrafttrædelsesdato |
-| 2 | DataHub → DDQ | Kvittering | DataHub bekræfter |
-| 3 | (ikrafttrædelse) | | Leverance ophører. Målepunktet kan overgå til "forsyningspligtig leverandør" ⚠ VERIFICÉR |
-| 4 | DataHub → DDQ | RSM-012 | Endelige måledata |
-| 5 | Internt | | Slutafregning + faktura |
+### Deadlines
 
-**Annulleringsmulighed:** Hvis kunden fortryder før ikrafttrædelsesdatoen, send **BRS-044** for at annullere leveranceophøret.
+- BRS-001: minimum 15 business days' notice before effective date. VERIFY
+- BRS-043: 1 business day's notice. VERIFY
+- BRS-009: can take effect immediately or on a future date. VERIFY
 
-### Scenarie C: Kunden fraflytter
+### What Can Go Wrong
 
-**Trigger:** Kunden melder fraflytning til ny adresse, eller netvirksomheden melder fraflytning.
-
-| Trin | Retning | BRS/RSM | Hvad sker der |
-|------|---------|---------|---------------|
-| 1 | DDQ → DataHub (eller DDM → DataHub) | **BRS-010** | Fraflytningsbesked med ikrafttrædelsesdato |
-| 2 | DataHub → DDQ | Kvittering | DataHub bekræfter |
-| 3 | DataHub → DDQ | RSM-012 | Endelige måledata op til fraflytningsdato |
-| 4 | Internt | | Slutafregning + faktura |
-
-Hvis kunden også **tilflytter** en ny adresse vi leverer til, kører fraflytning og en ny BRS-009-tilflytning parallelt.
-
-### Scenarie D: Manglende betaling (tvunget leveranceophør)
-
-**Trigger:** Kunden har ikke betalt efter gentagne rykkere.
-
-| Trin | Retning | BRS/RSM | Hvad sker der |
-|------|---------|---------|---------------|
-| 1 | Internt | | Inkassoproces udtømt, beslutning om opsigelse |
-| 2 | DDQ → DataHub | **BRS-002** (RSM-005) | Indsend leveranceophør med årsag: manglende betaling ⚠ VERIFICÉR |
-| 3 | DataHub → DDQ | Kvittering | DataHub bekræfter |
-| 4 | (ikrafttrædelse) | | Leverance ophører |
-| 5 | DataHub → DDQ | RSM-012 | Endelige måledata |
-| 6 | Internt | | Slutafregning + faktura. Udestående gæld overgår til inkasso/afskrivning |
-
-**Annulleringsmulighed:** Hvis kunden betaler før ikrafttrædelsesdatoen, send **BRS-044** for at annullere.
+- **Rejection:** DataHub rejects the request (incorrect GSRN, conflicting process, CPR mismatch) -> correct data and resubmit
+- **Customer cancellation:** The customer changes their mind -> send **BRS-003** to cancel before the effective date
 
 ---
 
-## Fase 6: Afslutning (Slutafregning)
+## Phase 2: Activation (Switch Takes Effect)
 
-Uanset offboarding-årsag er afslutningsprocessen den samme:
+**Trigger:** The effective date for the supplier switch has been reached.
 
-1. Modtag endelige RSM-012-måledata fra DataHub (op til slutdato)
-2. Kør afregning for den delvise faktureringsperiode
-3. For acontokunder: beregn slutopgørelse (faktisk forbrug vs. acontobetalinger)
-4. Udsted slutfaktura inden 4 uger (jf. elleveringsbekendtgørelsen §17)
-5. Arkivér kundepost, bevar måledata jf. opbevaringspolitik
+### DataHub Communication
 
-→ Detaljer: [Særtilfælde og fejlhåndtering](datahub3-edge-cases.md#4-slutafregning-ved-offboarding)
+| Step | Direction | BRS/RSM | What happens |
+|------|-----------|---------|--------------|
+| 1 | DataHub -> DDQ | **RSM-007** (MasterData queue) | Complete master data snapshot for the metering point: type, settlement method, grid area, connection status, grid company |
+| 2 | DataHub -> DDQ | **BRS-015** response | Confirmation of customer master data. VERIFY |
+| 3 | DataHub -> DDQ | **RSM-012** (Timeseries queue) | First metering data delivery — may include historical data for the transition period |
+
+### Internal Steps
+
+1. Receive and store master data -> metering point is now `active` in the portfolio
+2. Record the supply period start date
+3. Assign product/tariff plan to the metering point
+4. Load grid tariffs for the metering point's grid area (from Charges queue data)
+5. Set up billing schedule (monthly or quarterly — per contract)
+6. For aconto billing: calculate estimated quarterly aconto amount based on expected annual consumption
+7. The customer is now visible in the customer portal
+
+### Key Data Received at Activation
+
+| Data | Source | Used for |
+|------|--------|----------|
+| Metering point type (E17 consumption, E18 production) | RSM-007 | Determines settlement method |
+| Settlement method (flex / profile) | RSM-007 | Determines how metering data is received and settlement is calculated |
+| Grid area (netområde) | RSM-007 | Maps to the grid company's tariff plan |
+| Estimated annual consumption | RSM-007. VERIFY | Calculation basis for aconto |
+| Grid company GLN | RSM-007 | Identifies which tariffs apply |
 
 ---
 
-## Kilder
+## Phase 3: First Invoice
 
-- [DataHub 3 DDQ Forretningsproces-reference](datahub3-ddq-business-processes.md)
-- [Foreslået systemarkitektur](datahub3-proposed-architecture.md)
-- [RSM-012 Måledata-reference](rsm-012-datahub3-measure-data.md)
+**Trigger:** The first billing period ends (typically 1 month after activation).
+
+### Metering Data Flow (Ongoing from Activation)
+
+| Event | Direction | Message | Frequency |
+|-------|-----------|---------|-----------|
+| Grid company reads meter | MDR -> DataHub | BRS-021 | Daily (flex) or monthly (profile) |
+| DataHub forwards to us | DataHub -> DDQ | RSM-012 (E66, Timeseries queue) | Same frequency |
+| DataHub runs wholesale settlement | DataHub -> DDQ | RSM-014 (E31, Aggregations queue) | Monthly. VERIFY |
+
+### Invoice Calculation
+
+For a **flex-settled** metering point (most common for customers with remotely read meters):
+
+```
+For each interval in the billing period:
+  1. Energy cost     = quantity_kwh × spot_price_for_interval
+  2. Grid tariff     = quantity_kwh × grid_tariff_rate_for_interval
+  3. Product margin  = quantity_kwh × product_rate_for_interval
+  4. Subscription    = daily_subscription_fee / intervals_per_day
+  5. Taxes           = quantity_kwh × applicable_tax_rates
+
+Invoice line total = sum of all intervals for each component
+```
+
+For a **profile-settled** metering point:
+- Uses estimated consumption profile distributed across intervals
+- Actual consumption is reconciled subsequently via BRS-020 consumption statement (forbrugsopgørelse)
+
+### Invoice Components
+
+| Line | Source | Calculation basis |
+|------|--------|-------------------|
+| Energy (spot + margin) | RSM-012 quantities × market price + product margin | Per interval |
+| Grid tariff (transport / nettarif) | RSM-012 quantities × grid tariff rates | Per interval, time-differentiated |
+| System tariff (systemtarif) | RSM-012 quantities × system tariff rate | Per interval |
+| Subscription (grid / netabonnement) | Grid company's fixed monthly fee | Per day |
+| Subscription (own) | Product plan's fixed fee | Per day |
+| Electricity tax (elafgift) | RSM-012 quantities × tax rate | Per kWh |
+| PSO / green tax. VERIFY | RSM-012 quantities × tax rate | Per kWh |
+| VAT (moms, 25%) | Sum of the above | Standard Danish VAT |
+
+### Aconto vs. Actual
+
+Aconto (prepayment on account) is a billing model where the customer pays a fixed estimated amount each period rather than the actual consumption cost.
+
+| Model | Description | Reconciliation |
+|-------|-------------|----------------|
+| **Aconto** | The customer pays a fixed quarterly estimate. The aconto settlement (acontoopgørelse) reconciles against actual consumption. | Each quarter (at billing period end) |
+| **Actual** | The customer pays based on actually measured consumption each period. | Each invoice is final (no reconciliation needed) |
+
+### Internal Steps
+
+1. Settlement engine runs for the billing period
+2. Settlement results are grouped by invoice line types
+3. Invoice is generated and sent to the customer (email, e-Boks, or post)
+4. Payment follow-up begins (payment due date typically net 14-30 days)
+5. Settlement results are stored for audit and reconciliation
+
+---
+
+## Phase 4: Operations (Ongoing Supply / Løbende leverance)
+
+The customer is active. The following occurs on an ongoing basis:
+
+### Daily Operations
+
+| Event | DataHub | Internal |
+|-------|---------|----------|
+| Metering data received | RSM-012 via Timeseries queue | Stored in time series database |
+| Tariff/charge updates | Charges queue | Rate tables updated |
+| Master data changes | RSM-004/007 via MasterData queue | Portfolio updated |
+
+### Periodic Operations
+
+| Event | Frequency | DataHub | Internal |
+|-------|-----------|---------|----------|
+| Invoice generation | Monthly / quarterly | — | Settlement run -> invoice -> send to customer |
+| Wholesale settlement reconciliation | Monthly. VERIFY | RSM-014 (BRS-027) | Compare own settlement with DataHub aggregation |
+| Aconto settlement (acontoopgørelse) | Quarterly (for aconto) | — | Calculate actual vs. aconto payments, net on quarterly invoice |
+| Product/price changes | Per contract | — | Update product rates, notify customer |
+| Grid tariff changes | Typically annually | Charges queue | Update rate tables, recalculate future estimates |
+| Change of balance responsible party (balanceansvarlig) | Rare | BRS-006 notification | Update portfolio records |
+
+### Customer Self-Service (Portal)
+
+- View consumption data (hourly/daily/monthly graphs)
+- View and download invoices
+- Update contact information
+- View contract details and product plan
+
+### Payment and Collections (Inkasso)
+
+| Event | Action |
+|-------|--------|
+| Invoice issued | Record receivable, send to customer |
+| Payment received | Match to invoice, update balance |
+| Payment overdue | Send reminder (1st, 2nd) |
+| Persistent non-payment | Initiate supply termination (BRS-002) — see Phase 5 |
+
+---
+
+## Phase 5: Offboarding
+
+A customer leaves us for one of several reasons. Each follows a different process:
+
+### Scenario A: Customer Switches to Another Supplier
+
+**Trigger:** Another supplier submits BRS-001 for our metering point.
+
+| Step | Direction | What happens |
+|------|-----------|--------------|
+| 1 | DataHub -> DDQ | We receive notification that a new supplier has requested our metering point |
+| 2 | (waiting) | The effective date is reached — the supply obligation transfers |
+| 3 | DataHub -> DDQ | RSM-012 with final metering data up to the switch date |
+| 4 | Internal | Mark metering point as `inactive`, record supply period end date |
+| 5 | Internal | Run final settlement for the partial period |
+| 6 | Internal | Generate final invoice / credit note |
+
+We do not initiate anything — the incoming supplier drives the process.
+
+### Scenario B: Customer Terminates Contract
+
+**Trigger:** The customer notifies us that they wish to terminate supply (moving abroad, switching to own production, etc.).
+
+| Step | Direction | BRS/RSM | What happens |
+|------|-----------|---------|--------------|
+| 1 | DDQ -> DataHub | **BRS-002** (RSM-005) | Submit supply termination request with effective date |
+| 2 | DataHub -> DDQ | Acknowledgement | DataHub confirms |
+| 3 | (effective date) | | Supply terminates. The metering point may transfer to the "supplier of last resort" (forsyningspligtig leverandør). VERIFY |
+| 4 | DataHub -> DDQ | RSM-012 | Final metering data |
+| 5 | Internal | | Final settlement + invoice |
+
+**Cancellation option:** If the customer changes their mind before the effective date, send **BRS-044** to cancel the supply termination.
+
+### Scenario C: Customer Moves Out (Fraflytning)
+
+**Trigger:** The customer reports moving out to a new address, or the grid company (netvirksomhed) reports the move-out.
+
+| Step | Direction | BRS/RSM | What happens |
+|------|-----------|---------|--------------|
+| 1 | DDQ -> DataHub (or DDM -> DataHub) | **BRS-010** | Move-out message with effective date |
+| 2 | DataHub -> DDQ | Acknowledgement | DataHub confirms |
+| 3 | DataHub -> DDQ | RSM-012 | Final metering data up to move-out date |
+| 4 | Internal | | Final settlement + invoice |
+
+If the customer also **moves into** a new address where we supply, the move-out and a new BRS-009 move-in run in parallel.
+
+### Scenario D: Non-Payment (Forced Supply Termination)
+
+**Trigger:** The customer has not paid after repeated reminders.
+
+| Step | Direction | BRS/RSM | What happens |
+|------|-----------|---------|--------------|
+| 1 | Internal | | Collections process exhausted, decision to terminate |
+| 2 | DDQ -> DataHub | **BRS-002** (RSM-005) | Submit supply termination with reason: non-payment. VERIFY |
+| 3 | DataHub -> DDQ | Acknowledgement | DataHub confirms |
+| 4 | (effective date) | | Supply terminates |
+| 5 | DataHub -> DDQ | RSM-012 | Final metering data |
+| 6 | Internal | | Final settlement + invoice. Outstanding debt transfers to collections/write-off |
+
+**Cancellation option:** If the customer pays before the effective date, send **BRS-044** to cancel.
+
+---
+
+## Phase 6: Closing (Final Settlement / Slutafregning)
+
+Regardless of the offboarding reason, the closing process is the same:
+
+1. Receive final RSM-012 metering data from DataHub (up to end date)
+2. Run settlement for the partial billing period
+3. For aconto customers: calculate final aconto settlement (acontoopgørelse) — actual consumption vs. aconto payments
+4. Issue final invoice within 4 weeks (per the Electricity Supply Order / elleveringsbekendtgørelsen section 17)
+5. Archive customer record, retain metering data per retention policy
+
+> Details: [Special Cases and Error Handling](datahub3-edge-cases.md#4-slutafregning-ved-offboarding)
+
+---
+
+## Sources
+
+- [DataHub 3 DDQ Business Process Reference](datahub3-ddq-business-processes.md)
+- [Proposed System Architecture](datahub3-proposed-architecture.md)
+- [RSM-012 Metering Data Reference](rsm-012-datahub3-measure-data.md)

@@ -1,29 +1,29 @@
-# Foreslået arkitektur: Afregningssystem til DataHub 3
+# Proposed Architecture: Settlement System for DataHub 3
 
-Overordnet arkitektur for et open source-afregningssystem der opererer som elleverandør (DDQ) i Energinet DataHub 3. Eksemplerne nedenfor er dimensioneret til ~80.000 kunder.
+Overall architecture for an open source settlement system operating as an electricity supplier (DDQ) in Energinet DataHub 3. The examples below are sized for ~80,000 customers.
 
-## Datavolumen-estimater
+## Data Volume Estimates
 
-| Metrik | PT1H (nuværende) | PT15M (fremtidig) |
-|--------|-------------------|-------------------|
-| Datapunkter pr. kunde pr. dag | 24 | 96 |
-| Datapunkter pr. dag (80K kunder) | 1,92M | 7,68M |
-| Datapunkter pr. måned | ~58M | ~230M |
-| Datapunkter pr. år | ~700M | ~2,8 mia. |
-| RSM-012-meddelelser pr. dag (gns. 1 pr. kunde) | ~80K | ~80K |
-| Bytes pr. datapunkt (position + mængde + kvalitet) | ~40 B | ~40 B |
-| Rå tidsserielagring pr. år | ~28 GB | ~112 GB |
+| Metric | PT1H (current) | PT15M (future) |
+|--------|----------------|----------------|
+| Data points per customer per day | 24 | 96 |
+| Data points per day (80K customers) | 1.92M | 7.68M |
+| Data points per month | ~58M | ~230M |
+| Data points per year | ~700M | ~2.8 billion |
+| RSM-012 messages per day (avg. 1 per customer) | ~80K | ~80K |
+| Bytes per data point (position + quantity + quality) | ~40 B | ~40 B |
+| Raw time series storage per year | ~28 GB | ~112 GB |
 
-Disse volumener driver centrale valg omkring lagringsmotor, partitionering og indlæsningspipeline.
+These volumes drive key decisions around storage engine, partitioning, and ingestion pipeline.
 
 ---
 
-## Systemkontekst
+## System Context
 
 ```
 ┌───────────────┐         ┌───────────────┐        ┌──────────────┐
-│  Backoffice   │         │  Kunde-       │        │  Fakturering │
-│  UI           │         │  portal       │        │  / ERP       │
+│  Backoffice   │         │  Customer     │        │  Billing     │
+│  UI           │         │  Portal       │        │  / ERP       │
 └──────┬────────┘         └──────┬────────┘        └──────┬───────┘
        │                         │                        │
        └─────────────────┬───────┘────────────────────────┘
@@ -36,16 +36,16 @@ Disse volumener driver centrale valg omkring lagringsmotor, partitionering og in
        ┌─────────────────┼─────────────────┐
        │                 │                 │
 ┌──────┴──────┐  ┌───────┴──────┐  ┌───────┴───────┐
-│ DataHub     │  │ Afregnings-  │  │ Kunde- &      │
-│ Integra-    │  │ motor        │  │ Portefølje-   │
-│ tionsservice│  │              │  │ service       │
+│ DataHub     │  │ Settlement   │  │ Customer &    │
+│ Integration │  │ Engine       │  │ Portfolio     │
+│ Service     │  │              │  │ Service       │
 └──────┬──────┘  └───────┬──────┘  └───────┬───────┘
        │                 │                 │
        └─────────────────┼─────────────────┘
                          │
               ┌──────────┴──────────┐
-              │  Tidsserie-lager    │
-              │  + Relationelt lager│
+              │  Time Series Store  │
+              │  + Relational Store │
               └──────────┬──────────┘
                          │
               ┌──────────┴──────────┐
@@ -57,326 +57,326 @@ Disse volumener driver centrale valg omkring lagringsmotor, partitionering og in
 
 ---
 
-## Kerneservices
+## Core Services
 
-### 1. DataHub Integrationsservice
+### 1. DataHub Integration Service
 
-Al kommunikation med DataHub 3 B2B API.
+All communication with the DataHub 3 B2B API.
 
-**Delkomponenter:**
-- **Auth Manager** — OAuth2-tokenlivscyklus (hent, cache, proaktiv fornyelse)
-- **Queue Poller** — Poller alle fire peek-endpoints på uafhængige intervaller
-- **Message Parser** — CIM JSON-deserialisering, skemavalidering, routing
-- **Request Sender** — Bygger og sender udgående CIM-forespørgsler, sporer ventende korrelationer
+**Sub-components:**
+- **Auth Manager** — OAuth2 token lifecycle (fetch, cache, proactive renewal)
+- **Queue Poller** — Polls all four peek endpoints on independent intervals
+- **Message Parser** — CIM JSON deserialization, schema validation, routing
+- **Request Sender** — Builds and sends outbound CIM requests, tracks pending correlations
 
-**Køer der polles:**
+**Queues polled:**
 
-| Kø | Endpoint | Meddelelser | Forretningsprocesser |
-|----|----------|-------------|----------------------|
+| Queue | Endpoint | Messages | Business Processes |
+|-------|----------|----------|--------------------|
 | Timeseries | `GET /cim/Timeseries` | RSM-012, RSM-014 | BRS-020, BRS-021, BRS-027 |
 | Aggregations | `GET /cim/Aggregations` | RSM-014 | BRS-027, BRS-028, BRS-029, BRS-030 |
 | MasterData | `GET /cim/MasterData` | RSM-004, RSM-007 | BRS-001, BRS-006, BRS-009, BRS-010 |
-| Charges | `GET /cim/Charges` | Pris-/tariflister | Tarif-/gebyropdateringer |
+| Charges | `GET /cim/Charges` | Price/tariff lists | Tariff/charge updates |
 
-**Udgående forespørgsler:**
+**Outbound requests:**
 
-| Handling | BRS/RSM |
-|----------|---------|
-| Leverandørskifte | BRS-001, BRS-043 |
-| Leveranceophør | BRS-002, BRS-005 |
-| Annuller skifte / tilbageførsel | BRS-003, BRS-042 |
-| Annuller leveranceophør | BRS-044 |
-| Anmod om historiske data | RSM-015 |
-| Anmod om aggregerede data | RSM-016 |
-| Indsend kundedata | BRS-015 |
+| Action | BRS/RSM |
+|--------|---------|
+| Supplier switch (leverandørskifte) | BRS-001, BRS-043 |
+| End of supply (leveranceophør) | BRS-002, BRS-005 |
+| Cancel switch / reversal (tilbageførsel) | BRS-003, BRS-042 |
+| Cancel end of supply | BRS-044 |
+| Request historical data | RSM-015 |
+| Request aggregated data | RSM-016 |
+| Submit customer data | BRS-015 |
 
-**Designbeslutninger:**
-- Poll specifikke køer (ikke `/cim/all`) — uafhængigt throughput og fejlisolering pr. meddelelsestype
-- Dequeue først efter bekræftet persistering — at-least-once leveringsgaranti
-- Idempotent behandling via gemt `MessageId` — sikker genleverance efter nedbrud
+**Design decisions:**
+- Poll specific queues (not `/cim/all`) — independent throughput and fault isolation per message type
+- Dequeue only after confirmed persistence — at-least-once delivery guarantee
+- Idempotent processing via stored `MessageId` — safe replay after crashes
 
-**Throughput-betragtning:**
-- Ved 80K RSM-012-meddelelser/dag behandler Timeseries-køen ~55 meddelelser/minut i gennemsnit
-- Peek → parse → persist → dequeue-cyklussen skal gennemføres på <1 sekund i gennemsnit
-- Parallel polling af forskellige køer forhindrer én langsom kø i at blokere andre
+**Throughput consideration:**
+- At 80K RSM-012 messages/day, the Timeseries queue processes ~55 messages/minute on average
+- The peek → parse → persist → dequeue cycle must complete in <1 second on average
+- Parallel polling of different queues prevents one slow queue from blocking others
 
-### 2. Afregningsmotor
+### 2. Settlement Engine (Afregningsmotor)
 
-Kerneforretningslogik: beregner afregningsbeløb ud fra måledata, tariffer og markedspriser.
+Core business logic: calculates settlement amounts from metering data, tariffs, and market prices.
 
-**Ansvarsområder:**
-- Beregn energiafregning pr. målepunkt pr. interval
-- Anvend nettariffer (tidsdifferentierede satser fra Charges)
-- Anvend produktmarginer og abonnementsgebyrer
-- Producér afregningsopgørelser pr. kunde pr. faktureringsperiode
-- Afstem mod DataHub engrosopgørelser (BRS-027)
-- Understøt genberegning on-demand ved opdaterede data eller satser
+**Responsibilities:**
+- Calculate energy settlement per metering point per interval
+- Apply grid tariffs (time-differentiated rates from Charges)
+- Apply product margins and subscription fees
+- Produce settlement statements per customer per billing period (faktureringsperiode)
+- Reconcile against DataHub wholesale settlement (engrosopgørelse) (BRS-027)
+- Support recalculation on demand when updated data or rates arrive
 
-**Forretningsprocesser:**
-- **BRS-020** — Forbrugsopgørelser for profilafregnede målepunkter
-- **BRS-021** — Validerede måledata modtaget → udløser afregningsberegning
-- **BRS-027** — Engrosopgørelsesresultater bruges til afstemning
-- **BRS-028/029/030** — On-demand aggregerede data til verifikation
+**Business processes:**
+- **BRS-020** — Consumption statements for profile-settled metering points (profilafregnede målepunkter)
+- **BRS-021** — Validated metering data received → triggers settlement calculation
+- **BRS-027** — Wholesale settlement results used for reconciliation
+- **BRS-028/029/030** — On-demand aggregated data for verification
 
-**Designbeslutninger:**
-- Batchorienteret til planlagte afregningskørsler (nat/uge)
-- Hændelsesdrevet genberegning når nye måledata eller satsændringer ankommer
-- Partitioneret efter netområde — afregningskørsler kører uafhængigt pr. netområde for parallelisering
-- Uforanderlige afregningssnapshots — hver kørsel producerer et versioneret resultat, tidligere versioner bevares
+**Design decisions:**
+- Batch-oriented for scheduled settlement runs (nightly/weekly)
+- Event-driven recalculation when new metering data or rate changes arrive
+- Partitioned by grid area (netområde) — settlement runs execute independently per grid area for parallelization
+- Immutable settlement snapshots — each run produces a versioned result, previous versions are preserved
 
-**Volumenbetragtning:**
-- En fuld månedlig afregningskørsel ved PT15M: 80K kunder × 96 punkter × 30 dage = ~230M rækker at læse og aggregere
-- Partitionér efter netområde + måned for at holde individuelle forespørgsler håndterbare
-- Præ-aggregér dagstotaler under indlæsning for at fremskynde månedlige opgørelser
+**Volume consideration:**
+- A full monthly settlement run at PT15M: 80K customers × 96 points × 30 days = ~230M rows to read and aggregate
+- Partition by grid area + month to keep individual queries manageable
+- Pre-aggregate daily totals during ingestion to speed up monthly statements
 
-### 3. Kunde- & Porteføljeservice
+### 3. Customer & Portfolio Service
 
-Administrerer leverandørens kundeportefølje, målepunktstilknytninger og livscyklus.
+Manages the supplier's customer portfolio, metering point associations, and lifecycle.
 
-**Ansvarsområder:**
-- Vedligehold målepunktsregister (GSRN, type, afregningsmetode, netområde, tilslutningsstatus)
-- Spor leveranceperioder pr. målepunkt (start-/slutdatoer, aktiv leverandør)
-- Behandl stamdata-opdateringer fra DataHub (RSM-004, RSM-007)
-- Administrér kunderegistre (CPR/CVR, navn, kontakt)
-- Orkestrer leverandørskifteworkflows (tilstandsmaskine pr. målepunkt)
-- Koordinér til-/fraflytningsflows
+**Responsibilities:**
+- Maintain metering point registry (GSRN, type, settlement method, grid area, connection status)
+- Track supply periods per metering point (start/end dates, active supplier)
+- Process master data updates from DataHub (RSM-004, RSM-007)
+- Manage customer records (CPR/CVR, name, contact)
+- Orchestrate supplier switch workflows (state machine per metering point)
+- Coordinate move-in/move-out flows (til-/fraflytning)
 
-**Forretningsprocesser:**
-- **BRS-001** — Standard leverandørskifte
-- **BRS-002** — Leveranceophør
-- **BRS-003** — Annuller ventende skifte
-- **BRS-005** — Tvunget leveranceophør
-- **BRS-006** — Skift af balanceansvarlig
-- **BRS-009** — Tilflytning
-- **BRS-010** — Fraflytning
-- **BRS-011** — Fejlagtig flytning
-- **BRS-015** — Indsendelse af kundestamdata
-- **BRS-042** — Fejlagtigt leverandørskifte (tilbageførsel)
-- **BRS-043** — Leverandørskifte med kort varsel
-- **BRS-044** — Annuller leveranceophør
+**Business processes:**
+- **BRS-001** — Standard supplier switch (leverandørskifte)
+- **BRS-002** — End of supply (leveranceophør)
+- **BRS-003** — Cancel pending switch
+- **BRS-005** — Forced end of supply
+- **BRS-006** — Change of balance responsible party (balanceansvarlig)
+- **BRS-009** — Move-in (tilflytning)
+- **BRS-010** — Move-out (fraflytning)
+- **BRS-011** — Erroneous move
+- **BRS-015** — Customer master data submission
+- **BRS-042** — Erroneous supplier switch (reversal)
+- **BRS-043** — Supplier switch with short notice
+- **BRS-044** — Cancel end of supply
 
-**Designbeslutninger:**
-- Tilstandsmaskine pr. målepunkt — hver BRS-proces mapper til en tilstandsovergang
-- Event sourcing til auditspor — hver tilstandsændring er en uforanderlig hændelse (hvem, hvornår, hvorfor, hvilken BRS)
-- Separat læsemodel til hurtige porteføljeforespørgsler (f.eks. "list alle aktive målepunkter i netområde 344")
+**Design decisions:**
+- State machine per metering point — each BRS process maps to a state transition
+- Event sourcing for audit trail — each state change is an immutable event (who, when, why, which BRS)
+- Separate read model for fast portfolio queries (e.g., "list all active metering points in grid area 344")
 
 ---
 
-## Dataarkitektur
+## Data Architecture
 
-### Tidsserie-lager
+### Time Series Store
 
-Den dominerende datavolumen er måledata. Dette kræver en lagringsstrategi optimeret til:
-- Høj skrivethroughput (7,68M indsættelser/dag ved PT15M)
-- Intervalforespørgsler efter målepunkt + tidsperiode
-- Aggregeringsforespørgsler på tværs af mange målepunkter (afregningskørsler)
+The dominant data volume is metering data. This requires a storage strategy optimized for:
+- High write throughput (7.68M inserts/day at PT15M)
+- Range queries by metering point + time period
+- Aggregation queries across many metering points (settlement runs)
 
-**Anbefaling: partitioneret relationel tabel (PostgreSQL/TimescaleDB eller SQL Server med partitionering)**
+**Recommendation: partitioned relational table (PostgreSQL/TimescaleDB or SQL Server with partitioning)**
 
-**Skemakoncept:**
+**Schema concept:**
 
 ```
 metering_data
-├── metering_point_id   (GSRN, indekseret)
-├── timestamp           (UTC, del af partitioneringsnøgle)
+├── metering_point_id   (GSRN, indexed)
+├── timestamp           (UTC, part of partition key)
 ├── resolution          (PT15M / PT1H / P1M)
 ├── quantity_kwh        (decimal)
 ├── quality_code        (A01/A02/A03/A06)
-├── source_message_id   (DataHub MessageId, til sporbarhed)
-├── received_at         (indlæsningstidspunkt)
-└── PARTITION BY RANGE (timestamp), månedligt
+├── source_message_id   (DataHub MessageId, for traceability)
+├── received_at         (ingestion timestamp)
+└── PARTITION BY RANGE (timestamp), monthly
 ```
 
-**Partitioneringsstrategi:**
-- Månedlige partitioner på `timestamp` — holder aktiv partition lille, gamle partitioner kan komprimeres eller arkiveres
-- Sammensat indeks på `(metering_point_id, timestamp)` til punktopslag
-- Ved PT15M med 80K kunder: ~230M rækker/måned, ~40 bytes/række = ~9 GB/måned rå (før indekser)
+**Partitioning strategy:**
+- Monthly partitions on `timestamp` — keeps the active partition small, old partitions can be compressed or archived
+- Composite index on `(metering_point_id, timestamp)` for point lookups
+- At PT15M with 80K customers: ~230M rows/month, ~40 bytes/row = ~9 GB/month raw (before indexes)
 
-**Opbevaring:**
-- Hot: indeværende måned + 2 foregående (aktivt afregningsvindue)
-- Warm: 12 måneder (genberegningsvindue)
-- Cold/arkiv: 3+ år (lovkrav ⚠ VERIFICÉR)
+**Retention:**
+- Hot: current month + 2 previous (active settlement window)
+- Warm: 12 months (recalculation window)
+- Cold/archive: 3+ years (legal requirement — VERIFY)
 
-### Relationelt lager
+### Relational Store
 
-Standard relationel database til strukturerede domænedata:
+Standard relational database for structured domain data:
 
-| Domæne | Nøgleentiteter |
-|--------|----------------|
-| Portefølje | MålepunktMeteringPoint, Customer, SupplyPeriod, BalanceResponsible |
-| Livscyklus | ProcessRequest, ProcessEvent (event-sourcede tilstandsovergange) |
-| Afregning | SettlementRun, SettlementLine, BillingPeriod |
-| Satser | GridTariff, ProductMargin, Subscription, ChargeSchedule |
+| Domain | Key Entities |
+|--------|--------------|
+| Portfolio | MeteringPoint, Customer, SupplyPeriod, BalanceResponsible |
+| Lifecycle | ProcessRequest, ProcessEvent (event-sourced state transitions) |
+| Settlement | SettlementRun, SettlementLine, BillingPeriod |
+| Rates | GridTariff, ProductMargin, Subscription, ChargeSchedule |
 | DataHub | InboundMessage (log), OutboundRequest, PendingCorrelation |
-| System | DeadLetter, ProcessedMessageId (idempotens) |
+| System | DeadLetter, ProcessedMessageId (idempotency) |
 
-→ Detaljer: [Klassediagram](datahub3-class-diagram.md) | [Databasemodel](datahub3-database-model.md)
+> Details: [Class Diagram](datahub3-class-diagram.md) | [Database Model](datahub3-database-model.md)
 
-### Præ-aggregeringspipeline
+### Pre-aggregation Pipeline
 
-For effektiv håndtering af afregningsforespørgsler over 230M rækker/måned:
+For efficient handling of settlement queries over 230M rows/month:
 
 ```
-Rå måledata (PT15M)
-  → Daglig aggregeringsjob
-    → daily_summary (metering_point_id, dato, total_kwh, peak_kwh, off_peak_kwh)
-      → Månedlig afregningskørsel læser dagsoversigter i stedet for rådata
-        → 80K × 30 = 2,4M rækker i stedet for 230M
+Raw metering data (PT15M)
+  → Daily aggregation job
+    → daily_summary (metering_point_id, date, total_kwh, peak_kwh, off_peak_kwh)
+      → Monthly settlement run reads daily summaries instead of raw data
+        → 80K × 30 = 2.4M rows instead of 230M
 ```
 
-For tarifdifferentieret afregning (forskellige satser pr. time) grupperer den daglige aggregering efter tarifperiode i stedet for blot at summere dagen.
+For tariff-differentiated settlement (different rates per hour), the daily aggregation groups by tariff period instead of simply summing the day.
 
 ---
 
 ## API Gateway
 
-Enkelt indgangspunkt for alle interne og eksterne forbrugere.
+Single entry point for all internal and external consumers.
 
-**Forbrugere:**
-- **Backoffice UI** — Porteføljestyring, afregningsgennemgang, manuel procesinitiering
-- **Kundeportal** — Forbrugsoversigt, faktureringshistorik
-- **Fakturering/ERP** — Eksport af afregningsresultater, faktureringstriggers
+**Consumers:**
+- **Backoffice UI** — Portfolio management, settlement review, manual process initiation
+- **Customer Portal** — Consumption overview, billing history
+- **Billing/ERP** — Export of settlement results, billing triggers
 
-**Centrale API-domæner:**
+**Key API domains:**
 
-| Domæne | Eksempler |
-|--------|-----------|
-| Portefølje | List målepunkter, vis kundedetaljer, søg efter netområde |
-| Livscyklus | Initiér leverandørskifte, vis processtatus, annuller ventende forespørgsel |
-| Måledata | Forespørg forbrug pr. målepunkt + periode, sammenlign perioder |
-| Afregning | Vis afregningskørselsresultater, udløs genberegning, eksportér til fakturering |
-| Satser | Vis aktuelle tariffer, upload produktmarginer |
-| Admin | Systemhelbred, kø-lag, dead-letter-gennemgang |
-
----
-
-## Tværgående hensyn
-
-### Observerbarhed
-
-- Struktureret logning med `CorrelationId` (DataHub) og internt `TraceId`
-- Metrikker: modtagne meddelelser/sek pr. kø, afregningskørselsvarighed, API-latens
-- Alarmer: kø-behandlingslag, DataHub-autentificeringsfejl, dead-letter-vækst
-
-### Fejlhåndtering
-
-| Scenarie | Handling |
-|----------|----------|
-| DataHub 5xx / timeout | Genforsøg med eksponentiel backoff, dequeue ikke |
-| Fejl i meddelelsesparsing | Dead-letter, dequeue for at frigøre køen |
-| Forretningsvalideringsfejl | Log + gem til gennemgang, dequeue |
-| Afregningsberegningsfejl | Fejl kørslen, alarmér, bevar delresultater til fejlfinding |
-
-→ Detaljer: [Særtilfælde og fejlhåndtering](datahub3-edge-cases.md#7-systemfejl-og-genopretning)
-
-### Sikkerhed
-
-- OAuth2 client credentials gemt i vault (Azure Key Vault el.lign.)
-- CPR/CVR-data krypteret at rest (GDPR)
-- Rollebaseret adgangskontrol på API-endpoints
-- Auditlog for alle tilstandsændrende operationer
-
-→ Detaljer: [Autentificering og sikkerhed](datahub3-authentication-security.md)
-
-### Konfiguration
-
-| Indstilling | Formål |
-|-------------|--------|
-| `DataHub:Environment` | aktørtest / preprod / prod |
-| `DataHub:TenantId` | Azure AD-tenant |
-| `DataHub:ClientId` / `ClientSecret` | OAuth2-legitimationsoplysninger |
-| `DataHub:BaseUrl` | API-host |
-| `DataHub:PollIntervalMs` | Poll-interval pr. kø |
-| `DataHub:ActorGLN` | Aktørens GLN |
-| `Settlement:DefaultResolution` | PT1H (nuværende) eller PT15M (fremtidig) |
-| `Settlement:RetentionMonthsHot` | Aktivt datavindue |
-| `TimeSeries:PartitionScheme` | Månedlig / ugentlig |
+| Domain | Examples |
+|--------|----------|
+| Portfolio | List metering points, view customer details, search by grid area |
+| Lifecycle | Initiate supplier switch, view process status, cancel pending request |
+| Metering Data | Query consumption per metering point + period, compare periods |
+| Settlement | View settlement run results, trigger recalculation, export to billing |
+| Rates | View current tariffs, upload product margins |
+| Admin | System health, queue lag, dead-letter review |
 
 ---
 
-## Teknologianbefalinger
+## Cross-cutting Concerns
 
-### Applikationsplatform
+### Observability
 
-| Mulighed | Egnethed | Noter |
-|----------|----------|-------|
-| **.NET 9 (anbefalet)** | Stærk | Naturlig for teamet, modent økosystem til baggrundsservices (`IHostedService`), stærke SQL Server/PostgreSQL-drivere, førsteklasses Azure-integration |
-| Go | God til indlæsningsservices | Høj concurrency, lille footprint — anvendelig til Queue Poller hvis den adskilles som selvstændig service |
-| Java/Spring | Brugbar | Udbredt i energisektoren, men tungere runtime og langsommere iteration hvis teamet er .NET-native |
+- Structured logging with `CorrelationId` (DataHub) and internal `TraceId`
+- Metrics: messages received/sec per queue, settlement run duration, API latency
+- Alerts: queue processing lag, DataHub authentication failures, dead-letter growth
 
-**.NET passer godt fordi:**
-- `BackgroundService` / `IHostedService` mapper direkte til Queue Poller-mønsteret
-- `HttpClientFactory` med `DelegatingHandler` til OAuth2 token-injektion
-- EF Core til relationelt lager, Dapper eller rå ADO.NET til high-throughput tidsserieindlæsning
-- Aspire til lokal dev-orkestrering af flere services
+### Error Handling
 
-### Tidsserie-database
+| Scenario | Action |
+|----------|--------|
+| DataHub 5xx / timeout | Retry with exponential backoff, do not dequeue |
+| Message parsing failure | Dead-letter, dequeue to free the queue |
+| Business validation failure | Log + save for review, dequeue |
+| Settlement calculation failure | Fail the run, alert, preserve partial results for debugging |
 
-Det mest kritiske valg — det afgør om 230M rækker/måned kan forespørges effektivt til afregning.
+> Details: [Edge Cases and Error Handling](datahub3-edge-cases.md#7-systemfejl-og-genopretning)
 
-| Mulighed | Fordele | Ulemper |
-|----------|---------|---------|
-| **TimescaleDB (anbefalet)** | Formålsbygget til tidsserier oven på PostgreSQL. Automatisk partitionering (hypertables), indbygget komprimering (90%+ for måledata), continuous aggregates erstatter den manuelle præ-aggregeringspipeline, standard SQL | Kræver PostgreSQL — nyt hvis teamet kun kender SQL Server |
-| PostgreSQL + native partitionering | Fuld kontrol, ingen extensions. Deklarativ partitionering fungerer godt i denne skala | Manuel partitionsstyring, ingen indbygget komprimering eller continuous aggregates |
-| SQL Server med partitionering | Velkendt hvis teamet bruger SQL Server. Columnstore-indekser komprimerer godt til analyser | Partitionsstyring er mere manuel, columnstore-opdateringer er langsommere end row-store-indsættelser, licenskostnad i skala |
-| ClickHouse | Ekstremt hurtigt til analytiske forespørgsler, columnar komprimering | Overkill til 80K kunder, ikke godt til punktopslag på metering_point_id, kræver separat driftsviden |
-| InfluxDB | Formålsbygget tidsserie | Svagere SQL-understøttelse, sværere at joine med relationelle data, kommerciel licens til clustering |
+### Security
 
-**Hvorfor TimescaleDB:**
-- Ved ~230M rækker/måned (PT15M) opnår hypertable-komprimering typisk 10-15x — reducerer 9 GB/måned til under 1 GB
-- Continuous aggregates vedligeholder automatisk de daglige/timevise opsummeringer afregningsmotor behøver
-- Standard PostgreSQL nedenunder — samme driver, samme værktøj, samme backup-strategi som det relationelle lager
-- Én databasemotor til både tidsserier og relationelle data forenkler drift
+- OAuth2 client credentials stored in vault (Azure Key Vault or similar)
+- CPR/CVR data encrypted at rest (GDPR)
+- Role-based access control on API endpoints
+- Audit log for all state-changing operations
 
-### Relationel database
+> Details: [Authentication and Security](datahub3-authentication-security.md)
 
-| Mulighed | Egnethed | Noter |
-|----------|----------|-------|
-| **PostgreSQL (anbefalet)** | Stærk | Gratis, bevist i skala, passer naturligt med TimescaleDB til en single-engine stak |
-| SQL Server | Stærk | Bedre hvis organisationen allerede driver SQL Server-infrastruktur og licensering |
+### Configuration
 
-Hvis TimescaleDB vælges til tidsserier, er PostgreSQL til det relationelle lager det naturlige valg — én databasemotor at drifte.
+| Setting | Purpose |
+|---------|---------|
+| `DataHub:Environment` | actor test / preprod / prod |
+| `DataHub:TenantId` | Azure AD tenant |
+| `DataHub:ClientId` / `ClientSecret` | OAuth2 credentials |
+| `DataHub:BaseUrl` | API host |
+| `DataHub:PollIntervalMs` | Poll interval per queue |
+| `DataHub:ActorGLN` | Actor's GLN |
+| `Settlement:DefaultResolution` | PT1H (current) or PT15M (future) |
+| `Settlement:RetentionMonthsHot` | Active data window |
+| `TimeSeries:PartitionScheme` | Monthly / weekly |
 
-### Intern message bus
+---
 
-Til afkobling af DataHub Integrationsservice fra domænehandlers:
+## Technology Recommendations
 
-| Mulighed | Egnethed | Noter |
-|----------|----------|-------|
-| **In-process channels (anbefalet til start)** | God | .NET `Channel<T>` eller MediatR. Simplest mulige løsning når alle services kører i én proces. Ingen infrastrukturafhængighed |
-| RabbitMQ | God til udskalering | Nødvendig hvis services deployes uafhængigt. Holdbare køer, dead-letter-support indbygget |
-| Azure Service Bus | God til Azure-hosting | Managed, ingen driftsbyrde. Godt match hvis man allerede er på Azure |
-| Kafka | Overkill | Designet til langt højere throughput. Tilføjer driftskompleksitet der ikke er berettiget ved 80K kunder |
+### Application Platform
 
-**Anbefaling:** Start med in-process channels. Udtrækkes til RabbitMQ eller Azure Service Bus hvis/når services har brug for uafhængig skalering eller deployment.
+| Option | Suitability | Notes |
+|--------|-------------|-------|
+| **.NET 9 (recommended)** | Strong | Natural for the team, mature ecosystem for background services (`IHostedService`), strong SQL Server/PostgreSQL drivers, first-class Azure integration |
+| Go | Good for ingestion services | High concurrency, small footprint — applicable to Queue Poller if split out as a standalone service |
+| Java/Spring | Viable | Widespread in the energy sector, but heavier runtime and slower iteration if the team is .NET-native |
 
-### Hosting & deployment
+**.NET is a good fit because:**
+- `BackgroundService` / `IHostedService` maps directly to the Queue Poller pattern
+- `HttpClientFactory` with `DelegatingHandler` for OAuth2 token injection
+- EF Core for relational store, Dapper or raw ADO.NET for high-throughput time series ingestion
+- Aspire for local dev orchestration of multiple services
 
-| Mulighed | Egnethed | Noter |
-|----------|----------|-------|
-| **Containeriseret (Docker + orkestrator)** | Anbefalet | Hver service som en container. Docker Compose til dev, Kubernetes eller Azure Container Apps til produktion |
-| Azure App Service | Simpel | God til API Gateway. Mindre naturlig til langkørende baggrundsservices (Queue Poller) |
-| Windows Service | Brugbar | Teamet kender mønsteret. Fungerer men begrænser portabilitet og skalering |
-| VMs | Undgå | Manuel skalering, ingen isolering mellem services |
+### Time Series Database
 
-**Anbefaling:** Docker-containere fra dag ét. Brug Azure Container Apps eller Kubernetes i produktion — health checks, auto-genstart og skalering er indbygget. Queue Poller og Afregningsmotor har gavn af at køre som always-on containere frem for request-drevne services.
+The most critical choice — it determines whether 230M rows/month can be queried efficiently for settlement.
+
+| Option | Advantages | Disadvantages |
+|--------|------------|---------------|
+| **TimescaleDB (recommended)** | Purpose-built for time series on top of PostgreSQL. Automatic partitioning (hypertables), built-in compression (90%+ for metering data), continuous aggregates replace the manual pre-aggregation pipeline, standard SQL | Requires PostgreSQL — new if the team only knows SQL Server |
+| PostgreSQL + native partitioning | Full control, no extensions. Declarative partitioning works well at this scale | Manual partition management, no built-in compression or continuous aggregates |
+| SQL Server with partitioning | Familiar if the team uses SQL Server. Columnstore indexes compress well for analytics | Partition management is more manual, columnstore updates are slower than row-store inserts, licensing cost at scale |
+| ClickHouse | Extremely fast for analytical queries, columnar compression | Overkill for 80K customers, not good for point lookups on metering_point_id, requires separate operational expertise |
+| InfluxDB | Purpose-built time series | Weaker SQL support, harder to join with relational data, commercial license for clustering |
+
+**Why TimescaleDB:**
+- At ~230M rows/month (PT15M), hypertable compression typically achieves 10-15x — reducing 9 GB/month to under 1 GB
+- Continuous aggregates automatically maintain the daily/hourly summaries the settlement engine needs
+- Standard PostgreSQL underneath — same driver, same tooling, same backup strategy as the relational store
+- One database engine for both time series and relational data simplifies operations
+
+### Relational Database
+
+| Option | Suitability | Notes |
+|--------|-------------|-------|
+| **PostgreSQL (recommended)** | Strong | Free, proven at scale, natural fit with TimescaleDB for a single-engine stack |
+| SQL Server | Strong | Better if the organization already operates SQL Server infrastructure and licensing |
+
+If TimescaleDB is chosen for time series, PostgreSQL for the relational store is the natural choice — one database engine to operate.
+
+### Internal Message Bus
+
+For decoupling the DataHub Integration Service from domain handlers:
+
+| Option | Suitability | Notes |
+|--------|-------------|-------|
+| **In-process channels (recommended to start)** | Good | .NET `Channel<T>` or MediatR. Simplest possible solution when all services run in a single process. No infrastructure dependency |
+| RabbitMQ | Good for scaling out | Necessary if services are deployed independently. Durable queues, built-in dead-letter support |
+| Azure Service Bus | Good for Azure hosting | Managed, no operational burden. Good match if already on Azure |
+| Kafka | Overkill | Designed for far higher throughput. Adds operational complexity not justified at 80K customers |
+
+**Recommendation:** Start with in-process channels. Extract to RabbitMQ or Azure Service Bus if/when services need independent scaling or deployment.
+
+### Hosting & Deployment
+
+| Option | Suitability | Notes |
+|--------|-------------|-------|
+| **Containerized (Docker + orchestrator)** | Recommended | Each service as a container. Docker Compose for dev, Kubernetes or Azure Container Apps for production |
+| Azure App Service | Simple | Good for API Gateway. Less natural for long-running background services (Queue Poller) |
+| Windows Service | Viable | The team knows the pattern. Works but limits portability and scaling |
+| VMs | Avoid | Manual scaling, no isolation between services |
+
+**Recommendation:** Docker containers from day one. Use Azure Container Apps or Kubernetes in production — health checks, auto-restart, and scaling are built in. Queue Poller and Settlement Engine benefit from running as always-on containers rather than request-driven services.
 
 ### Frontend
 
-| Mulighed | Egnethed | Noter |
-|----------|----------|-------|
-| **React + TypeScript (anbefalet)** | Stærk | Teamet bruger det allerede. Rigt økosystem til datatabeller, grafer (forbrugsvisning), formularer |
-| Blazor | Brugbar | .NET end-to-end. Svagere økosystem til kompleks datavisualisering |
+| Option | Suitability | Notes |
+|--------|-------------|-------|
+| **React + TypeScript (recommended)** | Strong | The team already uses it. Rich ecosystem for data tables, charts (consumption views), forms |
+| Blazor | Viable | .NET end-to-end. Weaker ecosystem for complex data visualization |
 
-### Observerbarhedsstak
+### Observability Stack
 
-| Mulighed | Egnethed | Noter |
-|----------|----------|-------|
-| **OpenTelemetry + Grafana/Loki/Prometheus** | Anbefalet | Leverandørneutral, .NET har førsteklasses OTel-understøttelse. Grafana-dashboards til kø-lag, afregningskørselsmetrikker |
-| Azure Monitor + Application Insights | God til Azure | Managed, mindre drift. Indbygget .NET-integration |
-| ELK (Elasticsearch + Kibana) | Brugbar | Tungere at drifte, men kraftfuld til logsøgning |
+| Option | Suitability | Notes |
+|--------|-------------|-------|
+| **OpenTelemetry + Grafana/Loki/Prometheus** | Recommended | Vendor-neutral, .NET has first-class OTel support. Grafana dashboards for queue lag, settlement run metrics |
+| Azure Monitor + Application Insights | Good for Azure | Managed, less operational overhead. Built-in .NET integration |
+| ELK (Elasticsearch + Kibana) | Viable | Heavier to operate, but powerful for log searching |
 
-### Teknologistak-oversigt
+### Technology Stack Overview
 
 ```
 ┌─────────────────────────────────────────────────┐
@@ -386,123 +386,123 @@ Til afkobling af DataHub Integrationsservice fra domænehandlers:
 │  Services:  .NET 9 BackgroundService             │
 │  Bus:       In-process channels → RabbitMQ       │
 ├─────────────────────────────────────────────────┤
-│  Tidsserier:  TimescaleDB (på PostgreSQL)       │
-│  Relationelt: PostgreSQL                        │
+│  Time Series:  TimescaleDB (on PostgreSQL)      │
+│  Relational:   PostgreSQL                       │
 ├─────────────────────────────────────────────────┤
-│  Hosting:      Docker → Azure Container Apps    │
-│  Observerbarhed: OpenTelemetry + Grafana        │
-│  Hemmeligheder: Azure Key Vault                 │
-│  CI/CD:        Azure DevOps Pipelines           │
+│  Hosting:       Docker → Azure Container Apps   │
+│  Observability: OpenTelemetry + Grafana         │
+│  Secrets:       Azure Key Vault                 │
+│  CI/CD:         Azure DevOps Pipelines          │
 └─────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Estimerede månedlige driftsomkostninger (Azure, West Europe)
+## Estimated Monthly Operating Costs (Azure, West Europe)
 
-Alle priser er omtrentlige, baseret på Azure-listepriser primo 2025, omregnet til DKK med kurs 6,90 kr./USD. Faktiske omkostninger afhænger af reserverede instanser, enterprise-aftaler og forbrugsmønstre.
+All prices are approximate, based on Azure list prices as of early 2025, converted to DKK at a rate of 6.90 kr./USD. Actual costs depend on reserved instances, enterprise agreements, and consumption patterns.
 
-### Tre scenarier
+### Three Scenarios
 
-| | Fase 1-2 (Lean start) | Produktion PT1H | Produktion PT15M |
+| | Phase 1-2 (Lean start) | Production PT1H | Production PT15M |
 |-|------------------------|-----------------|------------------|
-| **Kunder** | 80.000 | 80.000 | 80.000 |
-| **Opløsning** | PT1H | PT1H | PT15M |
-| **Datapunkter/måned** | 58M | 58M | 230M |
+| **Customers** | 80,000 | 80,000 | 80,000 |
+| **Resolution** | PT1H | PT1H | PT15M |
+| **Data points/month** | 58M | 58M | 230M |
 
 #### Compute — Azure Container Apps
 
-| Service | Profil | Lean start | Prod PT1H | Prod PT15M |
-|---------|--------|------------|-----------|------------|
-| API Gateway | Always-on, 0,5 vCPU / 1 GB | 275 kr. | 275 kr. | 275 kr. |
-| DataHub Queue Poller | Always-on, 0,5 vCPU / 1 GB | 275 kr. | 275 kr. | 275 kr. |
-| Afregningsmotor | Burst, 2 vCPU / 4 GB, ~2t/dag | — | 175 kr. | 345 kr. |
+| Service | Profile | Lean start | Prod PT1H | Prod PT15M |
+|---------|---------|------------|-----------|------------|
+| API Gateway | Always-on, 0.5 vCPU / 1 GB | 275 kr. | 275 kr. | 275 kr. |
+| DataHub Queue Poller | Always-on, 0.5 vCPU / 1 GB | 275 kr. | 275 kr. | 275 kr. |
+| Settlement Engine | Burst, 2 vCPU / 4 GB, ~2h/day | — | 175 kr. | 345 kr. |
 | **Compute subtotal** | | **550 kr.** | **725 kr.** | **895 kr.** |
 
-Beregningsgrundlag: Azure Container Apps consumption-priser — ca. 0,000166 kr./vCPU-sek, ca. 0,0000207 kr./GiB-sek. Always-on services kører 2.592.000 sekunder/måned. Afregningsmotoren skalerer op under kørsler.
+Calculation basis: Azure Container Apps consumption pricing — approx. 0.000166 kr./vCPU-sec, approx. 0.0000207 kr./GiB-sec. Always-on services run 2,592,000 seconds/month. The settlement engine scales up during runs.
 
 #### Database — Azure Database for PostgreSQL Flexible Server
 
-| Komponent | Lean start | Prod PT1H | Prod PT15M |
+| Component | Lean start | Prod PT1H | Prod PT15M |
 |-----------|------------|-----------|------------|
-| Compute (TimescaleDB) | Burstable B2ms (2 vCPU, 8 GB) — 690 kr. | GP D4s (4 vCPU, 16 GB) — 1.930 kr. | GP D8s (8 vCPU, 32 GB) — 3.865 kr. |
-| Storage (provisioneret) | 128 GB — 105 kr. | 256 GB — 205 kr. | 512 GB — 405 kr. |
-| Backup (inkluderet) | Op til 128 GB | Op til 256 GB | Op til 512 GB |
-| **Database subtotal** | **795 kr.** | **2.135 kr.** | **4.270 kr.** |
+| Compute (TimescaleDB) | Burstable B2ms (2 vCPU, 8 GB) — 690 kr. | GP D4s (4 vCPU, 16 GB) — 1,930 kr. | GP D8s (8 vCPU, 32 GB) — 3,865 kr. |
+| Storage (provisioned) | 128 GB — 105 kr. | 256 GB — 205 kr. | 512 GB — 405 kr. |
+| Backup (included) | Up to 128 GB | Up to 256 GB | Up to 512 GB |
+| **Database subtotal** | **795 kr.** | **2,135 kr.** | **4,270 kr.** |
 
-Noter:
-- TimescaleDB-komprimering opnår typisk 10-15x på måledata — 230M rækker/måned (~9 GB rå) komprimeres til under 1 GB
-- Efter 12 måneder ved PT15M: ~112 GB rå → ~11 GB komprimeret. Lagerplads-headroom er til indekser, ukomprimerede hot-data og relationelle tabeller
-- Én PostgreSQL-instans dækker både tidsserier (TimescaleDB hypertable) og relationelle data i denne skala
+Notes:
+- TimescaleDB compression typically achieves 10-15x on metering data — 230M rows/month (~9 GB raw) compresses to under 1 GB
+- After 12 months at PT15M: ~112 GB raw → ~11 GB compressed. Storage headroom is for indexes, uncompressed hot data, and relational tables
+- A single PostgreSQL instance covers both time series (TimescaleDB hypertable) and relational data at this scale
 
-#### Understøttende services
+#### Supporting Services
 
-| Service | Månedlig pris | Noter |
+| Service | Monthly price | Notes |
 |---------|---------------|-------|
-| Azure Key Vault | 20 kr. | Hemmelighedslagring til OAuth2-credentials, connection strings |
-| Azure Container Registry (Basic) | 35 kr. | Docker image-lagring |
-| Azure DevOps | 0 kr. | Første 5 brugere gratis; allerede i brug |
-| Grafana Cloud (gratis tier) | 0 kr. | Op til 10K metrikserier, 50 GB logs. Selvhostet Grafana i container hvis overskredet: ~140 kr. |
-| DNS / netværk | 35 kr. | Ubetydeligt ved dette trafikvolumen |
-| **Understøttende subtotal** | **~90 kr.** | |
+| Azure Key Vault | 20 kr. | Secret storage for OAuth2 credentials, connection strings |
+| Azure Container Registry (Basic) | 35 kr. | Docker image storage |
+| Azure DevOps | 0 kr. | First 5 users free; already in use |
+| Grafana Cloud (free tier) | 0 kr. | Up to 10K metric series, 50 GB logs. Self-hosted Grafana in container if exceeded: ~140 kr. |
+| DNS / networking | 35 kr. | Negligible at this traffic volume |
+| **Supporting subtotal** | **~90 kr.** | |
 
-#### Månedlige totaler
+#### Monthly Totals
 
 | | Lean start | Prod PT1H | Prod PT15M |
 |-|------------|-----------|------------|
 | Compute | 550 kr. | 725 kr. | 895 kr. |
-| Database | 795 kr. | 2.135 kr. | 4.270 kr. |
-| Understøttende | 90 kr. | 90 kr. | 90 kr. |
-| **Total** | **~1.435 kr./md.** | **~2.950 kr./md.** | **~5.255 kr./md.** |
-| **Årligt** | **~17.220 kr./år** | **~35.400 kr./år** | **~63.060 kr./år** |
+| Database | 795 kr. | 2,135 kr. | 4,270 kr. |
+| Supporting | 90 kr. | 90 kr. | 90 kr. |
+| **Total** | **~1,435 kr./mo.** | **~2,950 kr./mo.** | **~5,255 kr./mo.** |
+| **Annually** | **~17,220 kr./yr.** | **~35,400 kr./yr.** | **~63,060 kr./yr.** |
 
-### Omkostningsreduktionsmuligheder
+### Cost Reduction Opportunities
 
-| Mulighed | Besparelse | Noter |
-|----------|------------|-------|
-| 1-årig reserveret instans (DB) | 30-35% | Sænker Prod PT15M database fra 4.270 kr. → ~2.760 kr. |
-| 3-årig reserveret instans (DB) | 50-55% | Sænker Prod PT15M database fra 4.270 kr. → ~1.930 kr. |
-| Dev/Test-priser | 40-50% | Til aktørtest- og preprod-miljøer |
-| Selvhostet PostgreSQL på VM | 20-30% | Byt driftsindsats for lavere pris — D4s VM til ~965 kr./md. vs. managed 1.930 kr./md. |
-| Spot-instanser til afregningsmotor | 60-80% | Afregningskørsler kan afbrydes og genstartes |
+| Option | Savings | Notes |
+|--------|---------|-------|
+| 1-year reserved instance (DB) | 30-35% | Reduces Prod PT15M database from 4,270 kr. → ~2,760 kr. |
+| 3-year reserved instance (DB) | 50-55% | Reduces Prod PT15M database from 4,270 kr. → ~1,930 kr. |
+| Dev/Test pricing | 40-50% | For actor test and preprod environments |
+| Self-hosted PostgreSQL on VM | 20-30% | Trade operational effort for lower price — D4s VM at ~965 kr./mo. vs. managed 1,930 kr./mo. |
+| Spot instances for settlement engine | 60-80% | Settlement runs can be interrupted and restarted |
 
-### Hvad er IKKE inkluderet
+### What Is NOT Included
 
-- **Udviklingsmiljøer** (aktørtest, preprod) — multiplicér med 0,5-0,7x pr. miljø (mindre instanser)
-- **Personale-/udviklingsomkostninger** — den klart dominerende omkostning
-- **Fakturering/ERP-integration** — afhænger af målsystem
-- **Kundeportal-hosting** — hvis adskilt fra backoffice
-- **Dataoverførsel (egress)** — Azure opkræver for udgående data, men volumener er små (~1 GB/md. DataHub-trafik)
-- **Disaster recovery / geo-redundans** — tilføjer ~50% til databaseomkostninger ved zone-redundant HA
+- **Development environments** (actor test, preprod) — multiply by 0.5-0.7x per environment (smaller instances)
+- **Personnel/development costs** — by far the dominant cost
+- **Billing/ERP integration** — depends on target system
+- **Customer portal hosting** — if separate from backoffice
+- **Data transfer (egress)** — Azure charges for outbound data, but volumes are small (~1 GB/mo. DataHub traffic)
+- **Disaster recovery / geo-redundancy** — adds ~50% to database costs with zone-redundant HA
 
-### Pris pr. kunde
+### Price per Customer
 
 | | Lean start | Prod PT1H | Prod PT15M |
 |-|------------|-----------|------------|
-| Månedlig pris pr. kunde | 0,02 kr. | 0,04 kr. | 0,07 kr. |
-| Årlig pris pr. kunde | 0,22 kr. | 0,44 kr. | 0,79 kr. |
+| Monthly price per customer | 0.02 kr. | 0.04 kr. | 0.07 kr. |
+| Annual price per customer | 0.22 kr. | 0.44 kr. | 0.79 kr. |
 
-Ved disse volumener er infrastrukturomkostningen ubetydelig sammenlignet med forretningsværdien. Databasen er den primære omkostningsdriver, og reserverede instanser reducerer den markant.
-
----
-
-## Fasevis udrulning
-
-| Fase | Scope | Forretningsprocesser |
-|------|-------|----------------------|
-| 1 | DataHub-forbindelse + måledataindlæsning | Auth, Queue Poller, RSM-012 (BRS-021), tidsserie-lager |
-| 2 | Portefølje + stamdata | RSM-004/007, BRS-001/009/010, Kunde- & Porteføljeservice |
-| 3 | Afregningsmotor | BRS-020, BRS-027, afregningsberegninger, faktureringseksport |
-| 4 | Fuld livscyklusstyring | BRS-002/003/005/006/011/042/043/044, tilstandsmaskine |
-| 5 | Engrosopgørelse + gebyrer | BRS-027/028/029/030, RSM-014/016/017, Charges-kø |
-| 6 | PT15M-migrering | Re-partitionér tidsserie-lager, opdatér afregningsmotor, belastningstest ved 7,68M punkter/dag |
+At these volumes, infrastructure cost is negligible compared to business value. The database is the primary cost driver, and reserved instances reduce it significantly.
 
 ---
 
-## Kilder
+## Phased Rollout
 
-- [DataHub 3 DDQ Forretningsproces-reference](datahub3-ddq-business-processes.md)
-- [RSM-012 Måledata-reference](rsm-012-datahub3-measure-data.md)
-- [Særtilfælde og fejlhåndtering](datahub3-edge-cases.md)
-- CIM Webservice Interface (Dok. 22/03077-1)
-- CIM EDI Guide (Dok. 15/00718-191)
+| Phase | Scope | Business Processes |
+|-------|-------|--------------------|
+| 1 | DataHub connection + metering data ingestion | Auth, Queue Poller, RSM-012 (BRS-021), time series store |
+| 2 | Portfolio + master data | RSM-004/007, BRS-001/009/010, Customer & Portfolio Service |
+| 3 | Settlement engine | BRS-020, BRS-027, settlement calculations, billing export |
+| 4 | Full lifecycle management | BRS-002/003/005/006/011/042/043/044, state machine |
+| 5 | Wholesale settlement (engrosopgørelse) + charges | BRS-027/028/029/030, RSM-014/016/017, Charges queue |
+| 6 | PT15M migration | Re-partition time series store, update settlement engine, load test at 7.68M points/day |
+
+---
+
+## Sources
+
+- [DataHub 3 DDQ Business Process Reference](datahub3-ddq-business-processes.md)
+- [RSM-012 Metering Data Reference](rsm-012-datahub3-measure-data.md)
+- [Edge Cases and Error Handling](datahub3-edge-cases.md)
+- CIM Webservice Interface (Doc. 22/03077-1)
+- CIM EDI Guide (Doc. 15/00718-191)

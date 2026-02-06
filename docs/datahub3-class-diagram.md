@@ -1,16 +1,16 @@
-# DataHub 3: Klassediagram (v1)
+# DataHub 3: Class Diagram (v1)
 
-Domænemodellen for afregningssystemet, opdelt i bounded contexts. Diagrammerne viser de centrale entiteter og deres relationer — ikke den endelige databasemodel, men en konceptuel oversigt der kan drive det første design.
+The domain model for the settlement system, divided into bounded contexts. The diagrams show the central entities and their relationships — not the final database model, but a conceptual overview that can drive the initial design.
 
 ---
 
-## Samlet overblik
+## Full Overview
 
 ```mermaid
 classDiagram
     direction LR
 
-    namespace Portefølje {
+    namespace Portfolio {
         class Customer
         class MeteringPoint
         class SupplyPeriod
@@ -18,17 +18,17 @@ classDiagram
         class GridArea
     }
 
-    namespace Produkt {
+    namespace Product {
         class Product
         class EnergyModel
     }
 
-    namespace Måledata {
+    namespace MeteringData {
         class MeteringData
         class DailySummary
     }
 
-    namespace Satser {
+    namespace Rates {
         class GridTariff
         class TariffRate
         class Subscription
@@ -36,7 +36,7 @@ classDiagram
         class SpotPrice
     }
 
-    namespace Afregning {
+    namespace Settlement {
         class SettlementRun
         class SettlementLine
         class BillingPeriod
@@ -44,7 +44,7 @@ classDiagram
         class AcontoSettlement
     }
 
-    namespace Fakturering {
+    namespace Invoicing {
         class Invoice
         class InvoiceLine
     }
@@ -55,7 +55,7 @@ classDiagram
         class ProcessedMessageId
     }
 
-    namespace Livscyklus {
+    namespace Lifecycle {
         class ProcessRequest
         class ProcessEvent
     }
@@ -75,7 +75,7 @@ classDiagram
 
 ---
 
-## Portefølje og kunde
+## Portfolio and Customer
 
 ```mermaid
 classDiagram
@@ -186,15 +186,15 @@ classDiagram
     SupplyPeriod --> EndReason
 ```
 
-**Nøglerelationer:**
-- En **Customer** har én eller flere **Contracts** (typisk én pr. målepunkt)
-- En **Contract** binder en kunde til et **MeteringPoint** og et **Product**
-- Et **MeteringPoint** har en historik af **SupplyPeriods** (vi er kun leverandør i den aktive periode)
-- Et **MeteringPoint** tilhører et **GridArea** — det bestemmer hvilke tariffer der gælder
+**Key relationships:**
+- A **Customer** has one or more **Contracts** (typically one per metering point)
+- A **Contract** binds a customer to a **MeteringPoint** and a **Product**
+- A **MeteringPoint** has a history of **SupplyPeriods** (we are only the supplier during the active period)
+- A **MeteringPoint** belongs to a **GridArea** (netområde) — this determines which tariffs apply
 
 ---
 
-## Produkt
+## Product
 
 ```mermaid
 classDiagram
@@ -227,17 +227,17 @@ classDiagram
     Contract "*" --> "1" Product
 ```
 
-**Produktet bestemmer:**
-- **EnergyModel** — hvordan spotprisen håndteres (spot / fast / blanding)
-- **MarginOrePerKwh** — leverandørens margin oven på spotprisen
-- **SupplementOrePerKwh** — evt. produkttillæg (f.eks. grøn energi)
-- **SubscriptionKrPerMonth** — leverandørabonnementet
+**The product determines:**
+- **EnergyModel** — how the spot price is handled (spot / fixed / mixed)
+- **MarginOrePerKwh** — the supplier's margin on top of the spot price
+- **SupplementOrePerKwh** — optional product supplement (e.g. green energy)
+- **SubscriptionKrPerMonth** — the supplier subscription fee (leverandørabonnement)
 
-**Contract** binder et produkt til den specifikke kunde og tilføjer individuelle parametre (betalingsmodel, faktureringsfrekvens, betalingsfrist).
+**Contract** binds a product to the specific customer and adds individual parameters (payment model, billing frequency, payment terms).
 
 ---
 
-## Måledata (tidsserie)
+## Metering Data (Time Series) (Måledata)
 
 ```mermaid
 classDiagram
@@ -284,15 +284,15 @@ classDiagram
         +string Gsrn
     }
 
-    note for MeteringData "Partitioneret pr. måned (PARTITION BY RANGE timestamp)\nSammensat indeks: (metering_point_id, timestamp)\n~230M rækker/måned ved PT15M"
-    note for DailySummary "Præ-aggregeret fra rå måledata\nBruges af afregningsmotor\n80K × 30 = 2,4M rækker/måned"
+    note for MeteringData "Partitioned by month (PARTITION BY RANGE timestamp)\nComposite index: (metering_point_id, timestamp)\n~230M rows/month at PT15M"
+    note for DailySummary "Pre-aggregated from raw metering data\nUsed by the settlement engine\n80K x 30 = 2.4M rows/month"
 ```
 
-**MeteringData** er systemets største tabel. Partitioneret månedligt på `timestamp`. **DailySummary** er en præ-aggregering der reducerer afregningsforespørgsler fra 230M til 2,4M rækker.
+**MeteringData** is the system's largest table. Partitioned monthly on `timestamp`. **DailySummary** is a pre-aggregation that reduces settlement queries from 230M to 2.4M rows.
 
 ---
 
-## Satser og priser
+## Rates and Prices (Satser og priser)
 
 ```mermaid
 classDiagram
@@ -356,19 +356,19 @@ classDiagram
         +string Code
     }
 
-    note for TariffRate "HourNumber 1-24 (DB-konvention)\nTidsdifferentierede satser:\ndag/nat/spids"
-    note for SpotPrice "Hentes fra ekstern markedsdata-feed\nÉn pris pr. time pr. prisområde (DK1/DK2)"
+    note for TariffRate "HourNumber 1-24 (DB convention)\nTime-differentiated rates:\nday/night/peak"
+    note for SpotPrice "Fetched from external market data feed\nOne price per hour per price area (DK1/DK2)"
 ```
 
-**Priskilder:**
-- **GridTariff + TariffRate** — tidsdifferentierede satser fra netvirksomheden (via Charges-kø)
-- **Subscription** — faste månedsgebyrer (net + leverandør)
-- **ElectricityTax** — lovbestemt elafgift (opdateres årligt)
-- **SpotPrice** — Nordpool-timepris (ekstern markedsdata)
+**Price sources:**
+- **GridTariff + TariffRate** — time-differentiated rates from the grid operator (netvirksomhed) (via the Charges queue)
+- **Subscription** — fixed monthly fees (grid + supplier)
+- **ElectricityTax** (elafgift) — statutory electricity tax (updated annually)
+- **SpotPrice** — Nordpool hourly price (external market data)
 
 ---
 
-## Afregning
+## Settlement (Afregning)
 
 ```mermaid
 classDiagram
@@ -447,19 +447,19 @@ classDiagram
         +Guid Id
     }
 
-    note for SettlementRun "Uforanderligt snapshot — hver kørsel\nproducerer ny version.\nPartitioneret pr. netområde."
-    note for AcontoSettlement "Difference = ActualCost - AcontoPaid\nPositiv = kunde skylder\nNegativ = kunde tilgode"
+    note for SettlementRun "Immutable snapshot — each run\nproduces a new version.\nPartitioned by grid area."
+    note for AcontoSettlement "Difference = ActualCost - AcontoPaid\nPositive = customer owes\nNegative = customer is owed"
 ```
 
-**Afregningsflow:**
-1. **SettlementRun** kører for en **BillingPeriod** (pr. netområde for parallelisering)
-2. Producerer **SettlementLines** pr. målepunkt pr. ChargeType
-3. For acontokunder: **AcontoSettlement** sammenligner faktisk afregning mod **AcontoPayments**
-4. Hver kørsel er et **versioneret, uforanderligt snapshot** — genberegninger skaber nye versioner
+**Settlement flow:**
+1. **SettlementRun** runs for a **BillingPeriod** (per grid area for parallelization)
+2. Produces **SettlementLines** per metering point per ChargeType
+3. For aconto customers: **AcontoSettlement** (acontoopgørelse) compares actual settlement against **AcontoPayments**
+4. Each run is a **versioned, immutable snapshot** — recalculations create new versions
 
 ---
 
-## Fakturering
+## Invoicing (Fakturering)
 
 ```mermaid
 classDiagram
@@ -526,12 +526,12 @@ classDiagram
         SupplierSubscription
     }
 
-    note for Invoice "Standard = bagudbetaling\nAcontoCombined = opgørelse + nyt aconto\nFinalSettlement = slutfaktura ved offboarding"
+    note for Invoice "Standard = post-payment (bagudbetaling)\nAcontoCombined = settlement + new aconto\nFinalSettlement = final invoice at offboarding"
 ```
 
 ---
 
-## Livscyklus (tilstandsmaskine)
+## Lifecycle (State Machine) (Livscyklus)
 
 ```mermaid
 classDiagram
@@ -582,22 +582,22 @@ classDiagram
     ProcessRequest --> ProcessType
     ProcessRequest --> ProcessStatus
 
-    note for ProcessEvent "Event sourcing — hver\ntilstandsændring er en\nuforanderlig hændelse"
-    note for ProcessRequest "Tilstandsmaskine pr. målepunkt:\nPending → SentToDataHub → Acknowledged\n→ EffectuationPending → Completed"
+    note for ProcessEvent "Event sourcing — each\nstate change is an\nimmutable event"
+    note for ProcessRequest "State machine per metering point:\nPending -> SentToDataHub -> Acknowledged\n-> EffectuationPending -> Completed"
 ```
 
-**Tilstandsmaskine for leverandørskifte (BRS-001):**
+**State machine for supplier switch (leverandørskifte) (BRS-001):**
 
 ```mermaid
 stateDiagram-v2
-    [*] --> Pending : Opret anmodning
+    [*] --> Pending : Create request
     Pending --> SentToDataHub : Send BRS-001
-    SentToDataHub --> Acknowledged : RSM-009 accepteret
-    SentToDataHub --> Rejected : RSM-009 afvist
-    Acknowledged --> EffectuationPending : Venter på ikrafttrædelse
-    EffectuationPending --> Completed : RSM-007 + RSM-012 modtaget
-    Pending --> Cancelled : BRS-003 annullering
-    Acknowledged --> Cancelled : BRS-003 annullering
+    SentToDataHub --> Acknowledged : RSM-009 accepted
+    SentToDataHub --> Rejected : RSM-009 rejected
+    Acknowledged --> EffectuationPending : Awaiting effectuation
+    EffectuationPending --> Completed : RSM-007 + RSM-012 received
+    Pending --> Cancelled : BRS-003 cancellation
+    Acknowledged --> Cancelled : BRS-003 cancellation
     Rejected --> [*]
     Completed --> [*]
     Cancelled --> [*]
@@ -605,7 +605,7 @@ stateDiagram-v2
 
 ---
 
-## DataHub-integration
+## DataHub Integration
 
 ```mermaid
 classDiagram
@@ -663,13 +663,13 @@ classDiagram
     InboundMessage --> MessageStatus
     OutboundRequest --> OutboundStatus
 
-    note for ProcessedMessageId "Idempotenstabel — sikrer at\nsame DataHub-meddelelse\nikke behandles to gange"
-    note for DeadLetterMessage "Meddelelser der fejler parsing\neller validering — til manuel\ngennemgang og genforsøg"
+    note for ProcessedMessageId "Idempotency table — ensures that\nthe same DataHub message\nis not processed twice"
+    note for DeadLetterMessage "Messages that fail parsing\nor validation — for manual\nreview and retry"
 ```
 
 ---
 
-## Relationsoversigt (alle domæner)
+## Relationship Overview (All Domains)
 
 ```
 Customer ──1:*── Contract ──1:1── MeteringPoint ──*:1── GridArea
@@ -678,33 +678,33 @@ Customer ──1:*── Contract ──1:1── MeteringPoint ──*:1── 
                     ▼                    ▼
                  Product            MeteringData
                                          │
-                                         │ aggregeres til
+                                         │ aggregated into
                                          ▼
                                     DailySummary
                                          │
-                                         │ bruges af
+                                         │ used by
                                          ▼
 GridArea ──1:*── GridTariff ──1:*── TariffRate
     │                                    │
-    │ 1:*                                │ afregningsberegning
+    │ 1:*                                │ settlement calculation
     ▼                                    ▼
 Subscription                      SettlementRun ──1:*── SettlementLine
                                          │
-                                         │ driver
+                                         │ drives
                                          ▼
 ElectricityTax                      Invoice ──1:*── InvoiceLine
 SpotPrice                                │
-                                         │ for acontokunder
+                                         │ for aconto customers
                                          ▼
                               AcontoPayment / AcontoSettlement
 ```
 
 ---
 
-## Enums samlet
+## Enums Summary
 
-| Enum | Værdier | Bruges af |
-|------|---------|-----------|
+| Enum | Values | Used by |
+|------|--------|---------|
 | **MeteringPointType** | E17_Consumption, E18_Production | MeteringPoint |
 | **SettlementMethod** | Flex, NonProfiled | MeteringPoint |
 | **ConnectionStatus** | Connected, Disconnected, ClosedDown | MeteringPoint |
@@ -721,11 +721,11 @@ SpotPrice                                │
 
 ---
 
-## Kilder
+## Sources
 
-- [Foreslået systemarkitektur](datahub3-proposed-architecture.md) — services, datamodel, teknologivalg
-- [Produktopbygning og fakturering](datahub3-product-and-billing.md) — alle fakturaparametre
-- [Kundelivscyklus](datahub3-customer-lifecycle.md) — faser og tilstandsovergange
-- [Sekvensdiagrammer](datahub3-sequence-diagrams.md) — meddelelsesflows
-- [Afregningsoverblik](datahub3-settlement-overview.md) — afregningsberegning
-- [Databasemodel](datahub3-database-model.md) — fysisk PostgreSQL/TimescaleDB-skema
+- [Proposed system architecture](datahub3-proposed-architecture.md) — services, data model, technology choices
+- [Product structure and billing](datahub3-product-and-billing.md) — all invoice parameters
+- [Customer lifecycle](datahub3-customer-lifecycle.md) — phases and state transitions
+- [Sequence diagrams](datahub3-sequence-diagrams.md) — message flows
+- [Settlement overview](datahub3-settlement-overview.md) — settlement calculation
+- [Database model](datahub3-database-model.md) — physical PostgreSQL/TimescaleDB schema

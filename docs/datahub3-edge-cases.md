@@ -1,289 +1,291 @@
-# DataHub 3: Særtilfælde og fejlhåndtering
+# DataHub 3: Edge Cases and Error Handling
 
-Alle edge cases, fejlscenarier og genopretningsprocedurer samlet ét sted. Dækker korrektioner af måledata, fejlagtige processer, annulleringer, afstemningsafvigelser, systemfejl og kundetvister.
-
----
-
-## 1. Korrektioner af måledata
-
-Den vigtigste edge case i systemet. Netvirksomheden kan indsende **rettede målinger** for en allerede afregnet periode.
-
-### Hvordan korrektioner ankommer
-
-- Vi modtager en ny RSM-012 for samme målepunkt + periode via Timeseries-køen
-- Der er **ingen eksplicit markering** der siger "dette er en korrektion"
-- Vi skal selv sammenligne med det vi allerede har gemt
-- Enhver RSM-012 kan potentielt være en korrektion
-
-### Detektionslogik
-
-```
-1. Modtag RSM-012 → parse MeteringPointId + periode + Point[]
-2. Slå op i metering_data for samme MeteringPointId + tidsinterval
-3. Hvis INGEN eksisterende data → initial data (normal indlæsning)
-4. Hvis eksisterende data FINDES → dette er en korrektion:
-   a. Beregn delta pr. interval: ny_mængde - gammel_mængde
-   b. Beregn økonomisk effekt (se korrektionsformler)
-   c. Overskriv måledata med nye værdier
-   d. Generér kredit-/debitnota
-5. Dequeue beskeden
-```
-
-### Korrektionsformler
-
-| Komponent | Formel |
-|-----------|--------|
-| **Energi** | `deltaKwh × calculatedPrice` |
-| **Tarif** | `originalKwh × (newRate - oldRate) + deltaKwh × newRate` |
-| **Produktmargin** | `deltaKwh × productRate` |
-| **Abonnement** | Uændret (fast beløb, afhænger ikke af forbrug) |
-| **Elafgift** | `deltaKwh × afgiftssats` |
-| **Moms** | 25% af summen af alle ændringer |
-
-### Mulige årsager til korrektioner
-
-| Årsag | Typisk tidspunkt | Hyppighed |
-|-------|-----------------|-----------|
-| Målerfejl korrigeret | Uger/måneder efter original aflæsning | Sjælden |
-| Estimerede data erstattet med faktiske | Dage efter original | Almindelig |
-| Netvirksomhed retter valideringsfejl | Dage-uger | Lejlighedsvis |
-| Kvalitetskode-opgradering (A02→A03) | Dage | Almindelig |
-
-### Systemdesign-implikationer
-
-- **Idempotent opdatering:** Overskriv-logik skal håndtere at samme korrektion kan ankomme flere gange
-- **Historik:** Bevar den originale aflæsning i en audit-log før overskrivning
-- **Genberegning:** Afregningsmotor skal kunne genberegne for vilkårlige historiske perioder
-- **Tidsbegrænsning:** Korrektioner kan ankomme op til 3 år efter den oprindelige aflæsning (⚠ VERIFICÉR)
+All edge cases, error scenarios, and recovery procedures collected in one place. Covers metering data corrections, erroneous processes, cancellations, reconciliation discrepancies, system errors, and customer disputes.
 
 ---
 
-## 2. Fejlagtige processer
+## 1. Metering Data Corrections
 
-### 2.1 Fejlagtigt leverandørskifte (BRS-042)
+The most important edge case in the system. The grid company (netvirksomheden) can submit **corrected measurements** for an already settled period.
 
-Et leverandørskifte er sket ved en fejl — f.eks. forkert målepunkt eller kunden har ikke accepteret.
+### How corrections arrive
+
+- We receive a new RSM-012 for the same metering point + period via the Timeseries queue
+- There is **no explicit flag** indicating "this is a correction"
+- We must compare against what we have already stored ourselves
+- Any RSM-012 can potentially be a correction
+
+### Detection logic
+
+```
+1. Receive RSM-012 -> parse MeteringPointId + period + Point[]
+2. Look up metering_data for same MeteringPointId + time interval
+3. If NO existing data -> initial data (normal ingestion)
+4. If existing data EXISTS -> this is a correction:
+   a. Calculate delta per interval: new_quantity - old_quantity
+   b. Calculate financial impact (see correction formulas)
+   c. Overwrite metering data with new values
+   d. Generate credit/debit note
+5. Dequeue the message
+```
+
+### Correction formulas
+
+| Component | Formula |
+|-----------|---------|
+| **Energy** | `deltaKwh × calculatedPrice` |
+| **Tariff** | `originalKwh × (newRate - oldRate) + deltaKwh × newRate` |
+| **Product margin** | `deltaKwh × productRate` |
+| **Subscription** | Unchanged (fixed amount, does not depend on consumption) |
+| **Electricity tax (elafgift)** | `deltaKwh × taxRate` |
+| **VAT (moms)** | 25% of the sum of all changes |
+
+### Possible causes of corrections
+
+| Cause | Typical timing | Frequency |
+|-------|---------------|-----------|
+| Meter error corrected | Weeks/months after original reading | Rare |
+| Estimated data replaced with actual | Days after original | Common |
+| Grid company corrects validation error | Days-weeks | Occasional |
+| Quality code upgrade (A02->A03) | Days | Common |
+
+### System design implications
+
+- **Idempotent update:** Overwrite logic must handle the same correction arriving multiple times
+- **History:** Preserve the original reading in an audit log before overwriting
+- **Recalculation:** Settlement engine must be able to recalculate for arbitrary historical periods
+- **Time limit:** Corrections can arrive up to 3 years after the original reading (WARNING: VERIFY)
+
+---
+
+## 2. Erroneous Processes
+
+### 2.1 Erroneous supplier switch (leverandørskifte) (BRS-042)
+
+A supplier switch has occurred by mistake — e.g., wrong metering point or the customer has not accepted.
 
 **Flow:**
 
-| Trin | Retning | Handling |
-|------|---------|----------|
-| 1 | DDQ → DataHub | **BRS-042** tilbageførselsanmodning |
-| 2 | DataHub | Validerer anmodning, tilbagefører skiftet |
-| 3 | DataHub → gammel DDQ | Gammel leverandør genindsættes |
-| 4 | Internt | Alle måledata for den fejlagtige periode tilbageføres |
-| 5 | Internt | Udstedte fakturaer for perioden krediteres |
+| Step | Direction | Action |
+|------|-----------|--------|
+| 1 | DDQ -> DataHub | **BRS-042** reversal request |
+| 2 | DataHub | Validates request, reverses the switch |
+| 3 | DataHub -> old DDQ | Old supplier is reinstated |
+| 4 | Internal | All metering data for the erroneous period is reversed |
+| 5 | Internal | Issued invoices for the period are credited |
 
-**Tidsfrist:** Inden for 20 hverdage efter ikrafttrædelse (⚠ VERIFICÉR, jf. Forskrift H1)
+**Deadline:** Within 20 business days after the effective date (WARNING: VERIFY, cf. Regulation H1 (Forskrift H1))
 
-**Konsekvenser for systemet:**
-- Målepunkt skifter tilbage til gammel leverandør → supply_period skal korrigeres
-- Alle afregningsresultater for perioden skal markeres som ugyldige
-- Kreditnotaer genereres for eventuelle udstedte fakturaer
-- Modtagne måledata for perioden slettes eller markeres som tilbageført
+**Consequences for the system:**
+- Metering point switches back to old supplier -> supply_period must be corrected
+- All settlement results for the period must be marked as invalid
+- Credit notes are generated for any issued invoices
+- Received metering data for the period is deleted or marked as reversed
 
-### 2.2 Fejlagtig flytning (BRS-011)
+### 2.2 Erroneous move (BRS-011)
 
-En til- eller fraflytningsdato var forkert.
+A move-in or move-out date was incorrect.
 
 **Flow:**
 
-| Trin | Retning | Handling |
-|------|---------|----------|
-| 1 | DDQ → DataHub | **BRS-011** med den rettede dato |
-| 2 | DataHub | Justerer leveranceperioden |
-| 3 | DataHub → DDQ | Opdaterede måledata for den berørte periode (RSM-012) |
-| 4 | Internt | Genberegn afregning for den berørte periode |
-| 5 | Internt | Udsted kredit-/debitnotaer for differencer |
+| Step | Direction | Action |
+|------|-----------|--------|
+| 1 | DDQ -> DataHub | **BRS-011** with the corrected date |
+| 2 | DataHub | Adjusts the supply period (leveranceperioden) |
+| 3 | DataHub -> DDQ | Updated metering data for the affected period (RSM-012) |
+| 4 | Internal | Recalculate settlement for the affected period |
+| 5 | Internal | Issue credit/debit notes for differences |
 
-**Konsekvenser for systemet:**
-- Leveranceperiodens start- eller slutdato ændres
-- Måledata for den berørte periode kan ændre sig
-- Abonnementsberegning (pro rata) justeres
-- Acontoopgørelse skal evt. genberegnes
-
----
-
-## 3. Annulleringer
-
-### 3.1 Annuller leverandørskifte (BRS-003)
-
-Kunden fortryder et leverandørskifte **inden** ikrafttrædelsesdatoen.
-
-**Forudsætning:** Skiftet er anmodet (BRS-001) men ikrafttrædelsesdatoen er endnu ikke nået.
-
-| Trin | Handling |
-|------|----------|
-| 1 | DDQ → DataHub: **BRS-003** annulleringsanmodning |
-| 2 | DataHub → DDQ: Kvittering (accepteret/afvist) |
-| 3 | DataHub → gammel DDQ: Notifikation om annullering |
-| 4 | Internt: Markér ProcessRequest som `cancelled` |
-| 5 | Internt: Fjern forberedte faktureringsplaner, acontoestimater etc. |
-
-**Kan ikke annulleres efter ikrafttrædelse** — brug BRS-042 i stedet.
-
-### 3.2 Annuller leveranceophør (BRS-044)
-
-Kunden fortryder en opsigelse eller betaler et udestående beløb **inden** ikrafttrædelsesdatoen.
-
-| Trin | Handling |
-|------|----------|
-| 1 | DDQ → DataHub: **BRS-044** annuller ophør |
-| 2 | DataHub → DDQ: Kvittering (ophør annulleret) |
-| 3 | Internt: Leverance fortsætter normalt |
-| 4 | Internt: Annullér eventuelle forberedte slutafregninger |
-
-**Typisk scenarie:** Kunden har fået BRS-002 pga. manglende betaling, betaler derefter.
+**Consequences for the system:**
+- The supply period's start or end date changes
+- Metering data for the affected period may change
+- Subscription calculation (pro rata) is adjusted
+- Aconto settlement (acontoopgørelse) may need to be recalculated
 
 ---
 
-## 4. Slutafregning ved offboarding
+## 3. Cancellations
 
-Uanset offboarding-årsag (leverandørskifte, fraflytning, manglende betaling) er slutafregningen den samme.
+### 3.1 Cancel supplier switch (leverandørskifte) (BRS-003)
 
-### Offboarding-scenarier
+The customer withdraws from a supplier switch **before** the effective date.
 
-| Scenarie | Trigger | BRS-proces | Hvem initierer |
-|----------|---------|------------|----------------|
-| **A** | Kunden skifter til anden leverandør | Indgående BRS-001 | Ny leverandør |
-| **B** | Kunden opsiger | BRS-002 | Os |
-| **C** | Kunden fraflytter | BRS-010 | Os eller netvirksomhed |
-| **D** | Manglende betaling | BRS-002 | Os |
+**Prerequisite:** The switch has been requested (BRS-001) but the effective date has not yet been reached.
 
-### Slutafregningsprocedure
+| Step | Action |
+|------|--------|
+| 1 | DDQ -> DataHub: **BRS-003** cancellation request |
+| 2 | DataHub -> DDQ: Receipt (accepted/rejected) |
+| 3 | DataHub -> old DDQ: Notification of cancellation |
+| 4 | Internal: Mark ProcessRequest as `cancelled` |
+| 5 | Internal: Remove prepared billing plans, aconto estimates, etc. |
 
-1. Modtag endelige RSM-012-måledata fra DataHub (op til slutdato)
-2. Kør afregning for den delvise faktureringsperiode (periodens start → leverancens slutdato)
-3. Beregn alle komponenter: energi, nettarif, abonnementer (**forholdsmæssigt**), afgifter
+**Cannot be cancelled after the effective date** — use BRS-042 instead.
 
-### Acontokunde: slutopgørelse
+### 3.2 Cancel supply termination (leveranceophør) (BRS-044)
 
-1. Beregn faktisk forbrug fra kvartalets start til leverancens slutdato (delvis periode)
-2. Sammenlign med acontobetalinger modtaget for denne periode
-3. Generér slutfaktura med afstemning:
-   - Overbetalt → kreditnota / tilbagebetaling
-   - Underbetalt → slutfaktura med restbeløb
+The customer withdraws a termination notice or pays an outstanding amount **before** the effective date.
 
-### Slutfakturaens linjer
+| Step | Action |
+|------|--------|
+| 1 | DDQ -> DataHub: **BRS-044** cancel termination |
+| 2 | DataHub -> DDQ: Receipt (termination cancelled) |
+| 3 | Internal: Supply continues normally |
+| 4 | Internal: Cancel any prepared final settlements |
 
-| Linje | Beskrivelse |
-|-------|-------------|
-| Energi + margin | Faktisk forbrug × satser for den delvise periode |
-| Nettarif | Faktisk forbrug × tarifsatser, forholdsmæssigt |
-| Abonnement (eget) | Forholdsmæssigt til leverancens slutdato |
-| Abonnement (net) | Forholdsmæssigt til leverancens slutdato |
-| Afgifter og gebyrer | Pr. kWh på faktisk forbrug |
-| Acontoopgørelse (hvis relevant) | Difference mellem betalte estimater og faktisk total |
-| Udestående saldo | Eventuelle ubetalte tidligere fakturaer |
-| **Skyldig / tilgodehavende** | Nettobeløb |
-
-### Efter slutfaktura
-
-| Handling | Frist |
-|----------|-------|
-| Send slutfaktura til kunden | Inden 4 uger (jf. elleveringsbekendtgørelsen §17) |
-| Ved kreditsaldo: tilbagebetaling til kundens bankkonto | Uden unødig forsinkelse |
-| Ved debitsaldo: normale betalingsvilkår | Netto 14-30 dage |
-| Ubetalt debitsaldo → inkasso | Efter betalingsfrist |
-| Arkivér kundepost | Bevar i 5 år (⚠ VERIFICÉR) |
-| Bevar måledata | Jf. opbevaringspolitik (3+ år ⚠ VERIFICÉR) |
-| Deaktivér kundeportaladgang | Efter endelig betaling |
+**Typical scenario:** The customer has received a BRS-002 due to non-payment and then pays.
 
 ---
 
-## 5. Afstemningsafvigelser (BRS-027)
+## 4. Final Settlement at Offboarding
 
-Vores egen afregningsberegning afviger fra DataHubs engrosopgørelse (RSM-014).
+Regardless of the offboarding reason (supplier switch, move-out, non-payment), the final settlement is the same.
 
-### Afvigelsesprocedure
+### Offboarding scenarios
+
+| Scenario | Trigger | BRS process | Who initiates |
+|----------|---------|-------------|---------------|
+| **A** | Customer switches to another supplier | Incoming BRS-001 | New supplier |
+| **B** | Customer terminates | BRS-002 | Us |
+| **C** | Customer moves out (fraflytning) | BRS-010 | Us or grid company |
+| **D** | Non-payment | BRS-002 | Us |
+
+### Final settlement procedure
+
+1. Receive final RSM-012 metering data from DataHub (up to the end date)
+2. Run settlement for the partial billing period (faktureringsperiode) (period start -> supply end date)
+3. Calculate all components: energy, grid tariff (nettarif), subscriptions (**pro rata**), taxes and charges
+
+### Aconto customer: final settlement (slutopgørelse)
+
+Aconto is a prepayment scheme where customers pay estimated amounts periodically rather than per actual consumption, serving as a cash flow tool for the supplier.
+
+1. Calculate actual consumption from the start of the quarter to the supply end date (partial period)
+2. Compare with aconto payments received for this period
+3. Generate final invoice with reconciliation:
+   - Overpaid -> credit note / refund
+   - Underpaid -> final invoice with remaining balance
+
+### Final invoice line items
+
+| Line | Description |
+|------|-------------|
+| Energy + margin | Actual consumption x rates for the partial period |
+| Grid tariff (nettarif) | Actual consumption x tariff rates, pro rata |
+| Subscription (own) | Pro rata to the supply end date |
+| Subscription (grid) | Pro rata to the supply end date |
+| Taxes and charges (afgifter og gebyrer) | Per kWh on actual consumption |
+| Aconto settlement (acontoopgørelse) (if applicable) | Difference between paid estimates and actual total |
+| Outstanding balance | Any unpaid previous invoices |
+| **Amount owed / credit balance** | Net amount |
+
+### After the final invoice
+
+| Action | Deadline |
+|--------|----------|
+| Send final invoice to the customer | Within 4 weeks (cf. the Electricity Supply Order (elleveringsbekendtgørelsen) section 17) |
+| If credit balance: refund to customer's bank account | Without undue delay |
+| If debit balance: normal payment terms | Net 14-30 days |
+| Unpaid debit balance -> debt collection (inkasso) | After payment deadline |
+| Archive customer records | Retain for 5 years (WARNING: VERIFY) |
+| Retain metering data | Per retention policy (3+ years WARNING: VERIFY) |
+| Deactivate customer portal access | After final payment |
+
+---
+
+## 5. Reconciliation Discrepancies (BRS-027)
+
+Our own settlement calculation deviates from DataHub's wholesale settlement (engrosopgørelse) (RSM-014).
+
+### Discrepancy procedure
 
 ```
-1. Modtag RSM-014 (aggregerede data pr. netområde)
-2. Sammenlign med egen afregning for samme periode og netområde
-3. Hvis afvigelse:
-   a. Identificér afvigende målepunkter
-   b. Anmod detaljerede aggregerede data (RSM-016)
-   c. Analyser årsag:
-      - Manglende måledata?
-      - Forkerte tarifsatser?
-      - Beregningsfejl?
-4. Korriger:
-   - Manglende data → anmod historiske data (RSM-015)
-   - Forkerte satser → opdatér og genberegn
-   - Beregningsfejl → ret og genberegn
-5. Udsted kredit-/debitnotaer for berørte kunder
+1. Receive RSM-014 (aggregated data per grid area)
+2. Compare with own settlement for the same period and grid area
+3. If discrepancy:
+   a. Identify deviating metering points
+   b. Request detailed aggregated data (RSM-016)
+   c. Analyze cause:
+      - Missing metering data?
+      - Incorrect tariff rates?
+      - Calculation error?
+4. Correct:
+   - Missing data -> request historical data (RSM-015)
+   - Incorrect rates -> update and recalculate
+   - Calculation error -> fix and recalculate
+5. Issue credit/debit notes for affected customers
 ```
 
-### Typiske årsager til afvigelse
+### Typical causes of discrepancies
 
-| Årsag | Handling |
-|-------|----------|
-| Manglende RSM-012 for ét eller flere målepunkter | Anmod historiske data via RSM-015, genberegn |
-| Forkerte/forældede tarifsatser brugt | Opdatér satser fra Charges-kø, genberegn |
-| Korrektion modtaget efter vores afregningskørsel | Genberegn med korrigerede data |
-| Tidszone-/afrundingsdifference | Juster beregningslogik |
-| Målepunkt mangler i vores portefølje | Undersøg — mulig fejl i BRS-001-flow |
+| Cause | Action |
+|-------|--------|
+| Missing RSM-012 for one or more metering points | Request historical data via RSM-015, recalculate |
+| Incorrect/outdated tariff rates used | Update rates from Charges queue, recalculate |
+| Correction received after our settlement run | Recalculate with corrected data |
+| Timezone/rounding difference | Adjust calculation logic |
+| Metering point missing from our portfolio | Investigate — possible error in BRS-001 flow |
 
 ---
 
-## 6. Kunde bestrider faktura
+## 6. Customer Disputes Invoice
 
 ### Procedure
 
-| Trin | Handling |
-|------|----------|
-| 1 | Kunden kontakter support med indsigelse |
-| 2 | Anmod historiske validerede data fra DataHub (RSM-015) for verifikation |
-| 3 | Anmod aggregerede data (RSM-016) til krydskontrol |
-| 4 | Sammenlign vores afregning med DataHub-data |
-| 5a | Hvis måledata var forkerte → netvirksomheden indsender rettelse (BRS-021) → ny RSM-012 → korrektion (se sektion 1) |
-| 5b | Hvis vores beregning var forkert → genberegn og udsted kredit-/debitnota |
-| 5c | Hvis alt stemmer → informér kunden med dokumentation |
+| Step | Action |
+|------|--------|
+| 1 | Customer contacts support with an objection |
+| 2 | Request historical validated data from DataHub (RSM-015) for verification |
+| 3 | Request aggregated data (RSM-016) for cross-checking |
+| 4 | Compare our settlement with DataHub data |
+| 5a | If metering data was incorrect -> grid company submits correction (BRS-021) -> new RSM-012 -> correction (see section 1) |
+| 5b | If our calculation was incorrect -> recalculate and issue credit/debit note |
+| 5c | If everything matches -> inform the customer with documentation |
 
 ---
 
-## 7. Systemfejl og genopretning
+## 7. System Errors and Recovery
 
-### DataHub-kommunikationsfejl
+### DataHub Communication Errors
 
-| Scenarie | Handling |
-|----------|----------|
-| DataHub 5xx / timeout | Genforsøg med eksponentiel backoff, dequeue **ikke** |
-| 401 Unauthorized | Hent nyt OAuth2-token, genforsøg |
-| 403 Forbidden | Tjek credentials og GLN i aktørportalen |
-| 429 Too Many Requests | Vent og genforsøg med backoff |
+| Scenario | Action |
+|----------|--------|
+| DataHub 5xx / timeout | Retry with exponential backoff, do **not** dequeue |
+| 401 Unauthorized | Fetch new OAuth2 token, retry |
+| 403 Forbidden | Check credentials and GLN in the actor portal (aktørportalen) |
+| 429 Too Many Requests | Wait and retry with backoff |
 
-### Meddelelsesbehandlingsfejl
+### Message Processing Errors
 
-| Scenarie | Handling |
-|----------|----------|
-| Fejl i meddelelsesparsing (ugyldigt JSON/XML) | Dead-letter, dequeue for at frigøre køen |
-| Ukendt MessageType | Dead-letter, dequeue, alarmér operatør |
-| Forretningsvalideringsfejl (ukendt GSRN etc.) | Log + gem til gennemgang, dequeue |
-| Database-fejl under persistering | Genforsøg, dequeue **ikke** (at-least-once garanti) |
+| Scenario | Action |
+|----------|--------|
+| Message parsing error (invalid JSON/XML) | Dead-letter, dequeue to free the queue |
+| Unknown MessageType | Dead-letter, dequeue, alert operator |
+| Business validation error (unknown GSRN etc.) | Log + save for review, dequeue |
+| Database error during persistence | Retry, do **not** dequeue (at-least-once guarantee) |
 
-### Afregningsfejl
+### Settlement Errors
 
-| Scenarie | Handling |
-|----------|----------|
-| Afregningsberegningsfejl | Fejl kørslen, alarmér, bevar delresultater til fejlfinding |
-| Manglende spotpriser for perioden | Stop afregningskørsel, alarmér — kan ikke beregne uden priser |
-| Manglende tarifsatser for netområde | Stop for berørte målepunkter, alarmér |
-| Inkonsistente måledata (huller i tidsserien) | Markér berørte målepunkter, genberegn når data er komplet |
+| Scenario | Action |
+|----------|--------|
+| Settlement calculation error | Fail the run, alert, preserve partial results for debugging |
+| Missing spot prices for the period | Stop settlement run, alert — cannot calculate without prices |
+| Missing tariff rates for grid area | Stop for affected metering points, alert |
+| Inconsistent metering data (gaps in time series) | Mark affected metering points, recalculate when data is complete |
 
-### Dead-letter-håndtering
+### Dead-letter handling
 
-Meddelelser der fejler parsing eller validering ender i dead-letter-tabellen.
+Messages that fail parsing or validation end up in the dead-letter table.
 
-**Operatørprocedure:**
-1. Overvåg `datahub.dead_letter` for uløste poster (alarmér ved vækst)
-2. Analysér `error_reason` og `raw_payload`
-3. Ret årsagen (parsing-fejl, manglende data etc.)
-4. Genbehandl beskeden manuelt eller via genafspilning
-5. Markér som `resolved`
+**Operator procedure:**
+1. Monitor `datahub.dead_letter` for unresolved entries (alert on growth)
+2. Analyze `error_reason` and `raw_payload`
+3. Fix the root cause (parsing error, missing data, etc.)
+4. Reprocess the message manually or via replay
+5. Mark as `resolved`
 
 ```sql
--- Ubehandlede dead letters
+-- Unprocessed dead letters
 SELECT id, queue_name, error_reason, failed_at
 FROM datahub.dead_letter
 WHERE NOT resolved
@@ -292,52 +294,52 @@ ORDER BY failed_at DESC;
 
 ---
 
-## 8. Samtidige processer
+## 8. Concurrent Processes
 
-### Leverandørskifte og korrektion samtidigt
+### Supplier switch and correction at the same time
 
-En korrektion ankommer for en periode der overlapper med et leverandørskifte:
-- Korrektionen gælder kun for den periode vi var leverandør
-- Filtrer korrektionsdata til vores leveranceperiode (supply_period.start_date → end_date)
-- Ignorer data uden for vores leveranceperiode
+A correction arrives for a period that overlaps with a supplier switch (leverandørskifte):
+- The correction applies only to the period during which we were the supplier
+- Filter correction data to our supply period (supply_period.start_date -> end_date)
+- Ignore data outside our supply period
 
-### Fraflytning og acontoopgørelse
+### Move-out and aconto settlement
 
-Kunden fraflytter midt i et kvartal:
-- Slutafregning beregnes for den delvise periode (kvartalets start → fraflytningsdato)
-- Acontoopgørelse beregner difference mod forholdsmæssig acontoindbetaling
-- Slutfaktura udstedes som separat kredit-/debitnota (ikke den normale kombinerede kvartalsfaktura)
+The customer moves out mid-quarter:
+- Final settlement is calculated for the partial period (quarter start -> move-out date)
+- Aconto settlement (acontoopgørelse) calculates the difference against proportional aconto payments
+- The final invoice is issued as a separate credit/debit note (not the normal combined quarterly invoice)
 
-### Tarif-ændring midt i faktureringsperiode
+### Tariff change mid-billing period
 
-Netvirksomheden ændrer tarifsatser med virkning midt i en måned:
-- Afregningsberegning skal anvende gammel sats før ændringsdato og ny sats efter
-- Tariff-lookup bruger `valid_from`/`valid_to` pr. time, ikke pr. periode
-- Eksisterende fakturaer berøres **ikke** medmindre en korrektion modtages
-
----
-
-## Tidsfrist-oversigt
-
-| Proces | Frist | Kilde |
-|--------|-------|-------|
-| BRS-001 leverandørskifte (varsel) | Min. 15 hverdage | Forskrift H1 |
-| BRS-043 kort varsel | 1 hverdag (⚠ VERIFICÉR) | Forskrift H1 |
-| BRS-003 annuller skifte | Inden ikrafttrædelsesdato | Forskrift H1 |
-| BRS-042 tilbageførsel | 20 hverdage efter ikrafttrædelse (⚠ VERIFICÉR) | Forskrift H1 |
-| BRS-044 annuller ophør | Inden ikrafttrædelsesdato | Forskrift H1 |
-| Slutfaktura ved offboarding | 4 uger efter kundens afgang | Elleveringsbekendtgørelsen §17 |
-| Kundedata-arkivering | 5 år (⚠ VERIFICÉR) | GDPR / bogføringsloven |
-| Måledata-opbevaring | 3+ år (⚠ VERIFICÉR) | Lovkrav |
+The grid company (netvirksomheden) changes tariff rates effective mid-month:
+- Settlement calculation must apply the old rate before the change date and the new rate after
+- Tariff lookup uses `valid_from`/`valid_to` per hour, not per period
+- Existing invoices are **not** affected unless a correction is received
 
 ---
 
-## Kilder
+## Deadline Overview
 
-- [Kundelivscyklus](datahub3-customer-lifecycle.md) — faser og offboarding-flow
-- [Sekvensdiagrammer](datahub3-sequence-diagrams.md) — meddelelsesflows for BRS/RSM
-- [Forretningsprocesser](datahub3-ddq-business-processes.md) — BRS/RSM-reference
-- [RSM-012 reference](rsm-012-datahub3-measure-data.md) — korrektionsflow for måledata
-- [Afregningsoverblik](datahub3-settlement-overview.md) — korrektioner som edge case
-- [Systemarkitektur](datahub3-proposed-architecture.md) — fejlhåndtering og dead-letter
-- [Databasemodel](datahub3-database-model.md) — dead_letter-tabel
+| Process | Deadline | Source |
+|---------|----------|--------|
+| BRS-001 supplier switch (notice period) | Min. 15 business days | Regulation H1 (Forskrift H1) |
+| BRS-043 short notice | 1 business day (WARNING: VERIFY) | Regulation H1 (Forskrift H1) |
+| BRS-003 cancel switch | Before the effective date | Regulation H1 (Forskrift H1) |
+| BRS-042 reversal | 20 business days after effective date (WARNING: VERIFY) | Regulation H1 (Forskrift H1) |
+| BRS-044 cancel termination | Before the effective date | Regulation H1 (Forskrift H1) |
+| Final invoice at offboarding | 4 weeks after customer departure | Electricity Supply Order section 17 (Elleveringsbekendtgørelsen §17) |
+| Customer data archiving | 5 years (WARNING: VERIFY) | GDPR / Danish Bookkeeping Act (bogføringsloven) |
+| Metering data retention | 3+ years (WARNING: VERIFY) | Legal requirement |
+
+---
+
+## Sources
+
+- [Customer lifecycle](datahub3-customer-lifecycle.md) — phases and offboarding flow
+- [Sequence diagrams](datahub3-sequence-diagrams.md) — message flows for BRS/RSM
+- [Business processes](datahub3-ddq-business-processes.md) — BRS/RSM reference
+- [RSM-012 reference](rsm-012-datahub3-measure-data.md) — correction flow for metering data
+- [Settlement overview](datahub3-settlement-overview.md) — corrections as edge case
+- [System architecture](datahub3-proposed-architecture.md) — error handling and dead-letter
+- [Database model](datahub3-database-model.md) — dead_letter table

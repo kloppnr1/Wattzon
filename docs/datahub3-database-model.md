@@ -1,12 +1,12 @@
-# DataHub 3: Databasemodel (PostgreSQL + TimescaleDB)
+# DataHub 3: Database Model (PostgreSQL + TimescaleDB)
 
-Fysisk databaseskema for afregningssystemet. Baseret på den konceptuelle [domænemodel (klassediagram)](datahub3-class-diagram.md) og de teknologivalg beskrevet i [arkitekturdokumentet](datahub3-proposed-architecture.md).
+Physical database schema for the settlement system. Based on the conceptual [domain model (class diagram)](datahub3-class-diagram.md) and the technology choices described in the [architecture document](datahub3-proposed-architecture.md).
 
-**Valg:** PostgreSQL med TimescaleDB-extension. Én databaseinstans dækker både tidsserier og relationelle data.
+**Choice:** PostgreSQL with the TimescaleDB extension. A single database instance covers both time series and relational data.
 
 ---
 
-## Skemaoverblik
+## Schema Overview
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
@@ -40,7 +40,7 @@ Fysisk databaseskema for afregningssystemet. Baseret på den konceptuelle [domæ
 CREATE TABLE portfolio.customer (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name            TEXT NOT NULL,
-    cpr_cvr         TEXT NOT NULL,                -- CPR (10) eller CVR (8), krypteret at rest
+    cpr_cvr         TEXT NOT NULL,                -- CPR (10) or CVR (8), encrypted at rest
     contact_type    TEXT NOT NULL CHECK (contact_type IN ('private', 'business')),
     email           TEXT,
     phone           TEXT,
@@ -53,19 +53,19 @@ CREATE INDEX idx_customer_cpr_cvr ON portfolio.customer (cpr_cvr);
 CREATE INDEX idx_customer_status ON portfolio.customer (status);
 ```
 
-**GDPR-note:** `cpr_cvr` skal krypteres at rest (column-level encryption eller transparent data encryption). Overvej at gemme kun hash til opslag og den krypterede værdi separat.
+**GDPR note:** `cpr_cvr` must be encrypted at rest (column-level encryption or transparent data encryption). Consider storing only a hash for lookups and the encrypted value separately.
 
 ### metering_point
 
 ```sql
 CREATE TABLE portfolio.metering_point (
-    gsrn                TEXT PRIMARY KEY,          -- 18 cifre, f.eks. '571313100000012345'
-    type                TEXT NOT NULL CHECK (type IN ('E17', 'E18')),  -- E17=forbrug, E18=produktion
+    gsrn                TEXT PRIMARY KEY,          -- 18 digits, e.g. '571313100000012345'
+    type                TEXT NOT NULL CHECK (type IN ('E17', 'E18')),  -- E17=consumption, E18=production
     settlement_method   TEXT NOT NULL CHECK (settlement_method IN ('flex', 'non_profiled')),
     connection_status   TEXT NOT NULL DEFAULT 'connected'
                         CHECK (connection_status IN ('connected', 'disconnected', 'closed_down')),
     grid_area_code      TEXT NOT NULL REFERENCES portfolio.grid_area(code),
-    grid_operator_gln   TEXT NOT NULL,             -- 13 cifre
+    grid_operator_gln   TEXT NOT NULL,             -- 13 digits
     price_area          TEXT NOT NULL CHECK (price_area IN ('DK1', 'DK2')),
     activated_at        TIMESTAMPTZ,
     deactivated_at      TIMESTAMPTZ,
@@ -81,7 +81,7 @@ CREATE INDEX idx_metering_point_status ON portfolio.metering_point (connection_s
 
 ```sql
 CREATE TABLE portfolio.grid_area (
-    code                TEXT PRIMARY KEY,           -- f.eks. '344', '791'
+    code                TEXT PRIMARY KEY,           -- e.g. '344', '791'
     grid_operator_gln   TEXT NOT NULL,
     grid_operator_name  TEXT NOT NULL,
     price_area          TEXT NOT NULL CHECK (price_area IN ('DK1', 'DK2')),
@@ -96,7 +96,7 @@ CREATE TABLE portfolio.supply_period (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     gsrn            TEXT NOT NULL REFERENCES portfolio.metering_point(gsrn),
     start_date      DATE NOT NULL,
-    end_date        DATE,                          -- NULL = aktiv leveranceperiode
+    end_date        DATE,                          -- NULL = active supply period
     end_reason      TEXT CHECK (end_reason IN ('supplier_switch', 'move_out', 'non_payment')),
     created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -110,12 +110,12 @@ CREATE INDEX idx_supply_period_active ON portfolio.supply_period (gsrn) WHERE en
 ```sql
 CREATE TABLE portfolio.product (
     id                      UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    name                    TEXT NOT NULL,              -- f.eks. 'Spot Standard', 'Grøn', 'Fastpris 12 mdr.'
+    name                    TEXT NOT NULL,              -- e.g. 'Spot Standard', 'Green', 'Fixed Price 12 mo.'
     energy_model            TEXT NOT NULL CHECK (energy_model IN ('spot', 'fixed_price', 'mixed')),
-    margin_ore_per_kwh      NUMERIC(8,4) NOT NULL,     -- leverandørmargin i øre/kWh
-    supplement_ore_per_kwh  NUMERIC(8,4),              -- evt. produkttillæg (grøn energi etc.)
-    subscription_kr_per_month NUMERIC(10,2) NOT NULL,  -- leverandørabonnement i kr./måned
-    binding_period_months   INT,                        -- NULL = ingen binding
+    margin_ore_per_kwh      NUMERIC(8,4) NOT NULL,     -- supplier margin in ore/kWh (øre/kWh)
+    supplement_ore_per_kwh  NUMERIC(8,4),              -- optional product supplement (green energy etc.)
+    subscription_kr_per_month NUMERIC(10,2) NOT NULL,  -- supplier subscription in DKK/month
+    binding_period_months   INT,                        -- NULL = no binding period
     is_active               BOOLEAN NOT NULL DEFAULT true,
     created_at              TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at              TIMESTAMPTZ NOT NULL DEFAULT now()
@@ -138,7 +138,7 @@ CREATE TABLE portfolio.contract (
     created_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
 
-    UNIQUE (gsrn, start_date)                      -- højst én kontrakt pr. målepunkt pr. startdato
+    UNIQUE (gsrn, start_date)                      -- at most one contract per metering point per start date
 );
 
 CREATE INDEX idx_contract_customer ON portfolio.contract (customer_id);
@@ -146,7 +146,7 @@ CREATE INDEX idx_contract_gsrn ON portfolio.contract (gsrn);
 CREATE INDEX idx_contract_active ON portfolio.contract (gsrn) WHERE end_date IS NULL;
 ```
 
-### ER-diagram: portfolio
+### ER diagram: portfolio
 
 ```mermaid
 erDiagram
@@ -208,33 +208,33 @@ erDiagram
 
 ### metering_data (TimescaleDB hypertable)
 
-Den største tabel i systemet. ~230M rækker/måned ved PT15M-opløsning.
+The largest table in the system. Approximately 230M rows/month at PT15M resolution.
 
 ```sql
 CREATE TABLE metering.metering_data (
     metering_point_id   TEXT NOT NULL,              -- GSRN
-    timestamp           TIMESTAMPTZ NOT NULL,       -- UTC, start af interval
+    timestamp           TIMESTAMPTZ NOT NULL,       -- UTC, start of interval
     resolution          TEXT NOT NULL CHECK (resolution IN ('PT15M', 'PT1H', 'P1M')),
-    quantity_kwh        NUMERIC(12,3) NOT NULL,     -- max 3 decimaler jf. CIM
+    quantity_kwh        NUMERIC(12,3) NOT NULL,     -- max 3 decimals per CIM
     quality_code        TEXT NOT NULL CHECK (quality_code IN ('A01', 'A02', 'A03', 'A06')),
-    source_message_id   TEXT NOT NULL,              -- DataHub MessageId (sporbarhed)
+    source_message_id   TEXT NOT NULL,              -- DataHub MessageId (traceability)
     received_at         TIMESTAMPTZ NOT NULL DEFAULT now(),
 
     PRIMARY KEY (metering_point_id, timestamp)
 );
 
--- Konvertér til TimescaleDB hypertable med månedlige chunks
+-- Convert to TimescaleDB hypertable with monthly chunks
 SELECT create_hypertable(
     'metering.metering_data',
     by_range('timestamp', INTERVAL '1 month')
 );
 
--- Sammensat indeks til afregningsforespørgsler (allerede PK)
--- Ekstra indeks til sporbarhed
+-- Composite index for settlement queries (already PK)
+-- Additional index for traceability
 CREATE INDEX idx_metering_data_source ON metering.metering_data (source_message_id);
 ```
 
-**Komprimering (efter data er "settled"):**
+**Compression (after data is "settled"):**
 
 ```sql
 ALTER TABLE metering.metering_data SET (
@@ -243,20 +243,20 @@ ALTER TABLE metering.metering_data SET (
     timescaledb.compress_orderby = 'timestamp'
 );
 
--- Komprimér automatisk data ældre end 3 måneder
+-- Automatically compress data older than 3 months
 SELECT add_compression_policy('metering.metering_data', INTERVAL '3 months');
 ```
 
-**Opbevaringspolitik:**
+**Retention policy:**
 
 ```sql
--- Slet rå data ældre end 5 år (lovkrav)
+-- Delete raw data older than 5 years (legal requirement)
 SELECT add_retention_policy('metering.metering_data', INTERVAL '5 years');
 ```
 
 ### daily_summary (TimescaleDB continuous aggregate)
 
-Præ-aggregeret daglig oversigt — reducerer afregningsforespørgsler fra 230M til 2,4M rækker/måned.
+Pre-aggregated daily overview — reduces settlement queries from 230M to 2.4M rows/month.
 
 ```sql
 CREATE MATERIALIZED VIEW metering.daily_summary
@@ -266,11 +266,11 @@ SELECT
     time_bucket('1 day', timestamp)     AS date,
     SUM(quantity_kwh)                   AS total_kwh,
     COUNT(*)                            AS data_points,
-    MIN(quality_code)                   AS worst_quality  -- A01 < A02 < A03 (laveste = dårligst)
+    MIN(quality_code)                   AS worst_quality  -- A01 < A02 < A03 (lowest = worst)
 FROM metering.metering_data
 GROUP BY metering_point_id, time_bucket('1 day', timestamp);
 
--- Opdatér automatisk (1 times forsinkelse for at undgå race conditions)
+-- Refresh automatically (1 hour delay to avoid race conditions)
 SELECT add_continuous_aggregate_policy('metering.daily_summary',
     start_offset    => INTERVAL '3 days',
     end_offset      => INTERVAL '1 hour',
@@ -283,9 +283,9 @@ SELECT add_continuous_aggregate_policy('metering.daily_summary',
 ```sql
 CREATE TABLE metering.spot_price (
     price_area      TEXT NOT NULL CHECK (price_area IN ('DK1', 'DK2')),
-    hour            TIMESTAMPTZ NOT NULL,           -- UTC, start af timen
+    hour            TIMESTAMPTZ NOT NULL,           -- UTC, start of the hour
     price_per_kwh   NUMERIC(10,6) NOT NULL,         -- DKK/kWh
-    source          TEXT,                            -- f.eks. 'nordpool', 'energidataservice'
+    source          TEXT,                            -- e.g. 'nordpool', 'energidataservice'
     fetched_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
 
     PRIMARY KEY (price_area, hour)
@@ -302,12 +302,12 @@ CREATE TABLE metering.spot_price (
 CREATE TABLE tariff.grid_tariff (
     id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     grid_area_code      TEXT NOT NULL REFERENCES portfolio.grid_area(code),
-    charge_owner_id     TEXT NOT NULL,              -- GLN for tariffens ejer
+    charge_owner_id     TEXT NOT NULL,              -- GLN for the tariff owner
     tariff_type         TEXT NOT NULL CHECK (tariff_type IN ('grid', 'system', 'transmission')),
-    charge_type_code    TEXT,                        -- CIM-kode fra Charges-kø
+    charge_type_code    TEXT,                        -- CIM code from the Charges queue
     valid_from          DATE NOT NULL,
-    valid_to            DATE,                        -- NULL = gælder fortsat
-    source_message_id   TEXT,                        -- DataHub Charges-kø MessageId
+    valid_to            DATE,                        -- NULL = still valid
+    source_message_id   TEXT,                        -- DataHub Charges queue MessageId
     created_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
 
     UNIQUE (grid_area_code, tariff_type, valid_from)
@@ -322,21 +322,21 @@ CREATE INDEX idx_grid_tariff_area_validity ON tariff.grid_tariff (grid_area_code
 CREATE TABLE tariff.tariff_rate (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     grid_tariff_id  UUID NOT NULL REFERENCES tariff.grid_tariff(id) ON DELETE CASCADE,
-    hour_number     INT NOT NULL CHECK (hour_number BETWEEN 1 AND 24),  -- DB-konvention: 1-24
+    hour_number     INT NOT NULL CHECK (hour_number BETWEEN 1 AND 24),  -- DB convention: 1-24
     price_per_kwh   NUMERIC(10,6) NOT NULL,         -- DKK/kWh
 
     UNIQUE (grid_tariff_id, hour_number)
 );
 ```
 
-**Eksempel:** En nettarif med dag/nat/spids-differentiering:
+**Example:** A grid tariff (nettarif) with day/night/peak differentiation:
 
 ```
 hour_number | price_per_kwh
-  1-6       | 0.06          (nat)
-  7-16      | 0.18          (dag)
-  17-20     | 0.54          (spids)
-  21-24     | 0.06          (nat)
+  1-6       | 0.06          (night)
+  7-16      | 0.18          (day)
+  17-20     | 0.54          (peak)
+  21-24     | 0.06          (night)
 ```
 
 ### subscription
@@ -344,12 +344,12 @@ hour_number | price_per_kwh
 ```sql
 CREATE TABLE tariff.subscription (
     id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    grid_area_code      TEXT REFERENCES portfolio.grid_area(code),  -- NULL for leverandørabonnement
+    grid_area_code      TEXT REFERENCES portfolio.grid_area(code),  -- NULL for supplier subscription
     subscription_type   TEXT NOT NULL CHECK (subscription_type IN ('grid', 'supplier')),
     amount_kr_per_month NUMERIC(10,2) NOT NULL,
     valid_from          DATE NOT NULL,
     valid_to            DATE,
-    source_message_id   TEXT,                       -- NULL for leverandørabonnement (vores eget)
+    source_message_id   TEXT,                       -- NULL for supplier subscription (our own)
     created_at          TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
@@ -364,14 +364,14 @@ CREATE TABLE tariff.electricity_tax (
     rate_per_kwh    NUMERIC(10,6) NOT NULL,         -- DKK/kWh
     valid_from      DATE NOT NULL,
     valid_to        DATE,
-    description     TEXT,                            -- f.eks. 'Elafgift 2025'
+    description     TEXT,                            -- e.g. 'Electricity tax (elafgift) 2025'
     created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
 
     UNIQUE (valid_from)
 );
 ```
 
-### ER-diagram: tariff
+### ER diagram: tariff
 
 ```mermaid
 erDiagram
@@ -431,14 +431,14 @@ CREATE TABLE settlement.billing_period (
 CREATE TABLE settlement.settlement_run (
     id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     billing_period_id   UUID NOT NULL REFERENCES settlement.billing_period(id),
-    grid_area_code      TEXT,                       -- NULL = alle netområder, ellers partitioneret
-    version             INT NOT NULL DEFAULT 1,     -- øges ved genberegning
+    grid_area_code      TEXT,                       -- NULL = all grid areas, otherwise partitioned
+    version             INT NOT NULL DEFAULT 1,     -- incremented on recalculation
     status              TEXT NOT NULL DEFAULT 'running'
                         CHECK (status IN ('running', 'completed', 'failed')),
     executed_at         TIMESTAMPTZ NOT NULL DEFAULT now(),
     completed_at        TIMESTAMPTZ,
     error_details       TEXT,
-    metering_points_count INT,                      -- antal behandlede målepunkter
+    metering_points_count INT,                      -- number of processed metering points
 
     UNIQUE (billing_period_id, grid_area_code, version)
 );
@@ -458,9 +458,9 @@ CREATE TABLE settlement.settlement_line (
                             'energy', 'grid_tariff', 'system_tariff', 'transmission_tariff',
                             'electricity_tax', 'grid_subscription', 'supplier_subscription'
                         )),
-    total_kwh           NUMERIC(12,3),              -- NULL for abonnementer
-    total_amount        NUMERIC(12,2) NOT NULL,     -- DKK ekskl. moms
-    vat_amount          NUMERIC(12,2) NOT NULL,     -- 25% moms
+    total_kwh           NUMERIC(12,3),              -- NULL for subscriptions
+    total_amount        NUMERIC(12,2) NOT NULL,     -- DKK excl. VAT
+    vat_amount          NUMERIC(12,2) NOT NULL,     -- 25% VAT (moms)
     currency            TEXT NOT NULL DEFAULT 'DKK'
 );
 
@@ -475,8 +475,8 @@ CREATE TABLE settlement.aconto_payment (
     id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     contract_id         UUID NOT NULL REFERENCES portfolio.contract(id),
     billing_period_id   UUID NOT NULL REFERENCES settlement.billing_period(id),
-    amount              NUMERIC(12,2) NOT NULL,     -- DKK inkl. moms
-    paid_at             TIMESTAMPTZ,                -- NULL = forventet men ikke betalt endnu
+    amount              NUMERIC(12,2) NOT NULL,     -- DKK incl. VAT
+    paid_at             TIMESTAMPTZ,                -- NULL = expected but not yet paid
     created_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
 
     UNIQUE (contract_id, billing_period_id)
@@ -490,17 +490,17 @@ CREATE TABLE settlement.aconto_settlement (
     id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     contract_id         UUID NOT NULL REFERENCES portfolio.contract(id),
     billing_period_id   UUID NOT NULL REFERENCES settlement.billing_period(id),
-    actual_cost         NUMERIC(12,2) NOT NULL,     -- faktisk afregnet beløb inkl. moms
-    aconto_paid         NUMERIC(12,2) NOT NULL,     -- indbetalt acontobeløb
-    difference          NUMERIC(12,2) NOT NULL,     -- actual_cost - aconto_paid (positiv = skylder)
-    new_aconto_amount   NUMERIC(12,2),              -- genberegnet aconto for næste kvartal
+    actual_cost         NUMERIC(12,2) NOT NULL,     -- actual settled amount incl. VAT
+    aconto_paid         NUMERIC(12,2) NOT NULL,     -- aconto amount paid in
+    difference          NUMERIC(12,2) NOT NULL,     -- actual_cost - aconto_paid (positive = customer owes)
+    new_aconto_amount   NUMERIC(12,2),              -- recalculated aconto for next period
     settled_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
 
     UNIQUE (contract_id, billing_period_id)
 );
 ```
 
-### ER-diagram: settlement
+### ER diagram: settlement
 
 ```mermaid
 erDiagram
@@ -569,7 +569,7 @@ CREATE TABLE invoicing.invoice (
     status              TEXT NOT NULL DEFAULT 'draft' CHECK (status IN (
                             'draft', 'issued', 'sent', 'paid', 'overdue', 'cancelled'
                         )),
-    invoice_number      TEXT UNIQUE,                -- tildeles ved udstedelse
+    invoice_number      TEXT UNIQUE,                -- assigned upon issuance
     issued_at           TIMESTAMPTZ,
     due_date            DATE,
     total_ex_vat        NUMERIC(12,2) NOT NULL,
@@ -591,16 +591,16 @@ CREATE INDEX idx_invoice_period ON invoicing.invoice (billing_period_id);
 CREATE TABLE invoicing.invoice_line (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     invoice_id      UUID NOT NULL REFERENCES invoicing.invoice(id) ON DELETE CASCADE,
-    sort_order      INT NOT NULL,                   -- rækkefølge på fakturaen
+    sort_order      INT NOT NULL,                   -- display order on the invoice
     charge_type     TEXT NOT NULL CHECK (charge_type IN (
                         'energy', 'grid_tariff', 'system_tariff', 'transmission_tariff',
                         'electricity_tax', 'grid_subscription', 'supplier_subscription',
                         'aconto_settlement', 'aconto_new_period', 'vat'
                     )),
-    description     TEXT NOT NULL,                   -- f.eks. 'Elforsyning (spot + margin)'
-    quantity        NUMERIC(12,3),                   -- kWh, dage, eller stk.
-    unit_price      NUMERIC(12,6),                   -- DKK pr. enhed
-    amount          NUMERIC(12,2) NOT NULL,          -- DKK (linjens totalbeløb)
+    description     TEXT NOT NULL,                   -- e.g. 'Electricity supply (spot + margin)'
+    quantity        NUMERIC(12,3),                   -- kWh, days, or units
+    unit_price      NUMERIC(12,6),                   -- DKK per unit
+    amount          NUMERIC(12,2) NOT NULL,          -- DKK (line total amount)
 
     UNIQUE (invoice_id, sort_order)
 );
@@ -628,8 +628,8 @@ CREATE TABLE lifecycle.process_request (
                                 'pending', 'sent_to_datahub', 'acknowledged', 'rejected',
                                 'effectuation_pending', 'completed', 'cancelled'
                             )),
-    effective_date          DATE,                    -- ønsket ikrafttrædelsesdato
-    datahub_correlation_id  TEXT,                     -- fra RSM-009 kvittering
+    effective_date          DATE,                    -- requested effective date
+    datahub_correlation_id  TEXT,                     -- from RSM-009 acknowledgement
     requested_at            TIMESTAMPTZ NOT NULL DEFAULT now(),
     completed_at            TIMESTAMPTZ,
     created_at              TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -650,8 +650,8 @@ CREATE TABLE lifecycle.process_event (
     id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     process_request_id  UUID NOT NULL REFERENCES lifecycle.process_request(id),
     occurred_at         TIMESTAMPTZ NOT NULL DEFAULT now(),
-    event_type          TEXT NOT NULL,               -- f.eks. 'sent', 'acknowledged', 'rejected', 'completed'
-    payload             JSONB,                       -- beskedindhold, afvisningsårsag, etc.
+    event_type          TEXT NOT NULL,               -- e.g. 'sent', 'acknowledged', 'rejected', 'completed'
+    payload             JSONB,                       -- message content, rejection reason, etc.
     source              TEXT                          -- 'system', 'datahub', 'operator'
 );
 
@@ -667,13 +667,13 @@ CREATE INDEX idx_process_event_request ON lifecycle.process_event (process_reque
 ```sql
 CREATE TABLE datahub.inbound_message (
     id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    datahub_message_id  TEXT NOT NULL,               -- MessageId fra peek-header
-    message_type        TEXT NOT NULL,               -- f.eks. 'RSM-012', 'RSM-007', 'RSM-014'
-    correlation_id      TEXT,                        -- CorrelationId fra header (gem altid!)
+    datahub_message_id  TEXT NOT NULL,               -- MessageId from peek header
+    message_type        TEXT NOT NULL,               -- e.g. 'RSM-012', 'RSM-007', 'RSM-014'
+    correlation_id      TEXT,                        -- CorrelationId from header (always store!)
     queue_name          TEXT NOT NULL,               -- 'timeseries', 'masterdata', 'aggregations', 'charges'
     status              TEXT NOT NULL DEFAULT 'received'
                         CHECK (status IN ('received', 'parsed', 'processed', 'dead_lettered')),
-    raw_payload_size    INT,                         -- bytes (vi gemmer ikke hele payload)
+    raw_payload_size    INT,                         -- bytes (we do not store the full payload)
     error_details       TEXT,
     received_at         TIMESTAMPTZ NOT NULL DEFAULT now(),
     processed_at        TIMESTAMPTZ
@@ -690,11 +690,11 @@ CREATE INDEX idx_inbound_message_received ON datahub.inbound_message (received_a
 ```sql
 CREATE TABLE datahub.outbound_request (
     id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    process_type        TEXT NOT NULL,               -- f.eks. 'BRS-001', 'RSM-015'
+    process_type        TEXT NOT NULL,               -- e.g. 'BRS-001', 'RSM-015'
     gsrn                TEXT,
     status              TEXT NOT NULL DEFAULT 'sent'
                         CHECK (status IN ('sent', 'acknowledged_ok', 'acknowledged_error', 'timed_out')),
-    correlation_id      TEXT,                        -- fra DataHub-svar
+    correlation_id      TEXT,                        -- from DataHub response
     sent_at             TIMESTAMPTZ NOT NULL DEFAULT now(),
     response_at         TIMESTAMPTZ,
     error_details       TEXT
@@ -706,7 +706,7 @@ CREATE INDEX idx_outbound_request_pending ON datahub.outbound_request (status)
     WHERE status = 'sent';
 ```
 
-### processed_message_id (idempotens)
+### processed_message_id (idempotency)
 
 ```sql
 CREATE TABLE datahub.processed_message_id (
@@ -714,8 +714,8 @@ CREATE TABLE datahub.processed_message_id (
     processed_at    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- Automatisk sletning af gamle entries (ældre end 90 dage)
--- Implementeres via cron-job eller TimescaleDB-retention
+-- Automatic deletion of old entries (older than 90 days)
+-- Implemented via cron job or TimescaleDB retention
 ```
 
 ### dead_letter
@@ -726,11 +726,11 @@ CREATE TABLE datahub.dead_letter (
     original_message_id TEXT,
     queue_name          TEXT NOT NULL,
     error_reason        TEXT NOT NULL,
-    raw_payload         JSONB,                       -- den fejlede besked (til genbehandling)
+    raw_payload         JSONB,                       -- the failed message (for reprocessing)
     failed_at           TIMESTAMPTZ NOT NULL DEFAULT now(),
     resolved            BOOLEAN NOT NULL DEFAULT false,
     resolved_at         TIMESTAMPTZ,
-    resolved_by         TEXT                          -- operatør-ID
+    resolved_by         TEXT                          -- operator ID
 );
 
 CREATE INDEX idx_dead_letter_unresolved ON datahub.dead_letter (failed_at DESC)
@@ -739,9 +739,9 @@ CREATE INDEX idx_dead_letter_unresolved ON datahub.dead_letter (failed_at DESC)
 
 ---
 
-## Nyttige forespørgsler
+## Useful Queries
 
-### Hent forbrug for et målepunkt i en periode
+### Retrieve consumption for a metering point in a period
 
 ```sql
 SELECT
@@ -756,7 +756,7 @@ WHERE metering_point_id = '571313100000012345'
 ORDER BY timestamp;
 ```
 
-### Dagligt forbrug via continuous aggregate
+### Daily consumption via continuous aggregate
 
 ```sql
 SELECT date, total_kwh, data_points
@@ -767,7 +767,7 @@ WHERE metering_point_id = '571313100000012345'
 ORDER BY date;
 ```
 
-### Hent gældende tariffer for et netområde
+### Retrieve applicable tariffs for a grid area
 
 ```sql
 SELECT gt.tariff_type, tr.hour_number, tr.price_per_kwh
@@ -779,7 +779,7 @@ WHERE gt.grid_area_code = '344'
 ORDER BY gt.tariff_type, tr.hour_number;
 ```
 
-### Afregningsberegning: energilinje for én måned
+### Settlement calculation: energy line for one month
 
 ```sql
 SELECT
@@ -797,7 +797,7 @@ WHERE md.metering_point_id = '571313100000012345'
 GROUP BY md.metering_point_id;
 ```
 
-### Ubehandlede dead letters
+### Unresolved dead letters
 
 ```sql
 SELECT id, queue_name, error_reason, failed_at
@@ -808,16 +808,16 @@ ORDER BY failed_at DESC;
 
 ---
 
-## Migrering og vedligeholdelse
+## Migration and Maintenance
 
-### Opsætning (i rækkefølge)
+### Setup (in order)
 
 ```sql
 -- 1. Extensions
 CREATE EXTENSION IF NOT EXISTS timescaledb;
-CREATE EXTENSION IF NOT EXISTS pgcrypto;    -- til gen_random_uuid() og evt. kryptering
+CREATE EXTENSION IF NOT EXISTS pgcrypto;    -- for gen_random_uuid() and optional encryption
 
--- 2. Skemaer
+-- 2. Schemas
 CREATE SCHEMA IF NOT EXISTS portfolio;
 CREATE SCHEMA IF NOT EXISTS metering;
 CREATE SCHEMA IF NOT EXISTS tariff;
@@ -826,28 +826,28 @@ CREATE SCHEMA IF NOT EXISTS invoicing;
 CREATE SCHEMA IF NOT EXISTS lifecycle;
 CREATE SCHEMA IF NOT EXISTS datahub;
 
--- 3. Tabeller (portfolio først pga. FK-referencer)
--- 4. Hypertables og continuous aggregates
--- 5. Komprimeringspolitikker
--- 6. Retentionspolitikker
+-- 3. Tables (portfolio first due to FK references)
+-- 4. Hypertables and continuous aggregates
+-- 5. Compression policies
+-- 6. Retention policies
 ```
 
-### Lagringskrav (estimat, 80K kunder, PT15M)
+### Storage Requirements (estimate, 80K customers, PT15M)
 
-| Tabel | Rækker/måned | Rå størrelse | Med komprimering |
-|-------|-------------|-------------|-----------------|
-| metering_data | ~230M | ~9 GB | ~0,7 GB |
-| daily_summary | ~2,4M | ~100 MB | (view) |
-| spot_price | ~1.500 | <1 MB | — |
-| settlement_line | ~560K | ~30 MB | — |
-| Alt andet | — | ~50 MB | — |
-| **Total pr. måned** | | | **~1 GB** |
+| Table | Rows/month | Raw size | With compression |
+|-------|------------|----------|------------------|
+| metering_data | ~230M | ~9 GB | ~0.7 GB |
+| daily_summary | ~2.4M | ~100 MB | (view) |
+| spot_price | ~1,500 | <1 MB | -- |
+| settlement_line | ~560K | ~30 MB | -- |
+| Everything else | -- | ~50 MB | -- |
+| **Total per month** | | | **~1 GB** |
 
 ---
 
-## Kilder
+## Sources
 
-- [Klassediagram (domænemodel)](datahub3-class-diagram.md) — konceptuel model
-- [Foreslået systemarkitektur](datahub3-proposed-architecture.md) — dataarkitektur og teknologivalg
-- [Produktopbygning og fakturering](datahub3-product-and-billing.md) — alle fakturaparametre
-- [Afregningsoverblik](datahub3-settlement-overview.md) — afregningsberegning
+- [Class diagram (domain model)](datahub3-class-diagram.md) -- conceptual model
+- [Proposed system architecture](datahub3-proposed-architecture.md) -- data architecture and technology choices
+- [Product structure and billing](datahub3-product-and-billing.md) -- all invoice parameters
+- [Settlement overview](datahub3-settlement-overview.md) -- settlement calculation
