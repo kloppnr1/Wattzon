@@ -1,0 +1,3764 @@
+{
+  "MarketDocument": {
+    "mRID": "msg-multi-day-001",
+    "type": "E66",
+    "Process": {
+      "ProcessType": "E23"
+    },
+    "Sender_MarketParticipant": {
+      "mRID": "5790001330552",
+      "MarketRole": {
+        "type": "DGL"
+      }
+    },
+    "Receiver_MarketParticipant": {
+      "mRID": "5790002000000",
+      "MarketRole": {
+        "type": "DDQ"
+      }
+    },
+    "createdDateTime": "2025-02-01T06:00:00Z",
+    "Series": [
+      {
+        "mRID": "txn-multi-day-001",
+        "MarketEvaluationPoint": {
+          "mRID": "571313100000012345",
+          "type": "E17"
+        },
+        "Product": "8716867000030",
+        "Quantity_Measure_Unit": {
+          "name": "KWH"
+        },
+        "Period": {
+          "resolution": "PT1H",
+          "timeInterval": {
+            "start": "2025-01-01T00:00Z",
+            "end": "2025-02-01T00:00Z"
+          },
+          "Point": [
+            {
+              "position": 1,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 2,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 3,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 4,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 5,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 6,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 7,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 8,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 9,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 10,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 11,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 12,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 13,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 14,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 15,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 16,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 17,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 18,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 19,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 20,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 21,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 22,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 23,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 24,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 25,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 26,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 27,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 28,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 29,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 30,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 31,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 32,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 33,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 34,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 35,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 36,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 37,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 38,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 39,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 40,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 41,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 42,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 43,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 44,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 45,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 46,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 47,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 48,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 49,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 50,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 51,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 52,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 53,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 54,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 55,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 56,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 57,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 58,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 59,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 60,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 61,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 62,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 63,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 64,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 65,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 66,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 67,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 68,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 69,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 70,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 71,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 72,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 73,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 74,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 75,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 76,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 77,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 78,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 79,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 80,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 81,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 82,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 83,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 84,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 85,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 86,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 87,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 88,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 89,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 90,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 91,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 92,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 93,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 94,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 95,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 96,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 97,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 98,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 99,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 100,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 101,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 102,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 103,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 104,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 105,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 106,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 107,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 108,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 109,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 110,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 111,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 112,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 113,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 114,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 115,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 116,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 117,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 118,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 119,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 120,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 121,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 122,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 123,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 124,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 125,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 126,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 127,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 128,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 129,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 130,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 131,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 132,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 133,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 134,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 135,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 136,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 137,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 138,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 139,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 140,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 141,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 142,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 143,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 144,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 145,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 146,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 147,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 148,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 149,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 150,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 151,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 152,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 153,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 154,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 155,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 156,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 157,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 158,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 159,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 160,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 161,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 162,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 163,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 164,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 165,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 166,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 167,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 168,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 169,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 170,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 171,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 172,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 173,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 174,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 175,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 176,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 177,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 178,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 179,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 180,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 181,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 182,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 183,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 184,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 185,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 186,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 187,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 188,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 189,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 190,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 191,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 192,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 193,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 194,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 195,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 196,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 197,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 198,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 199,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 200,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 201,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 202,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 203,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 204,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 205,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 206,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 207,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 208,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 209,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 210,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 211,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 212,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 213,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 214,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 215,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 216,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 217,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 218,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 219,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 220,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 221,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 222,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 223,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 224,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 225,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 226,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 227,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 228,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 229,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 230,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 231,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 232,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 233,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 234,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 235,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 236,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 237,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 238,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 239,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 240,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 241,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 242,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 243,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 244,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 245,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 246,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 247,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 248,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 249,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 250,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 251,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 252,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 253,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 254,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 255,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 256,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 257,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 258,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 259,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 260,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 261,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 262,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 263,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 264,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 265,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 266,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 267,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 268,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 269,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 270,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 271,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 272,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 273,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 274,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 275,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 276,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 277,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 278,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 279,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 280,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 281,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 282,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 283,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 284,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 285,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 286,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 287,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 288,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 289,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 290,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 291,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 292,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 293,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 294,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 295,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 296,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 297,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 298,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 299,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 300,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 301,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 302,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 303,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 304,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 305,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 306,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 307,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 308,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 309,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 310,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 311,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 312,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 313,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 314,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 315,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 316,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 317,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 318,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 319,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 320,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 321,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 322,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 323,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 324,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 325,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 326,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 327,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 328,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 329,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 330,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 331,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 332,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 333,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 334,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 335,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 336,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 337,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 338,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 339,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 340,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 341,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 342,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 343,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 344,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 345,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 346,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 347,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 348,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 349,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 350,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 351,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 352,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 353,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 354,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 355,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 356,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 357,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 358,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 359,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 360,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 361,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 362,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 363,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 364,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 365,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 366,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 367,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 368,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 369,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 370,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 371,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 372,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 373,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 374,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 375,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 376,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 377,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 378,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 379,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 380,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 381,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 382,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 383,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 384,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 385,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 386,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 387,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 388,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 389,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 390,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 391,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 392,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 393,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 394,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 395,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 396,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 397,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 398,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 399,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 400,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 401,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 402,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 403,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 404,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 405,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 406,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 407,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 408,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 409,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 410,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 411,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 412,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 413,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 414,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 415,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 416,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 417,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 418,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 419,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 420,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 421,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 422,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 423,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 424,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 425,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 426,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 427,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 428,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 429,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 430,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 431,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 432,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 433,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 434,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 435,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 436,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 437,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 438,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 439,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 440,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 441,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 442,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 443,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 444,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 445,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 446,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 447,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 448,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 449,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 450,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 451,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 452,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 453,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 454,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 455,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 456,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 457,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 458,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 459,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 460,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 461,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 462,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 463,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 464,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 465,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 466,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 467,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 468,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 469,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 470,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 471,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 472,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 473,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 474,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 475,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 476,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 477,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 478,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 479,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 480,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 481,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 482,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 483,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 484,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 485,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 486,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 487,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 488,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 489,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 490,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 491,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 492,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 493,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 494,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 495,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 496,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 497,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 498,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 499,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 500,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 501,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 502,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 503,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 504,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 505,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 506,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 507,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 508,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 509,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 510,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 511,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 512,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 513,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 514,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 515,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 516,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 517,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 518,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 519,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 520,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 521,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 522,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 523,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 524,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 525,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 526,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 527,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 528,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 529,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 530,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 531,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 532,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 533,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 534,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 535,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 536,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 537,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 538,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 539,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 540,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 541,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 542,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 543,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 544,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 545,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 546,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 547,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 548,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 549,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 550,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 551,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 552,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 553,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 554,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 555,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 556,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 557,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 558,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 559,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 560,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 561,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 562,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 563,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 564,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 565,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 566,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 567,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 568,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 569,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 570,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 571,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 572,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 573,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 574,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 575,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 576,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 577,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 578,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 579,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 580,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 581,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 582,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 583,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 584,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 585,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 586,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 587,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 588,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 589,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 590,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 591,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 592,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 593,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 594,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 595,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 596,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 597,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 598,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 599,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 600,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 601,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 602,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 603,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 604,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 605,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 606,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 607,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 608,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 609,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 610,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 611,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 612,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 613,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 614,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 615,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 616,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 617,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 618,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 619,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 620,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 621,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 622,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 623,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 624,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 625,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 626,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 627,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 628,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 629,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 630,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 631,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 632,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 633,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 634,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 635,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 636,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 637,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 638,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 639,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 640,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 641,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 642,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 643,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 644,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 645,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 646,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 647,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 648,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 649,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 650,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 651,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 652,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 653,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 654,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 655,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 656,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 657,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 658,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 659,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 660,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 661,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 662,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 663,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 664,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 665,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 666,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 667,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 668,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 669,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 670,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 671,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 672,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 673,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 674,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 675,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 676,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 677,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 678,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 679,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 680,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 681,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 682,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 683,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 684,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 685,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 686,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 687,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 688,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 689,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 690,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 691,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 692,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 693,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 694,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 695,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 696,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 697,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 698,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 699,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 700,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 701,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 702,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 703,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 704,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 705,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 706,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 707,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 708,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 709,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 710,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 711,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 712,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 713,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 714,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 715,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 716,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 717,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 718,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 719,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 720,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 721,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 722,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 723,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 724,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 725,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 726,
+              "quantity": 0.300,
+              "quality": "A03"
+            },
+            {
+              "position": 727,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 728,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 729,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 730,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 731,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 732,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 733,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 734,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 735,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 736,
+              "quantity": 0.500,
+              "quality": "A03"
+            },
+            {
+              "position": 737,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 738,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 739,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 740,
+              "quantity": 1.200,
+              "quality": "A03"
+            },
+            {
+              "position": 741,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 742,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 743,
+              "quantity": 0.400,
+              "quality": "A03"
+            },
+            {
+              "position": 744,
+              "quantity": 0.400,
+              "quality": "A03"
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

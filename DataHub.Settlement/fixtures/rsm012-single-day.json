@@ -1,0 +1,60 @@
+{
+  "MarketDocument": {
+    "mRID": "msg-single-day-001",
+    "type": "E66",
+    "Process": { "ProcessType": "E23" },
+    "Sender_MarketParticipant": {
+      "mRID": "5790001330552",
+      "MarketRole": { "type": "DGL" }
+    },
+    "Receiver_MarketParticipant": {
+      "mRID": "5790002000000",
+      "MarketRole": { "type": "DDQ" }
+    },
+    "createdDateTime": "2025-01-02T06:00:00Z",
+    "Series": [
+      {
+        "mRID": "txn-single-day-001",
+        "MarketEvaluationPoint": {
+          "mRID": "571313100000012345",
+          "type": "E17"
+        },
+        "Product": "8716867000030",
+        "Quantity_Measure_Unit": { "name": "KWH" },
+        "Period": {
+          "resolution": "PT1H",
+          "timeInterval": {
+            "start": "2025-01-01T00:00Z",
+            "end": "2025-01-02T00:00Z"
+          },
+          "Point": [
+            { "position": 1, "quantity": 0.300, "quality": "A03" },
+            { "position": 2, "quantity": 0.300, "quality": "A03" },
+            { "position": 3, "quantity": 0.300, "quality": "A03" },
+            { "position": 4, "quantity": 0.300, "quality": "A03" },
+            { "position": 5, "quantity": 0.300, "quality": "A03" },
+            { "position": 6, "quantity": 0.300, "quality": "A03" },
+            { "position": 7, "quantity": 0.500, "quality": "A03" },
+            { "position": 8, "quantity": 0.500, "quality": "A03" },
+            { "position": 9, "quantity": 0.500, "quality": "A03" },
+            { "position": 10, "quantity": 0.500, "quality": "A03" },
+            { "position": 11, "quantity": 0.500, "quality": "A03" },
+            { "position": 12, "quantity": 0.500, "quality": "A03" },
+            { "position": 13, "quantity": 0.500, "quality": "A03" },
+            { "position": 14, "quantity": 0.500, "quality": "A03" },
+            { "position": 15, "quantity": 0.500, "quality": "A03" },
+            { "position": 16, "quantity": 0.500, "quality": "A03" },
+            { "position": 17, "quantity": 1.200, "quality": "A03" },
+            { "position": 18, "quantity": 1.200, "quality": "A03" },
+            { "position": 19, "quantity": 1.200, "quality": "A03" },
+            { "position": 20, "quantity": 1.200, "quality": "A03" },
+            { "position": 21, "quantity": 0.400, "quality": "A03" },
+            { "position": 22, "quantity": 0.400, "quality": "A03" },
+            { "position": 23, "quantity": 0.400, "quality": "A03" },
+            { "position": 24, "quantity": 0.400, "quality": "A03" }
+          ]
+        }
+      }
+    ]
+  }
+}

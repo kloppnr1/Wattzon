@@ -18,6 +18,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\DataHub.Settlement.Domain\DataHub.Settlement.Domain.csproj" />
     <ProjectReference Include="..\..\src\DataHub.Settlement.Application\DataHub.Settlement.Application.csproj" />
+    <ProjectReference Include="..\..\src\DataHub.Settlement.Infrastructure\DataHub.Settlement.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>
