@@ -40,7 +40,6 @@ In the Danish electricity market, a DDQ's CIS typically handles:
 | **DataHub 3** (Energinet) | **→** we receive | DataHub Integration | RSM-012 (kWh), RSM-007/004 (master data), BRS responses, tariffs |
 | **DataHub 3** (Energinet) | **←** we send | DataHub Integration | BRS-001/002/003/005/009/010/015/042/043/044 requests, RSM-015/016 data requests |
 | **Nord Pool** | **→** we receive | Settlement Engine | Hourly spot prices (DK1/DK2) |
-| **Eloverblik** | **→** we receive | Customer & Portfolio | GSRN data, historical consumption (onboarding) |
 | **ERP / Accounting** | **←** we send | Settlement Engine | Settlement results, invoice lines |
 | **ERP / Accounting** | **→** we receive | Customer & Portfolio | Payment status |
 | **Customer Portal** | **←** we send | Settlement Engine + Customer & Portfolio | Consumption data, invoice data, contract details, aconto |
@@ -203,16 +202,12 @@ The CRM manages the sales funnel and hands off new customers to our system for D
 **Data flow:**
 
 ```
-CRM / Sales                         Our system                    Eloverblik API
-    │                                    │                              │
-    │ New contract signed                │                              │
-    ├───── Customer + GSRN + product ───►│                              │
-    │                                    ├── Lookup GSRN ──────────────►│
-    │                                    │◄── Metering point data, ─────┤
-    │                                    │    historical consumption    │
-    │                                    │                              │
-    │                                    │ Validate GSRN, pre-assign
-    │                                    │ tariffs, calculate aconto
+CRM / Sales                         Our system
+    │                                    │
+    │ New contract signed                │
+    ├───── Customer + GSRN + product ───►│
+    │                                    │
+    │                                    │ Calculate aconto estimate
     │                                    │
     │                                    │ Initiate BRS-001 (supplier switch)
     │                                    │ or BRS-009 (move-in)
@@ -233,7 +228,6 @@ CRM / Sales                         Our system                    Eloverblik API
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| `/api/metering-points/{gsrn}/lookup` | GET | Look up a GSRN via Eloverblik — returns metering point data, grid area, historical consumption |
 | `/api/customers` | POST | Create a new customer + metering point association |
 | `/api/customers/{id}/switch` | POST | Initiate a supplier switch (BRS-001 / BRS-043) |
 | `/api/customers/{id}/move-in` | POST | Initiate a move-in (BRS-009) |
@@ -392,68 +386,6 @@ Nord Pool / Market data              Our system
 - **Units:** Nord Pool publishes in EUR/MWh or DKK/MWh — convert to DKK/kWh for settlement (÷ 1000)
 
 ---
-
-### 8. Eloverblik (Onboarding Data)
-
-**Eloverblik** (eloverblik.dk) is Energinet's portal for accessing metering point data. It is a **core part of the onboarding flow** — not an optional verification tool.
-
-**Why Eloverblik is essential for onboarding:**
-
-Before we are the active supplier on a metering point, we do **not** receive any data through DataHub's B2B API (RSM-007, RSM-012, etc.). The B2B queues only deliver data for metering points where we are the registered supplier. During signup, we need Eloverblik to get the data required to onboard the customer and submit the switch request (BRS-001).
-
-**What Eloverblik provides:**
-
-| Data | Used for |
-|------|----------|
-| GSRN validation | Confirm the metering point exists and matches the customer's address |
-| Metering point type (E17/E18) | Determine settlement method, detect solar installations |
-| Current supplier | Know who we are switching from |
-| Grid area | Pre-assign tariff plan before RSM-007 arrives |
-| Settlement method (flex/profile) | Set up correct billing |
-| Historical consumption (12 months) | Calculate the first aconto amount for aconto customers |
-| Estimated annual consumption | Fallback if historical data is insufficient |
-
-**The onboarding flow with Eloverblik:**
-
-```
-Customer          CRM / Sales         Our system          Eloverblik       DataHub
-    │                 │                    │                    │               │
-    │ Signs contract, │                    │                    │               │
-    │ provides GSRN   │                    │                    │               │
-    ├────────────────►│                    │                    │               │
-    │                 │                    │                    │               │
-    │                 ├── Create ─────────►│                    │               │
-    │                 │   customer + GSRN  │                    │               │
-    │                 │                    │                    │               │
-    │                 │                    ├── Lookup GSRN ────►│               │
-    │                 │                    │◄── Metering point ─┤               │
-    │                 │                    │    data + history  │               │
-    │                 │                    │                    │               │
-    │                 │                    │ Validate GSRN      │               │
-    │                 │                    │ Pre-assign tariffs │               │
-    │                 │                    │ Calculate aconto   │               │
-    │                 │                    │                    │               │
-    │                 │                    ├── BRS-001 ─────────┼──────────────►│
-    │                 │                    │   (supplier switch) │               │
-    │                 │                    │                    │               │
-```
-
-**After activation:** Once we are the active supplier, we receive all data through DataHub's B2B API (RSM-007 for master data, RSM-012 for metering data). Eloverblik is no longer needed for day-to-day operations, but remains available for dispute resolution where customers can independently verify their data.
-
-**Eloverblik has two interfaces:**
-
-| Interface | Users | Purpose |
-|-----------|-------|---------|
-| **Customer portal** (eloverblik.dk) | Consumers | Look up own GSRN, consumption history, current supplier |
-| **Third-party API** | DDQs, energy apps, comparison sites | Programmatic access with customer consent |
-
-**Eloverblik API access:**
-- Requires registration as a third-party data accessor (WARNING: VERIFY current access model)
-- Customer must grant explicit consent for the DDQ to access their data
-- API provides metering point details, historical consumption, and current supplier information
-- Separate from the DataHub B2B API — different authentication, different endpoints
-
-> Implementation details: [Eloverblik integration guide](datahub3-eloverblik-integration.md) — authentication flow, API endpoints, data mapping, error handling
 
 ---
 

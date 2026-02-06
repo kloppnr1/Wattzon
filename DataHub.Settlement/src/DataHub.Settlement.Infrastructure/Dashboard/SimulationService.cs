@@ -1,6 +1,5 @@
 using Dapper;
 using DataHub.Settlement.Application.Billing;
-using DataHub.Settlement.Application.Eloverblik;
 using DataHub.Settlement.Application.Lifecycle;
 using DataHub.Settlement.Application.Metering;
 using DataHub.Settlement.Application.Portfolio;
@@ -386,12 +385,6 @@ public sealed class SimulationService
         await Task.Delay(1500, ct);
 
         // ── Step 5 (4): Estimate Q1 Aconto ──
-        var history = new List<MonthlyConsumption>
-        {
-            new(2024, 10, 340m),
-            new(2024, 11, 400m),
-            new(2024, 12, 450m),
-        };
         var expectedPrice = AcontoEstimator.CalculateExpectedPricePerKwh(
             averageSpotPriceOrePerKwh: 75m, marginOrePerKwh: 4.0m,
             systemTariffRate: 0.054m, transmissionTariffRate: 0.049m,
@@ -399,7 +392,7 @@ public sealed class SimulationService
         var gridSubRate = 49.00m;
         var supplierSubRate = setup.Product.SubscriptionKrPerMonth;
         var quarterlyEstimate = AcontoEstimator.EstimateQuarterlyAmount(
-            history, expectedPrice, gridSubRate, supplierSubRate);
+            annualConsumptionKwh: 4000m, expectedPrice, gridSubRate, supplierSubRate);
 
         // Customer pays the full quarterly aconto amount upfront at Q1 start
         await acontoRepo.RecordPaymentAsync(Gsrn, new DateOnly(2025, 1, 1), new DateOnly(2025, 3, 31), quarterlyEstimate, ct);
@@ -491,13 +484,9 @@ public sealed class SimulationService
         await Task.Delay(1200, ct);
 
         // ── Step 11: Estimate Q2 + Combined Invoice ──
-        var q1Actuals = new List<MonthlyConsumption>
-        {
-            new(2025, 1, janResult.TotalKwh),
-            new(2025, 2, febResult.TotalKwh),
-            new(2025, 3, marResult.TotalKwh),
-        };
-        var q2Estimate = AcontoEstimator.EstimateQuarterlyAmount(q1Actuals, expectedPrice, gridSubRate, supplierSubRate);
+        var q1TotalKwh = janResult.TotalKwh + febResult.TotalKwh + marResult.TotalKwh;
+        var q2Estimate = AcontoEstimator.EstimateQuarterlyAmount(
+            annualConsumptionKwh: q1TotalKwh * 4m, expectedPrice, gridSubRate, supplierSubRate);
         var totalDue = difference + q2Estimate;
 
         await onStepCompleted(new SimulationStep(11, "Combined Invoice",

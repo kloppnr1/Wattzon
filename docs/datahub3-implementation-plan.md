@@ -92,7 +92,7 @@ The simulator is a lightweight HTTP server that mimics the DataHub B2B API — j
 | MVP | Simulator capabilities |
 |-----|----------------------|
 | **MVP 1** | In-process `FakeDataHubClient` only. Supports: OAuth2 (mock), Timeseries queue (RSM-012), MasterData queue (RSM-007), Charges queue, BRS-001 `SendRequestAsync` (returns RSM-009 accepted), Dequeue. Loads CIM JSON fixture files from disk. No HTTP, no Docker dependency. |
-| **MVP 2** | + **Standalone HTTP simulator (Docker).** ASP.NET Minimal API mimicking DataHub B2B API. + RSM-004. + BRS-002/003/005/009/010/043/044 request endpoints. + Scenarios: "rejection", "offboarding", "cancellation", "full lifecycle". + Eloverblik mock |
+| **MVP 2** | + **Standalone HTTP simulator (Docker).** ASP.NET Minimal API mimicking DataHub B2B API. + RSM-004. + BRS-002/003/005/009/010/043/044 request endpoints. + Scenarios: "rejection", "offboarding", "cancellation", "full lifecycle" |
 | **MVP 3** | + **Real DataHub (Actor Test) in parallel.** + Correction scenarios (original → correction on same queue). + BRS-042/011 endpoints. + Aggregations queue (RSM-014). + RSM-015/016 response endpoints. + Error injection (401, 503, malformed messages). + Elvarme/solar fixtures |
 | **MVP 4** | + Performance scenarios (80K metering points). + Realistic timing. + Preprod validation |
 
@@ -283,14 +283,13 @@ Golden Master #2: Partial period (mid-month start)
 
 | Area | Task | Test approach |
 |------|------|---------------|
-| **Simulator** | + BRS-002/003/005/009/010/043/044 endpoints. + RSM-004 on MasterData queue. + Scenarios: rejection, offboarding, cancellation, full lifecycle. + Eloverblik mock | Integration: full lifecycle scenario |
+| **Simulator** | + BRS-002/003/005/009/010/043/044 endpoints. + RSM-004 on MasterData queue. + Scenarios: rejection, offboarding, cancellation, full lifecycle | Integration: full lifecycle scenario |
 | **Master data** | RSM-004 parser (grid area change, metering point updates). Tariff reassignment on grid area change | Unit: fixtures. Integration: simulator |
-| **Eloverblik** | GSRN lookup at onboarding (metering point details, charges, historical consumption). Aconto estimation from 12-month history | Unit + integration |
 | **Rejection handling** | RSM-009 rejected → update process, notify CRM. Retry with corrected data | Unit: state machine. Integration: simulator |
 | **Cancellation** | BRS-003 (cancel switch before effective date) | Unit: state machine. Integration: simulator |
 | **Offboarding** | BRS-002 (end of supply). BRS-010 (move-out). BRS-044 (cancel termination). Incoming BRS-001 (we lose customer). BRS-043 (short notice switch). BRS-009 (move-in). BRS-015 (customer master data) | Unit + integration: simulator |
 | **Final settlement** | Partial period settlement. Aconto settlement at offboarding (actual vs. paid). Final invoice generation | Unit: golden master tests |
-| **Aconto** | Aconto estimation (new customer from Eloverblik data, existing from 12-month history). Quarterly settlement cycle. Combined quarterly invoice | Unit: golden master tests |
+| **Aconto** | Aconto estimation (static annual consumption estimate). Quarterly settlement cycle. Combined quarterly invoice | Unit: golden master tests |
 
 ### New golden master tests
 
