@@ -16,7 +16,7 @@ Når en privatkunde tegner en aftale, vælger de et **produkt** (f.eks. "Verdo S
 │  • Verdo-margin:     X øre/kWh oven på spotpris             │
 │  • Produkttillæg:    Ekstra øre/kWh (f.eks. grøn energi)   │
 │  • Abonnement:       Fast månedligt gebyr (kr./md.)         │
-│  • Faktureringsfrekvens:  Månedligt / kvartalsvist / årligt │
+│  • Faktureringsfrekvens:  Månedligt / kvartalsvist          │
 │  • Betalingsmodel:   Aconto / faktisk forbrug               │
 │  • Bindingsperiode:  Ingen / 3 mdr. / 6 mdr. / 12 mdr.    │
 │  • Betalingsfrist:   Netto 14 / 30 dage                    │
@@ -244,19 +244,19 @@ Hver kvartalsfaktura er et **samlet dokument** med to hoveddele:
 │  ═══════════════════════════════════════════════════════════════       │
 │                                                                       │
 │    Forventet årsforbrug: 4.200 kWh                                    │
-│    Q2-andel (20%): 840 kWh                                            │
-│    Estimeret Q2-omkostning inkl. moms:                1.520,00 kr.    │
+│    Q2-andel (÷4): 1.050 kWh                                          │
+│    Estimeret Q2-omkostning inkl. moms:                1.900,00 kr.    │
 │                                                                       │
-│    Aconto Q2:                                         1.520,00 kr.    │
+│    Aconto Q2:                                         1.900,00 kr.    │
 │                                                                       │
 │  ═══════════════════════════════════════════════════════════════       │
 │  SAMLET BELØB                                                         │
 │  ═══════════════════════════════════════════════════════════════       │
 │                                                                       │
 │    Q1 underbetaling:                                +   491,06 kr.    │
-│    Q2 aconto:                                       + 1.520,00 kr.    │
+│    Q2 aconto:                                       + 1.900,00 kr.    │
 │    ───────────────────────────────────────────────                    │
-│    TOTAL AT BETALE:                                   2.011,06 kr.    │
+│    TOTAL AT BETALE:                                   2.391,06 kr.    │
 │                                                                       │
 │    Betalingsfrist: 10. maj 2025                                       │
 │                                                                       │

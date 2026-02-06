@@ -17,7 +17,7 @@ DataHub:      → BRS-001 (leverandørskifte) med GSRN + ønsket dato + CPR/CVR
               → BRS-015 (indsend kundestamdata)
               → BRS-003 (annullér hvis kunden fortryder)
 Fakturering:  Opret kundepost, vælg produkt-/tarifplan
-              Opsæt faktureringsplan (månedlig/kvartalsvis/årlig)
+              Opsæt faktureringsplan (månedlig/kvartalsvis)
               Beregn aconto-estimat baseret på forventet årsforbrug
                                     │
                                     ▼
@@ -61,7 +61,7 @@ Fakturering:  Periodisk fakturering (månedligt/kvartalsvist)
                                     ▼
 FASE 5: OFFBOARDING                                              ~15 hverdage
 ─────────────────────────────────────────────────────────────────────────────
-Trigger:      Kunde opsiger / fraflytter / anden leverandør overtager
+Trigger:      Kunde fraflytter / anden leverandør overtager / manglende betaling
 DataHub:      → BRS-002 (leveranceophør — vi opsiger, scenarie B/D)
               → BRS-010 (fraflytning — scenarie C)
               → BRS-044 (annullér ophør ved fortrydelse)
@@ -263,8 +263,8 @@ Fakturatotal  = sum af alle linjer + moms
 2. Registrér leveranceperiodens startdato
 3. Tildel produkt-/tarifplan til målepunktet
 4. Indlæs nettariffer for målepunktets netområde (fra Charges-kø-data)
-5. Opsæt faktureringsplan (månedlig, kvartalsvis eller årlig — jf. kontrakt)
-6. Ved acontofakturering: beregn estimeret månedligt beløb baseret på forventet årsforbrug
+5. Opsæt faktureringsplan (månedlig eller kvartalsvis — jf. kontrakt)
+6. Ved acontofakturering: beregn estimeret kvartalsvist acontobeløb baseret på forventet årsforbrug
 7. Kunden er nu synlig i kundeportalen
 
 ### Nøgledata modtaget ved aktivering
@@ -327,7 +327,7 @@ For et **profilafregnet** målepunkt:
 
 | Model | Beskrivelse | Afstemning |
 |-------|-------------|------------|
-| **Aconto** | Kunden betaler fast månedligt estimat. Acontoopgørelse afstemmer mod faktisk forbrug. | Hvert kvartal (ved faktureringsperiode-slut) |
+| **Aconto** | Kunden betaler fast kvartalsvist estimat. Acontoopgørelse afstemmer mod faktisk forbrug. | Hvert kvartal (ved faktureringsperiode-slut) |
 | **Faktisk** | Kunden betaler baseret på faktisk målt forbrug hver periode. | Hver faktura er endelig (ingen afstemning nødvendig) |
 
 ### Interne trin

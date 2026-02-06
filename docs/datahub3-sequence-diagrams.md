@@ -121,7 +121,7 @@ sequenceDiagram
     Settl->>Settl: Slutafregning: delvis periode<br/>energi + tarif + abonnement (forholdsmæssigt)
 
     alt Acontokunde
-        Settl->>Settl: Årsopgørelse:<br/>faktisk forbrug vs. acontobetalinger
+        Settl->>Settl: Acontoopgørelse:<br/>faktisk forbrug vs. acontobetalinger
         Settl->>D365: Kredit (overbetalt) eller<br/>debit (underbetalt)
     end
 
