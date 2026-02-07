@@ -12,6 +12,7 @@ var connectionString = builder.Configuration.GetConnectionString("SettlementDb")
 builder.Services.AddSingleton(new DashboardQueryService(connectionString));
 builder.Services.AddSingleton(new DemoDataSeeder(connectionString));
 builder.Services.AddSingleton(new SimulationService(connectionString));
+builder.Services.AddScoped<SimulatedClock>();
 builder.Services.AddHttpClient();
 builder.Services.AddSingleton<IAddressLookupClient>(new StubAddressLookupClient());
 

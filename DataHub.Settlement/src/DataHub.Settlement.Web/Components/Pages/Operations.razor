@@ -4,6 +4,7 @@
 @using DataHub.Settlement.Infrastructure.Dashboard
 @inject IAddressLookupClient AddressLookup
 @inject SimulationService Simulator
+@inject SimulatedClock Clock
 @inject IHttpClientFactory HttpClientFactory
 
 <div style="display: flex; align-items: center; justify-content: space-between;">
@@ -15,6 +16,16 @@
 <p style="color: var(--text-muted); margin-bottom: 1.5rem;">
     Search an address, find metering points, and run concurrent change-of-supplier actions.
 </p>
+
+<!-- Clock Bar -->
+<div class="ops-clock-bar">
+    <div class="ops-clock-date">@Clock.CurrentDate.ToString("ddd, dd MMM yyyy")</div>
+    <div class="ops-clock-controls">
+        <button class="ops-clock-btn" @onclick="AdvanceOneDayAsync" disabled="@_ticking">+1 Day</button>
+        <button class="ops-clock-btn ops-clock-btn-accent" @onclick="SkipToNextEventAsync" disabled="@_ticking">Skip to Next Event</button>
+        <button class="ops-clock-btn" @onclick="AdvanceSevenDaysAsync" disabled="@_ticking">+7 Days</button>
+    </div>
+</div>
 
 <!-- Address Search -->
 <div class="ops-search-section">
@@ -78,6 +89,7 @@
             var rowCss = action.Status switch
             {
                 ActionStatus.Running => "ops-action ops-action-running",
+                ActionStatus.WaitingForDate => "ops-action ops-action-waiting",
                 ActionStatus.Completed => "ops-action ops-action-completed",
                 ActionStatus.Failed => "ops-action ops-action-failed",
                 _ => "ops-action",
@@ -106,6 +118,14 @@
                             {
                                 <span>@action.ActionType — @action.CurrentStepDetails</span>
                             }
+                            else if (action.Status == ActionStatus.WaitingForDate && action.MeteringDaysDelivered > 0 && action.MeteringDaysDelivered < action.TotalMeteringDays)
+                            {
+                                <span>@action.ActionType — RSM-012: @action.MeteringDaysDelivered/@action.TotalMeteringDays days received</span>
+                            }
+                            else if (action.Status == ActionStatus.WaitingForDate)
+                            {
+                                <span>@action.ActionType — waiting for @action.NextEventDate?.ToString("dd MMM"): @action.NextEventName</span>
+                            }
                             else if (action.Result is not null)
                             {
                                 @action.Result
@@ -121,6 +141,9 @@
                         {
                             case ActionStatus.Running:
                                 <span class="badge badge-sent">@action.CurrentStepName (@action.CompletedSteps/@action.TotalSteps)</span>
+                                break;
+                            case ActionStatus.WaitingForDate:
+                                <span class="badge badge-waiting">@action.CompletedSteps/@action.TotalSteps</span>
                                 break;
                             case ActionStatus.Completed:
                                 <span class="badge badge-completed">ready</span>
@@ -146,6 +169,45 @@
                         <span class="ops-expand-icon">@(isExpanded ? "\u25B2" : "\u25BC")</span>
                     </div>
                 </div>
+
+                <!-- Timeline Strip (always visible for time-aware actions) -->
+                @if (action.TimelineEvents is { Count: > 0 })
+                {
+                    <div class="ops-timeline-strip">
+                        @foreach (var evt in action.TimelineEvents)
+                        {
+                            var isRsm012Daily = evt.Name == "RSM-012 Daily";
+                            var isRsm012Done = isRsm012Daily && action.MeteringDaysDelivered >= action.TotalMeteringDays && action.TotalMeteringDays > 0;
+                            var isRsm012InProgress = isRsm012Daily && action.MeteringDaysDelivered > 0 && !isRsm012Done;
+                            var dotClass = (isRsm012Done || (action.CompletedTimelineSteps.Contains(evt.Name) && evt.Date <= Clock.CurrentDate))
+                                ? "ops-tl-dot ops-tl-done"
+                                : isRsm012InProgress
+                                    ? "ops-tl-dot ops-tl-progress"
+                                    : evt.Date <= Clock.CurrentDate && !isRsm012Daily
+                                        ? "ops-tl-dot ops-tl-ready"
+                                        : "ops-tl-dot ops-tl-future";
+                            <div class="ops-tl-event">
+                                <div class="@dotClass"></div>
+                                <div class="ops-tl-label">
+                                    <span class="ops-tl-date">@evt.Date.ToString("dd MMM")</span>
+                                    @if (isRsm012Daily && action.TotalMeteringDays > 0)
+                                    {
+                                        <span class="ops-tl-name">RSM-012</span>
+                                        <div class="ops-tl-progress-bar">
+                                            <div class="ops-tl-progress-fill" style="width: @(action.TotalMeteringDays > 0 ? (int)(100.0 * action.MeteringDaysDelivered / action.TotalMeteringDays) : 0)%"></div>
+                                        </div>
+                                        <span class="ops-tl-progress-text">@action.MeteringDaysDelivered / @action.TotalMeteringDays</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="ops-tl-name">@evt.Name</span>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+
                 @if (isExpanded && action.Summary is { } summary)
                 {
                     <div class="ops-detail-panel">
@@ -260,6 +322,60 @@
 }
 
 <style>
+    .ops-clock-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0.75rem 1rem;
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        margin-bottom: 1.5rem;
+    }
+
+    .ops-clock-date {
+        font-size: 1.3rem;
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .ops-clock-controls {
+        display: flex;
+        gap: 0.4rem;
+    }
+
+    .ops-clock-btn {
+        padding: 0.35rem 0.75rem;
+        font-size: 0.78rem;
+        font-weight: 600;
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        background: var(--bg-card);
+        color: var(--text);
+        cursor: pointer;
+        transition: background 0.15s, border-color 0.15s;
+    }
+
+    .ops-clock-btn:hover:not(:disabled) {
+        background: var(--bg-hover);
+        border-color: var(--accent);
+    }
+
+    .ops-clock-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    .ops-clock-btn-accent {
+        border-color: var(--accent);
+        color: var(--accent);
+    }
+
+    .ops-clock-btn-accent:hover:not(:disabled) {
+        background: var(--accent);
+        color: #fff;
+    }
+
     .ops-action-row {
         display: flex;
         align-items: center;
@@ -379,10 +495,132 @@
         opacity: 0.5;
         cursor: not-allowed;
     }
+
+    .ops-action-waiting {
+        border-left: 3px solid var(--accent);
+    }
+
+    .badge-waiting {
+        background: var(--accent);
+        color: #fff;
+        padding: 0.15rem 0.4rem;
+        border-radius: 4px;
+        font-size: 0.7rem;
+        font-weight: 600;
+    }
+
+    /* Timeline strip */
+    .ops-timeline-strip {
+        display: flex;
+        align-items: flex-start;
+        gap: 0;
+        width: 100%;
+        padding: 0.5rem 0 0.25rem 0.5rem;
+        overflow-x: auto;
+    }
+
+    .ops-tl-event {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        flex: 1;
+        min-width: 5rem;
+        position: relative;
+    }
+
+    .ops-tl-event::after {
+        content: '';
+        position: absolute;
+        top: 6px;
+        left: 50%;
+        width: 100%;
+        height: 2px;
+        background: var(--border);
+        z-index: 0;
+    }
+
+    .ops-tl-event:last-child::after {
+        display: none;
+    }
+
+    .ops-tl-dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        z-index: 1;
+        flex-shrink: 0;
+    }
+
+    .ops-tl-done {
+        background: #22c55e;
+    }
+
+    .ops-tl-ready {
+        background: var(--accent);
+        animation: pulse-dot 1.5s infinite;
+    }
+
+    .ops-tl-future {
+        background: var(--border);
+    }
+
+    @@keyframes pulse-dot {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.4; }
+    }
+
+    .ops-tl-label {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        margin-top: 0.25rem;
+        text-align: center;
+    }
+
+    .ops-tl-date {
+        font-size: 0.65rem;
+        font-weight: 700;
+        color: var(--text-muted);
+        font-variant-numeric: tabular-nums;
+    }
+
+    .ops-tl-name {
+        font-size: 0.6rem;
+        color: var(--text-muted);
+        white-space: nowrap;
+    }
+
+    .ops-tl-progress {
+        background: #f59e0b;
+    }
+
+    .ops-tl-progress-bar {
+        width: 3rem;
+        height: 4px;
+        background: var(--border);
+        border-radius: 2px;
+        margin-top: 0.15rem;
+        overflow: hidden;
+    }
+
+    .ops-tl-progress-fill {
+        height: 100%;
+        background: #22c55e;
+        border-radius: 2px;
+        transition: width 0.3s ease;
+    }
+
+    .ops-tl-progress-text {
+        font-size: 0.65rem;
+        font-weight: 700;
+        color: var(--text);
+        font-variant-numeric: tabular-nums;
+        margin-top: 0.1rem;
+    }
 </style>
 
 @code {
-    private enum ActionStatus { Pending, Running, Completed, Failed }
+    private enum ActionStatus { Pending, Running, WaitingForDate, Completed, Failed }
 
     private sealed class ActionViewModel
     {
@@ -390,7 +628,7 @@
         public string Gsrn { get; init; } = "";
         public string Address { get; init; } = "";
         public string ActionType { get; set; } = "";
-        public int TotalSteps { get; set; } = 8;
+        public int TotalSteps { get; set; } = 7;
         public bool IsOffboarded { get; set; }
         public ActionStatus Status { get; set; }
         public int CompletedSteps { get; set; }
@@ -400,6 +638,19 @@
         public string? ErrorMessage { get; set; }
         public List<string> CompletedOps { get; } = new();
         public MeteringPointSummary? Summary { get; set; }
+
+        // Time-aware fields
+        public bool IsTimeAware { get; set; }
+        public ChangeOfSupplierContext? CosContext { get; set; }
+        public MoveInContext? MoveInContext { get; set; }
+        public IReadOnlyList<TimelineEvent>? TimelineEvents { get; set; }
+        public HashSet<string> CompletedTimelineSteps { get; } = new();
+        public string? NextEventName { get; set; }
+        public DateOnly? NextEventDate { get; set; }
+
+        // Metering progress
+        public int MeteringDaysDelivered { get; set; }
+        public int TotalMeteringDays { get; set; }
     }
 
     private record DawaSuggestion(string Text, string DarId);
@@ -407,6 +658,7 @@
     private string _searchQuery = "";
     private bool _searching;
     private bool _resetting;
+    private bool _ticking;
     private bool _addressSelected;
     private string _selectedAddress = "";
     private int? _expandedActionId;
@@ -422,11 +674,141 @@
         StateHasChanged();
 
         await Simulator.ResetAsync();
+        Clock.Reset();
 
         _actions.Clear();
         _expandedActionId = null;
         _resetting = false;
         StateHasChanged();
+    }
+
+    private async Task AdvanceOneDayAsync()
+    {
+        Clock.AdvanceDays(1);
+        await TickAllActionsAsync();
+    }
+
+    private async Task AdvanceSevenDaysAsync()
+    {
+        Clock.AdvanceDays(7);
+        await TickAllActionsAsync();
+    }
+
+    private async Task SkipToNextEventAsync()
+    {
+        // Find the earliest future event across all time-aware actions
+        DateOnly? earliest = null;
+        foreach (var action in _actions.Where(a => a.IsTimeAware && a.Status == ActionStatus.WaitingForDate))
+        {
+            var timeline = action.CosContext?.Timeline ?? action.MoveInContext?.Timeline;
+            if (timeline is null) continue;
+
+            var nextEvt = timeline.Events
+                .Where(e => e.Date > Clock.CurrentDate && !action.CompletedTimelineSteps.Contains(e.Name))
+                .OrderBy(e => e.Date)
+                .FirstOrDefault();
+
+            if (nextEvt is not null && (earliest is null || nextEvt.Date < earliest))
+                earliest = nextEvt.Date;
+        }
+
+        if (earliest is not null)
+        {
+            Clock.AdvanceTo(earliest.Value);
+            await TickAllActionsAsync();
+        }
+    }
+
+    private async Task TickAllActionsAsync()
+    {
+        _ticking = true;
+        StateHasChanged();
+
+        foreach (var action in _actions.Where(a => a.IsTimeAware && a.Status == ActionStatus.WaitingForDate))
+        {
+            try
+            {
+                List<SimulationStep> executed;
+                if (action.CosContext is { } cosCtx)
+                {
+                    executed = await Simulator.TickChangeOfSupplierAsync(cosCtx, Clock.CurrentDate, CancellationToken.None);
+                }
+                else if (action.MoveInContext is { } miCtx)
+                {
+                    executed = await Simulator.TickMoveInAsync(miCtx, Clock.CurrentDate, CancellationToken.None);
+                }
+                else continue;
+
+                foreach (var step in executed)
+                {
+                    action.CompletedSteps = step.Number;
+                    action.CurrentStepName = step.Name;
+                    action.CurrentStepDetails = step.Details;
+                    if (step.Name == "Receive RSM-012")
+                    {
+                        SyncMeteringProgress(action);
+                        if (action.MeteringDaysDelivered > 0)
+                            action.CompletedTimelineSteps.Add("RSM-012 Daily");
+                    }
+                    else
+                    {
+                        action.CompletedTimelineSteps.Add(step.Name);
+                    }
+                }
+
+                // Check if all steps done
+                var isComplete = action.CosContext is not null
+                    ? action.CosContext.IsSettled
+                    : action.MoveInContext?.IsSettled ?? false;
+
+                if (isComplete)
+                {
+                    action.Status = ActionStatus.Completed;
+                    action.CompletedOps.Add(action.ActionType);
+                    action.Result = action.CurrentStepDetails;
+                }
+                else
+                {
+                    UpdateNextEvent(action);
+                }
+            }
+            catch (Exception ex)
+            {
+                action.Status = ActionStatus.Failed;
+                action.ErrorMessage = ex.Message;
+            }
+        }
+
+        _ticking = false;
+        StateHasChanged();
+    }
+
+    private static void SyncMeteringProgress(ActionViewModel action)
+    {
+        if (action.CosContext is { } cos)
+        {
+            action.MeteringDaysDelivered = cos.MeteringDaysDelivered;
+            action.TotalMeteringDays = cos.TotalMeteringDays;
+        }
+        else if (action.MoveInContext is { } mi)
+        {
+            action.MeteringDaysDelivered = mi.MeteringDaysDelivered;
+            action.TotalMeteringDays = mi.TotalMeteringDays;
+        }
+    }
+
+    private void UpdateNextEvent(ActionViewModel action)
+    {
+        var timeline = action.CosContext?.Timeline ?? action.MoveInContext?.Timeline;
+        if (timeline is null) return;
+
+        var nextEvt = timeline.Events
+            .Where(e => !action.CompletedTimelineSteps.Contains(e.Name))
+            .OrderBy(e => e.Date)
+            .FirstOrDefault();
+
+        action.NextEventName = nextEvt?.Name;
+        action.NextEventDate = nextEvt?.Date;
     }
 
     private async Task ToggleExpandAsync(ActionViewModel action)
@@ -503,48 +885,122 @@
         StateHasChanged();
     }
 
-    private void StartChangeOfSupplier(MeteringPointInfo mp)
+    private DateOnly ComputeEffectiveDate()
+    {
+        var today = Clock.CurrentDate;
+        // Effective date = first of next month (or current month if today is already the 1st)
+        var effective = today.Day == 1
+            ? today
+            : new DateOnly(today.Year, today.Month, 1).AddMonths(1);
+        return effective;
+    }
+
+    private async Task StartChangeOfSupplier(MeteringPointInfo mp)
     {
         var actionId = Interlocked.Increment(ref _actionCounter);
+        var effectiveDate = ComputeEffectiveDate();
+        var cosCtx = new ChangeOfSupplierContext(mp.Gsrn, $"Customer #{actionId}", effectiveDate);
+
         var action = new ActionViewModel
         {
             Id = actionId,
             Gsrn = mp.Gsrn,
             Address = _selectedAddress,
             ActionType = "Change of Supplier",
-            TotalSteps = 8,
-            Status = ActionStatus.Running,
-            CurrentStepName = "Starting...",
+            TotalSteps = 7,
+            Status = ActionStatus.WaitingForDate,
+            IsTimeAware = true,
+            CosContext = cosCtx,
+            TimelineEvents = cosCtx.Timeline.Events,
+            TotalMeteringDays = cosCtx.TotalMeteringDays,
         };
+        UpdateNextEvent(action);
         _actions.Insert(0, action);
 
         _selectedMeteringPoints.Clear();
         _searchQuery = "";
         _addressSelected = false;
 
-        _ = RunActionAsync(action);
+        // Execute any steps already due at the current clock date
+        await TickSingleActionAsync(action);
+        StateHasChanged();
     }
 
-    private void StartMoveIn(MeteringPointInfo mp)
+    private async Task StartMoveIn(MeteringPointInfo mp)
     {
         var actionId = Interlocked.Increment(ref _actionCounter);
+        var effectiveDate = ComputeEffectiveDate();
+        var miCtx = new MoveInContext(mp.Gsrn, $"Customer #{actionId}", effectiveDate);
+
         var action = new ActionViewModel
         {
             Id = actionId,
             Gsrn = mp.Gsrn,
             Address = _selectedAddress,
             ActionType = "Move In",
-            TotalSteps = 8,
-            Status = ActionStatus.Running,
-            CurrentStepName = "Starting...",
+            TotalSteps = 7,
+            Status = ActionStatus.WaitingForDate,
+            IsTimeAware = true,
+            MoveInContext = miCtx,
+            TimelineEvents = miCtx.Timeline.Events,
+            TotalMeteringDays = miCtx.TotalMeteringDays,
         };
+        UpdateNextEvent(action);
         _actions.Insert(0, action);
 
         _selectedMeteringPoints.Clear();
         _searchQuery = "";
         _addressSelected = false;
 
-        _ = RunActionAsync(action);
+        await TickSingleActionAsync(action);
+        StateHasChanged();
+    }
+
+    private async Task TickSingleActionAsync(ActionViewModel action)
+    {
+        try
+        {
+            List<SimulationStep> executed;
+            if (action.CosContext is { } cosCtx)
+                executed = await Simulator.TickChangeOfSupplierAsync(cosCtx, Clock.CurrentDate, CancellationToken.None);
+            else if (action.MoveInContext is { } miCtx)
+                executed = await Simulator.TickMoveInAsync(miCtx, Clock.CurrentDate, CancellationToken.None);
+            else return;
+
+            foreach (var step in executed)
+            {
+                action.CompletedSteps = step.Number;
+                action.CurrentStepName = step.Name;
+                action.CurrentStepDetails = step.Details;
+                if (step.Name == "Receive RSM-012")
+                {
+                    SyncMeteringProgress(action);
+                    if (action.MeteringDaysDelivered > 0)
+                        action.CompletedTimelineSteps.Add("RSM-012 Daily");
+                }
+                else
+                {
+                    action.CompletedTimelineSteps.Add(step.Name);
+                }
+            }
+
+            var isComplete = action.CosContext?.IsSettled ?? action.MoveInContext?.IsSettled ?? false;
+            if (isComplete)
+            {
+                action.Status = ActionStatus.Completed;
+                action.CompletedOps.Add(action.ActionType);
+                action.Result = action.CurrentStepDetails;
+            }
+            else
+            {
+                UpdateNextEvent(action);
+            }
+        }
+        catch (Exception ex)
+        {
+            action.Status = ActionStatus.Failed;
+            action.ErrorMessage = ex.Message;
+        }
     }
 
     private void StartFollowUp(ActionViewModel action, string actionType, int totalSteps)
@@ -557,6 +1013,7 @@
         action.CurrentStepDetails = null;
         action.Result = null;
         action.ErrorMessage = null;
+        action.IsTimeAware = false;
 
         _ = RunActionAsync(action);
     }
@@ -582,9 +1039,6 @@
 
             switch (action.ActionType)
             {
-                case "Change of Supplier":
-                    await Simulator.RunChangeOfSupplierAsync(action.Gsrn, $"Customer #{action.Id}", stepCallback, CancellationToken.None);
-                    break;
                 case "Receive Metering":
                     await Simulator.ReceiveMeteringOpsAsync(action.Gsrn, stepCallback, CancellationToken.None);
                     break;
@@ -596,9 +1050,6 @@
                     break;
                 case "Aconto Billing":
                     await Simulator.AcontoBillingOpsAsync(action.Gsrn, stepCallback, CancellationToken.None);
-                    break;
-                case "Move In":
-                    await Simulator.RunMoveInAsync(action.Gsrn, $"Customer #{action.Id}", stepCallback, CancellationToken.None);
                     break;
                 case "Move Out":
                     await Simulator.RunMoveOutAsync(action.Gsrn, stepCallback, CancellationToken.None);
