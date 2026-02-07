@@ -43,6 +43,11 @@ public sealed class BrsRequestBuilder : IBrsRequestBuilder
         return BuildCancelRequest(gsrn, originalCorrelationId, "E03");
     }
 
+    public string BuildBrs042(string gsrn, DateOnly effectiveDate)
+    {
+        return BuildEndOfSupply(gsrn, effectiveDate, "E34");
+    }
+
     private static string BuildChangeOfSupplier(string gsrn, string cprCvr, DateOnly effectiveDate, string processType)
     {
         var doc = new
