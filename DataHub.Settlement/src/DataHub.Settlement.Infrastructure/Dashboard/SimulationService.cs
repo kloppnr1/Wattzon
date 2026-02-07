@@ -67,7 +67,7 @@ public sealed class SimulationService
         DateTime? deactivatedAt = mpRow.deactivated_at;
 
         var processRows = await conn.QueryAsync<dynamic>(
-            "SELECT id, process_type, status, effective_date FROM lifecycle.process_request WHERE gsrn = @Gsrn ORDER BY created_at",
+            "SELECT id, process_type, status, effective_date FROM lifecycle.process_request WHERE gsrn = @Gsrn ORDER BY created_at DESC LIMIT 1",
             new { Gsrn = gsrn });
         var processes = processRows.Select(r => new MeteringPointSummary.ProcessInfo(
             (Guid)r.id, (string)r.process_type, (string)r.status,
