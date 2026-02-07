@@ -22,9 +22,7 @@ public sealed class ProcessStateMachine
     public async Task<ProcessRequest> CreateRequestAsync(
         string gsrn, string processType, DateOnly effectiveDate, CancellationToken ct)
     {
-        var request = await _repository.CreateAsync(processType, gsrn, effectiveDate, ct);
-        await _repository.AddEventAsync(request.Id, "created", null, "system", ct);
-        return request;
+        return await _repository.CreateWithEventAsync(processType, gsrn, effectiveDate, ct);
     }
 
     public async Task MarkSentAsync(Guid requestId, string correlationId, CancellationToken ct)
@@ -83,7 +81,6 @@ public sealed class ProcessStateMachine
                 $"Invalid transition from '{request.Status}' to '{newStatus}' for process {requestId}");
         }
 
-        await _repository.UpdateStatusAsync(requestId, newStatus, correlationId, ct);
-        await _repository.AddEventAsync(requestId, eventType, null, "system", ct);
+        await _repository.TransitionWithEventAsync(requestId, newStatus, request.Status, correlationId, eventType, ct);
     }
 }

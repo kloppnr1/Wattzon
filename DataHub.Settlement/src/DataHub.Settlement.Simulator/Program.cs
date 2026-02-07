@@ -124,7 +124,7 @@ app.MapPost("/admin/scenario/{name}", (string name) =>
     {
         ScenarioLoader.Load(state, name);
         // Auto-register the default GSRN as active for scenarios that include RSM-007
-        if (name is "sunshine" or "full_lifecycle" or "cancellation")
+        if (name is "sunshine" or "full_lifecycle" or "cancellation" or "move_in" or "move_out")
             state.ActivateGsrn("571313100000012345");
         return Results.Ok(new { Scenario = name, Status = "loaded" });
     }

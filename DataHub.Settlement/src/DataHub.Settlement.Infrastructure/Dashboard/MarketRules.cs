@@ -31,6 +31,50 @@ public static class MarketRules
         return Valid;
     }
 
+    public static async Task<ValidationResult> CanMoveInAsync(string gsrn, string connString, CancellationToken ct)
+    {
+        await using var conn = new NpgsqlConnection(connString);
+        await conn.OpenAsync(ct);
+
+        var hasActiveSupply = await conn.QuerySingleAsync<bool>(
+            "SELECT EXISTS(SELECT 1 FROM portfolio.supply_period WHERE gsrn = @Gsrn AND end_date IS NULL)",
+            new { Gsrn = gsrn });
+
+        if (hasActiveSupply)
+            return new ValidationResult(false, $"Already supplying GSRN {gsrn}");
+
+        var hasPendingProcess = await conn.QuerySingleAsync<bool>(
+            "SELECT EXISTS(SELECT 1 FROM lifecycle.process_request WHERE gsrn = @Gsrn AND status NOT IN ('completed','cancelled','rejected','final_settled'))",
+            new { Gsrn = gsrn });
+
+        if (hasPendingProcess)
+            return new ValidationResult(false, $"Conflicting process in progress for GSRN {gsrn}");
+
+        return Valid;
+    }
+
+    public static async Task<ValidationResult> CanMoveOutAsync(string gsrn, string connString, CancellationToken ct)
+    {
+        await using var conn = new NpgsqlConnection(connString);
+        await conn.OpenAsync(ct);
+
+        var hasActiveSupply = await conn.QuerySingleAsync<bool>(
+            "SELECT EXISTS(SELECT 1 FROM portfolio.supply_period WHERE gsrn = @Gsrn AND end_date IS NULL)",
+            new { Gsrn = gsrn });
+
+        if (!hasActiveSupply)
+            return new ValidationResult(false, $"No active supply period for GSRN {gsrn}");
+
+        var hasCompletedProcess = await conn.QuerySingleAsync<bool>(
+            "SELECT EXISTS(SELECT 1 FROM lifecycle.process_request WHERE gsrn = @Gsrn AND status = 'completed')",
+            new { Gsrn = gsrn });
+
+        if (!hasCompletedProcess)
+            return new ValidationResult(false, $"No completed process for GSRN {gsrn} — cannot move out");
+
+        return Valid;
+    }
+
     public static async Task<ValidationResult> CanReceiveMeteringAsync(string gsrn, string connString, CancellationToken ct)
     {
         await using var conn = new NpgsqlConnection(connString);

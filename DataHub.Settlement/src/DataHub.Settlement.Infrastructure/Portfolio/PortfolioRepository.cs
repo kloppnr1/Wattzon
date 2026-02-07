@@ -109,8 +109,15 @@ public sealed class PortfolioRepository : IPortfolioRepository
 
         await using var conn = new NpgsqlConnection(_connectionString);
         await conn.OpenAsync(ct);
-        return await conn.QuerySingleAsync<SupplyPeriod>(
-            new CommandDefinition(sql, new { Gsrn = gsrn, StartDate = startDate }, cancellationToken: ct));
+        try
+        {
+            return await conn.QuerySingleAsync<SupplyPeriod>(
+                new CommandDefinition(sql, new { Gsrn = gsrn, StartDate = startDate }, cancellationToken: ct));
+        }
+        catch (PostgresException ex) when (ex.SqlState == "23505")
+        {
+            throw new InvalidOperationException($"An active supply period already exists for GSRN {gsrn}.", ex);
+        }
     }
 
     public async Task ActivateMeteringPointAsync(string gsrn, DateTime activatedAtUtc, CancellationToken ct)

@@ -55,9 +55,14 @@
                     <span>Grid Area: @mp.GridAreaCode</span>
                     <span>@_selectedAddress</span>
                 </div>
-                <button class="btn" style="margin-top: 0.75rem;" @onclick="() => StartChangeOfSupplier(mp)">
-                    Change of Supplier
-                </button>
+                <div style="display: flex; gap: 0.5rem; margin-top: 0.75rem;">
+                    <button class="btn" @onclick="() => StartChangeOfSupplier(mp)">
+                        Change of Supplier
+                    </button>
+                    <button class="btn" @onclick="() => StartMoveIn(mp)">
+                        Move In
+                    </button>
+                </div>
             </div>
         }
     </div>
@@ -126,6 +131,7 @@
                                         <button class="ops-followup-btn" @onclick="@(() => StartFollowUp(action, "Run Settlement", 3))" @onclick:stopPropagation="true">Settlement</button>
                                         <button class="ops-followup-btn" @onclick="@(() => StartFollowUp(action, "Aconto Billing", 4))" @onclick:stopPropagation="true">Aconto</button>
                                         <button class="ops-followup-btn ops-followup-btn-warn" @onclick="@(() => StartFollowUp(action, "Offboard", 5))" @onclick:stopPropagation="true">Offboard</button>
+                                        <button class="ops-followup-btn ops-followup-btn-warn" @onclick="@(() => StartFollowUp(action, "Move Out", 6))" @onclick:stopPropagation="true">Move Out</button>
                                     </div>
                                 }
                                 else
@@ -519,6 +525,28 @@
         _ = RunActionAsync(action);
     }
 
+    private void StartMoveIn(MeteringPointInfo mp)
+    {
+        var actionId = Interlocked.Increment(ref _actionCounter);
+        var action = new ActionViewModel
+        {
+            Id = actionId,
+            Gsrn = mp.Gsrn,
+            Address = _selectedAddress,
+            ActionType = "Move In",
+            TotalSteps = 8,
+            Status = ActionStatus.Running,
+            CurrentStepName = "Starting...",
+        };
+        _actions.Insert(0, action);
+
+        _selectedMeteringPoints.Clear();
+        _searchQuery = "";
+        _addressSelected = false;
+
+        _ = RunActionAsync(action);
+    }
+
     private void StartFollowUp(ActionViewModel action, string actionType, int totalSteps)
     {
         action.ActionType = actionType;
@@ -569,13 +597,19 @@
                 case "Aconto Billing":
                     await Simulator.AcontoBillingOpsAsync(action.Gsrn, stepCallback, CancellationToken.None);
                     break;
+                case "Move In":
+                    await Simulator.RunMoveInAsync(action.Gsrn, $"Customer #{action.Id}", stepCallback, CancellationToken.None);
+                    break;
+                case "Move Out":
+                    await Simulator.RunMoveOutAsync(action.Gsrn, stepCallback, CancellationToken.None);
+                    break;
             }
 
             await InvokeAsync(() =>
             {
                 action.CompletedOps.Add(action.ActionType);
                 action.Status = ActionStatus.Completed;
-                if (action.ActionType == "Offboard")
+                if (action.ActionType is "Offboard" or "Move Out")
                     action.IsOffboarded = true;
                 StateHasChanged();
             });

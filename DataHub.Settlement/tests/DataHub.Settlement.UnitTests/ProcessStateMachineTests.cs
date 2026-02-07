@@ -170,6 +170,13 @@ public class ProcessStateMachineTests
             return Task.FromResult(request);
         }
 
+        public async Task<ProcessRequest> CreateWithEventAsync(string processType, string gsrn, DateOnly effectiveDate, CancellationToken ct)
+        {
+            var request = await CreateAsync(processType, gsrn, effectiveDate, ct);
+            await AddEventAsync(request.Id, "created", null, "system", ct);
+            return request;
+        }
+
         public Task<ProcessRequest?> GetAsync(Guid id, CancellationToken ct)
         {
             _requests.TryGetValue(id, out var request);
@@ -191,6 +198,12 @@ public class ProcessStateMachineTests
                 DatahubCorrelationId = correlationId ?? existing.DatahubCorrelationId,
             };
             return Task.CompletedTask;
+        }
+
+        public async Task TransitionWithEventAsync(Guid id, string newStatus, string expectedStatus, string? correlationId, string eventType, CancellationToken ct)
+        {
+            await UpdateStatusAsync(id, newStatus, correlationId, ct);
+            await AddEventAsync(id, eventType, null, "system", ct);
         }
 
         public Task AddEventAsync(Guid processRequestId, string eventType, string? payload, string? source, CancellationToken ct)

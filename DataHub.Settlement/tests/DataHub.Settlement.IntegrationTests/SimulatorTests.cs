@@ -62,5 +62,33 @@ public class SimulatorTests : IClassFixture<WebApplicationFactory<Program>>
         peekResponse2.StatusCode.Should().Be(HttpStatusCode.NoContent);
     }
 
+    [Fact]
+    public async Task Move_in_scenario_loads_and_returns_master_data()
+    {
+        await _client.PostAsync("/admin/reset", null);
+        var loadResponse = await _client.PostAsync("/admin/scenario/move_in", null);
+        loadResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var peekResponse = await _client.GetAsync("/v1.0/cim/MasterData");
+        peekResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var msg = await peekResponse.Content.ReadFromJsonAsync<PeekResponse>(JsonOptions);
+        msg!.MessageType.Should().Be("RSM-007");
+    }
+
+    [Fact]
+    public async Task Move_out_scenario_loads_and_returns_master_data()
+    {
+        await _client.PostAsync("/admin/reset", null);
+        var loadResponse = await _client.PostAsync("/admin/scenario/move_out", null);
+        loadResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var peekResponse = await _client.GetAsync("/v1.0/cim/MasterData");
+        peekResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var msg = await peekResponse.Content.ReadFromJsonAsync<PeekResponse>(JsonOptions);
+        msg!.MessageType.Should().Be("RSM-007");
+    }
+
     private record PeekResponse(string MessageId, string MessageType, string? CorrelationId, string Content);
 }

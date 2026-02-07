@@ -4,7 +4,7 @@
 
 <h1>Simulation</h1>
 <p style="color: var(--text-muted); margin-bottom: 1.5rem;">
-    Walk through settlement scenarios: onboarding, rejection, aconto billing, cancellation.
+    Walk through settlement scenarios: onboarding, rejection, aconto billing, cancellation, move-in, move-out.
 </p>
 
 <div style="margin-bottom: 1rem;">
@@ -172,6 +172,29 @@
             "Cancel Before Effectuation",
             "Verify Clean State",
         ], null),
+        ["move_in"] = new("Move In", [
+            "Seed Reference Data",
+            "Create Customer & Product",
+            "Create Metering Point",
+            "Submit BRS-009",
+            "DataHub Acknowledges",
+            "Receive RSM-007",
+            "Complete Process",
+            "Receive RSM-012",
+            "Run Settlement",
+        ], null),
+        ["move_out"] = new("Move Out", [
+            "Seed Reference Data",
+            "Create Customer & Product",
+            "Create Metering Point",
+            "Establish Supply",
+            "Receive January RSM-012",
+            "Run January Settlement",
+            "Submit BRS-010",
+            "DataHub Acknowledges",
+            "Receive Final RSM-012",
+            "Final Settlement + Deactivate",
+        ], null),
     };
 
     private string _selectedScenario = "sunshine";
@@ -273,6 +296,12 @@
                     break;
                 case "cancellation":
                     await Simulator.RunCancellationAsync(onStep, CancellationToken.None);
+                    break;
+                case "move_in":
+                    await Simulator.RunMoveInSunshineAsync(onStep, CancellationToken.None);
+                    break;
+                case "move_out":
+                    await Simulator.RunMoveOutScenarioAsync(onStep, CancellationToken.None);
                     break;
             }
 

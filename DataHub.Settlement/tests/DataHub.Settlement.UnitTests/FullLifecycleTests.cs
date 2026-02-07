@@ -155,4 +155,73 @@ public class FullLifecycleTests
         result.PreviousQuarter.Difference.Should().Be(93.14m);
         result.TotalDue.Should().Be(893.14m); // 93.14 underpayment + 800.00 next quarter
     }
+
+    [Fact]
+    public async Task Move_in_lifecycle()
+    {
+        var sm = new ProcessStateMachine(_processRepo);
+        var engine = new SettlementEngine();
+
+        // 1. Create and send BRS-009 (move in)
+        var request = await sm.CreateRequestAsync("571313100000012345", "move_in",
+            new DateOnly(2025, 1, 1), CancellationToken.None);
+        await sm.MarkSentAsync(request.Id, "corr-movein-001", CancellationToken.None);
+
+        // 2. DataHub acknowledges → effectuation_pending
+        await sm.MarkAcknowledgedAsync(request.Id, CancellationToken.None);
+        var state = await _processRepo.GetAsync(request.Id, CancellationToken.None);
+        state!.Status.Should().Be("effectuation_pending");
+
+        // 3. Complete process (RSM-007 received)
+        await sm.MarkCompletedAsync(request.Id, CancellationToken.None);
+
+        // 4. Run January settlement
+        var janRequest = BuildMonthRequest(new DateOnly(2025, 1, 1), new DateOnly(2025, 2, 1));
+        var janResult = engine.Calculate(janRequest);
+        janResult.Total.Should().Be(793.14m);
+
+        // 5. Mark final settled (move-in complete lifecycle)
+        await sm.MarkOffboardingAsync(request.Id, CancellationToken.None);
+        await sm.MarkFinalSettledAsync(request.Id, CancellationToken.None);
+        state = await _processRepo.GetAsync(request.Id, CancellationToken.None);
+        state!.Status.Should().Be("final_settled");
+    }
+
+    [Fact]
+    public async Task Move_out_lifecycle()
+    {
+        var sm = new ProcessStateMachine(_processRepo);
+        var engine = new SettlementEngine();
+
+        // 1. Establish supply via supplier_switch
+        var onboard = await sm.CreateRequestAsync("571313100000012345", "supplier_switch",
+            new DateOnly(2025, 1, 1), CancellationToken.None);
+        await sm.MarkSentAsync(onboard.Id, "corr-moveout-setup", CancellationToken.None);
+        await sm.MarkAcknowledgedAsync(onboard.Id, CancellationToken.None);
+        await sm.MarkCompletedAsync(onboard.Id, CancellationToken.None);
+
+        // 2. Run January settlement
+        var janRequest = BuildMonthRequest(new DateOnly(2025, 1, 1), new DateOnly(2025, 2, 1));
+        var janResult = engine.Calculate(janRequest);
+        janResult.Total.Should().Be(793.14m);
+
+        // 3. Create move_out process (BRS-010)
+        var moveOut = await sm.CreateRequestAsync("571313100000012345", "move_out",
+            new DateOnly(2025, 2, 16), CancellationToken.None);
+        await sm.MarkSentAsync(moveOut.Id, "corr-moveout-001", CancellationToken.None);
+        await sm.MarkAcknowledgedAsync(moveOut.Id, CancellationToken.None);
+        await sm.MarkCompletedAsync(moveOut.Id, CancellationToken.None);
+
+        // 4. Final settlement (partial Feb)
+        var finalService = new FinalSettlementService(engine);
+        var febRequest = BuildMonthRequest(new DateOnly(2025, 2, 1), new DateOnly(2025, 2, 16));
+        var finalResult = finalService.CalculateFinal(febRequest, acontoPaid: null);
+        finalResult.TotalDue.Should().BeGreaterThan(0);
+
+        // 5. Offboard and final settle the move_out process
+        await sm.MarkOffboardingAsync(moveOut.Id, CancellationToken.None);
+        await sm.MarkFinalSettledAsync(moveOut.Id, CancellationToken.None);
+        var state = await _processRepo.GetAsync(moveOut.Id, CancellationToken.None);
+        state!.Status.Should().Be("final_settled");
+    }
 }

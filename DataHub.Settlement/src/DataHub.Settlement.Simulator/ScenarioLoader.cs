@@ -22,6 +22,12 @@ public static class ScenarioLoader
             case "full_lifecycle":
                 LoadFullLifecycle(state);
                 break;
+            case "move_in":
+                LoadMoveIn(state);
+                break;
+            case "move_out":
+                LoadMoveOut(state);
+                break;
             default:
                 throw new ArgumentException($"Unknown scenario: {scenarioName}");
         }
@@ -64,6 +70,36 @@ public static class ScenarioLoader
         state.EnqueueMessage("MasterData", "RSM-004", null, BuildRsm004Json());
 
         // Phase 3: Final metering data up to switch
+        state.EnqueueMessage("Timeseries", "RSM-012", null, BuildRsm012Json(
+            new DateTimeOffset(2025, 2, 1, 0, 0, 0, TimeSpan.Zero),
+            new DateTimeOffset(2025, 2, 16, 0, 0, 0, TimeSpan.Zero),
+            360));
+    }
+
+    private static void LoadMoveIn(SimulatorState state)
+    {
+        // RSM-007: Master data confirmation
+        state.EnqueueMessage("MasterData", "RSM-007", "corr-sim-movein", BuildRsm007Json());
+
+        // RSM-012: Metering data for January (744 hours)
+        state.EnqueueMessage("Timeseries", "RSM-012", null, BuildRsm012Json(
+            new DateTimeOffset(2025, 1, 1, 0, 0, 0, TimeSpan.Zero),
+            new DateTimeOffset(2025, 2, 1, 0, 0, 0, TimeSpan.Zero),
+            744));
+    }
+
+    private static void LoadMoveOut(SimulatorState state)
+    {
+        // Phase 1: RSM-007 confirmation for initial supply
+        state.EnqueueMessage("MasterData", "RSM-007", "corr-sim-moveout", BuildRsm007Json());
+
+        // Phase 2: January metering data
+        state.EnqueueMessage("Timeseries", "RSM-012", null, BuildRsm012Json(
+            new DateTimeOffset(2025, 1, 1, 0, 0, 0, TimeSpan.Zero),
+            new DateTimeOffset(2025, 2, 1, 0, 0, 0, TimeSpan.Zero),
+            744));
+
+        // Phase 3: Final partial metering data (Feb 1-16)
         state.EnqueueMessage("Timeseries", "RSM-012", null, BuildRsm012Json(
             new DateTimeOffset(2025, 2, 1, 0, 0, 0, TimeSpan.Zero),
             new DateTimeOffset(2025, 2, 16, 0, 0, 0, TimeSpan.Zero),

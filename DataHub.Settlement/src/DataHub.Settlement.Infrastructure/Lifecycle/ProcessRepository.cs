@@ -33,6 +33,42 @@ public sealed class ProcessRepository : IProcessRepository
             new CommandDefinition(sql, new { ProcessType = processType, Gsrn = gsrn, EffectiveDate = effectiveDate }, cancellationToken: ct));
     }
 
+    public async Task<ProcessRequest> CreateWithEventAsync(string processType, string gsrn, DateOnly effectiveDate, CancellationToken ct)
+    {
+        const string insertProcess = """
+            INSERT INTO lifecycle.process_request (process_type, gsrn, effective_date)
+            VALUES (@ProcessType, @Gsrn, @EffectiveDate)
+            RETURNING id, process_type, gsrn, status, effective_date, datahub_correlation_id
+            """;
+
+        const string insertEvent = """
+            INSERT INTO lifecycle.process_event (process_request_id, event_type, source)
+            VALUES (@ProcessRequestId, 'created', 'system')
+            """;
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+        await conn.OpenAsync(ct);
+        await using var tx = await conn.BeginTransactionAsync(ct);
+
+        try
+        {
+            var request = await conn.QuerySingleAsync<ProcessRequest>(
+                new CommandDefinition(insertProcess, new { ProcessType = processType, Gsrn = gsrn, EffectiveDate = effectiveDate },
+                    transaction: tx, cancellationToken: ct));
+
+            await conn.ExecuteAsync(
+                new CommandDefinition(insertEvent, new { ProcessRequestId = request.Id },
+                    transaction: tx, cancellationToken: ct));
+
+            await tx.CommitAsync(ct);
+            return request;
+        }
+        catch (PostgresException ex) when (ex.SqlState == "23505")
+        {
+            throw new InvalidOperationException($"A process is already active for GSRN {gsrn}.", ex);
+        }
+    }
+
     public async Task<ProcessRequest?> GetAsync(Guid id, CancellationToken ct)
     {
         const string sql = """
@@ -79,6 +115,47 @@ public sealed class ProcessRepository : IProcessRepository
         await conn.OpenAsync(ct);
         await conn.ExecuteAsync(new CommandDefinition(sql,
             new { Id = id, Status = status, CorrelationId = correlationId }, cancellationToken: ct));
+    }
+
+    public async Task TransitionWithEventAsync(Guid id, string newStatus, string expectedStatus, string? correlationId, string eventType, CancellationToken ct)
+    {
+        var updateSql = correlationId is not null
+            ? """
+              UPDATE lifecycle.process_request
+              SET status = @NewStatus, datahub_correlation_id = @CorrelationId, updated_at = now()
+              WHERE id = @Id AND status = @ExpectedStatus
+              """
+            : """
+              UPDATE lifecycle.process_request
+              SET status = @NewStatus, updated_at = now()
+              WHERE id = @Id AND status = @ExpectedStatus
+              """;
+
+        const string insertEvent = """
+            INSERT INTO lifecycle.process_event (process_request_id, event_type, source)
+            VALUES (@ProcessRequestId, @EventType, 'system')
+            """;
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+        await conn.OpenAsync(ct);
+        await using var tx = await conn.BeginTransactionAsync(ct);
+
+        var rows = await conn.ExecuteAsync(
+            new CommandDefinition(updateSql,
+                new { Id = id, NewStatus = newStatus, ExpectedStatus = expectedStatus, CorrelationId = correlationId },
+                transaction: tx, cancellationToken: ct));
+
+        if (rows == 0)
+        {
+            throw new InvalidOperationException(
+                $"Concurrency conflict: process {id} is no longer in status '{expectedStatus}'.");
+        }
+
+        await conn.ExecuteAsync(
+            new CommandDefinition(insertEvent, new { ProcessRequestId = id, EventType = eventType },
+                transaction: tx, cancellationToken: ct));
+
+        await tx.CommitAsync(ct);
     }
 
     public async Task AddEventAsync(Guid processRequestId, string eventType, string? payload, string? source, CancellationToken ct)
