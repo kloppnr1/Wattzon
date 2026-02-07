@@ -1,5 +1,6 @@
 using System.Text.Json;
 using DataHub.Settlement.Application.Parsing;
+using DataHub.Settlement.Application.Settlement;
 using DataHub.Settlement.Domain.MasterData;
 using DataHub.Settlement.Domain.Metering;
 
@@ -137,6 +138,45 @@ public sealed class CimJsonParser : ICimParser
             activity.GetProperty("Period").GetProperty("timeInterval").GetProperty("start").GetString()!);
 
         return new Rsm004Result(gsrn, newGridAreaCode, newSettlementMethod, newConnectionStatus, effectiveDate);
+    }
+
+    public Rsm014Aggregation ParseRsm014(string json)
+    {
+        using var doc = JsonDocument.Parse(json);
+        var root = doc.RootElement.GetProperty("MarketDocument");
+
+        var series = root.GetProperty("Series");
+        var firstSeries = series.EnumerateArray().First();
+
+        var gridAreaCode = firstSeries.GetProperty("marketEvaluationPoint")
+            .GetProperty("meteringGridArea").GetProperty("mRID").GetString()!;
+
+        var period = firstSeries.GetProperty("Period");
+        var interval = period.GetProperty("timeInterval");
+        var periodStart = DateTimeOffset.Parse(interval.GetProperty("start").GetString()!);
+        var periodEnd = DateTimeOffset.Parse(interval.GetProperty("end").GetString()!);
+        var resolution = period.GetProperty("resolution").GetString()!;
+        var step = GetStep(resolution, periodStart, periodEnd);
+
+        var points = new List<AggregationPoint>();
+        decimal totalKwh = 0m;
+
+        foreach (var point in period.GetProperty("Point").EnumerateArray())
+        {
+            var position = point.GetProperty("position").GetInt32();
+            var timestamp = ComputeTimestamp(periodStart, position, step, resolution);
+            var quantity = point.GetProperty("quantity").GetDecimal();
+
+            points.Add(new AggregationPoint(timestamp.UtcDateTime, quantity));
+            totalKwh += quantity;
+        }
+
+        return new Rsm014Aggregation(
+            gridAreaCode,
+            DateOnly.FromDateTime(periodStart.UtcDateTime),
+            DateOnly.FromDateTime(periodEnd.UtcDateTime),
+            totalKwh,
+            points);
     }
 
     private static TimeSpan GetStep(string resolution, DateTimeOffset periodStart, DateTimeOffset periodEnd)

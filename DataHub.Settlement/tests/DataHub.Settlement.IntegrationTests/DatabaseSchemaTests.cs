@@ -48,6 +48,11 @@ public class DatabaseSchemaTests : IAsyncLifetime
     [InlineData("datahub", "outbound_request")]
     [InlineData("lifecycle", "process_request")]
     [InlineData("lifecycle", "process_event")]
+    [InlineData("billing", "aconto_payment")]
+    [InlineData("metering", "metering_data_history")]
+    [InlineData("metering", "annual_consumption_tracker")]
+    [InlineData("settlement", "correction_settlement")]
+    [InlineData("settlement", "erroneous_switch_reversal")]
     public async Task Table_Exists(string schema, string table)
     {
         await using var cmd = new NpgsqlCommand(
@@ -61,16 +66,16 @@ public class DatabaseSchemaTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task All_21_Tables_Exist()
+    public async Task All_26_Tables_Exist()
     {
         await using var cmd = new NpgsqlCommand(
             @"SELECT COUNT(*) FROM information_schema.tables
-              WHERE table_schema IN ('portfolio', 'metering', 'tariff', 'settlement', 'datahub', 'lifecycle')
+              WHERE table_schema IN ('portfolio', 'metering', 'tariff', 'settlement', 'datahub', 'lifecycle', 'billing')
                 AND table_type = 'BASE TABLE'",
             _connection);
 
         var count = (long)(await cmd.ExecuteScalarAsync())!;
-        count.Should().Be(21, "MVP 1 requires exactly 21 tables");
+        count.Should().Be(26, "MVP 3 requires exactly 26 tables");
     }
 
     [Fact]
