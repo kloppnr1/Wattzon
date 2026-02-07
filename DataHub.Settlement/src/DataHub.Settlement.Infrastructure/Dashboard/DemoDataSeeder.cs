@@ -101,7 +101,7 @@ public sealed class DemoDataSeeder
         await meteringRepo.StoreTimeSeriesAsync(Gsrn, rows, ct);
 
         // ── 6. Process lifecycle ──
-        var stateMachine = new ProcessStateMachine(processRepo);
+        var stateMachine = new ProcessStateMachine(processRepo, new SystemClock());
         var processRequest = await stateMachine.CreateRequestAsync(Gsrn, "supplier_switch", new DateOnly(2025, 1, 1), ct);
         await stateMachine.MarkSentAsync(processRequest.Id, "corr-seed-001", ct);
         await stateMachine.MarkAcknowledgedAsync(processRequest.Id, ct);

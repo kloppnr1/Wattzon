@@ -1,10 +1,15 @@
+using DataHub.Settlement.Domain;
+
 namespace DataHub.Settlement.Infrastructure.Dashboard;
 
-public sealed class SimulatedClock
+public sealed class SimulatedClock : IClock
 {
     private static readonly DateOnly DefaultStart = new(2024, 12, 22);
 
     public DateOnly CurrentDate { get; private set; } = DefaultStart;
+
+    DateOnly IClock.Today => CurrentDate;
+    DateTime IClock.UtcNow => CurrentDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
 
     public event Action<DateOnly>? DateChanged;
 

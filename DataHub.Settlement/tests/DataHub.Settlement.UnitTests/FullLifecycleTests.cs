@@ -15,6 +15,7 @@ namespace DataHub.Settlement.UnitTests;
 public class FullLifecycleTests
 {
     private readonly ProcessStateMachineTests.InMemoryProcessRepository _processRepo = new();
+    private readonly TestClock _clock = new();
 
     private static SettlementRequest BuildMonthRequest(DateOnly start, DateOnly end)
     {
@@ -63,7 +64,7 @@ public class FullLifecycleTests
     [Fact]
     public async Task Full_lifecycle_onboarding_to_offboarding()
     {
-        var sm = new ProcessStateMachine(_processRepo);
+        var sm = new ProcessStateMachine(_processRepo, _clock);
         var engine = new SettlementEngine();
 
         // 1. Create and send BRS-001
@@ -104,7 +105,7 @@ public class FullLifecycleTests
     [Fact]
     public async Task Rejection_and_retry()
     {
-        var sm = new ProcessStateMachine(_processRepo);
+        var sm = new ProcessStateMachine(_processRepo, _clock);
 
         // 1. Submit BRS-001
         var request = await sm.CreateRequestAsync("571313100000012345", "supplier_switch",
@@ -130,7 +131,7 @@ public class FullLifecycleTests
     [Fact]
     public async Task Aconto_quarterly_settlement()
     {
-        var sm = new ProcessStateMachine(_processRepo);
+        var sm = new ProcessStateMachine(_processRepo, _clock);
         var engine = new SettlementEngine();
         var acontoService = new AcontoSettlementService(engine);
 
@@ -159,7 +160,7 @@ public class FullLifecycleTests
     [Fact]
     public async Task Move_in_lifecycle()
     {
-        var sm = new ProcessStateMachine(_processRepo);
+        var sm = new ProcessStateMachine(_processRepo, _clock);
         var engine = new SettlementEngine();
 
         // 1. Create and send BRS-009 (move in)
@@ -190,7 +191,7 @@ public class FullLifecycleTests
     [Fact]
     public async Task Move_out_lifecycle()
     {
-        var sm = new ProcessStateMachine(_processRepo);
+        var sm = new ProcessStateMachine(_processRepo, _clock);
         var engine = new SettlementEngine();
 
         // 1. Establish supply via supplier_switch

@@ -39,6 +39,7 @@ public sealed class SimulationService
 {
     private const string Gsrn = "571313100000012345";
     private readonly string _connectionString;
+    private readonly Domain.IClock _clock;
 
     static SimulationService()
     {
@@ -46,9 +47,10 @@ public sealed class SimulationService
         DapperTypeHandlers.Register();
     }
 
-    public SimulationService(string connectionString)
+    public SimulationService(string connectionString, Domain.IClock? clock = null)
     {
         _connectionString = connectionString;
+        _clock = clock ?? new SystemClock();
     }
 
     public async Task<MeteringPointSummary?> GetMeteringPointSummaryAsync(string gsrn, CancellationToken ct)
@@ -190,7 +192,7 @@ public sealed class SimulationService
         var spotPriceRepo = new SpotPriceRepository(_connectionString);
         var meteringRepo = new MeteringDataRepository(_connectionString);
         var processRepo = new ProcessRepository(_connectionString);
-        var stateMachine = new ProcessStateMachine(processRepo);
+        var stateMachine = new ProcessStateMachine(processRepo, _clock);
 
         // ── Step 1: Seed Reference Data ──
         await portfolio.EnsureGridAreaAsync("344", "5790000392261", "N1 A/S", "DK1", ct);
@@ -815,7 +817,7 @@ public sealed class SimulationService
         var spotPriceRepo = new SpotPriceRepository(_connectionString);
         var meteringRepo = new MeteringDataRepository(_connectionString);
         var processRepo = new ProcessRepository(_connectionString);
-        var stateMachine = new ProcessStateMachine(processRepo);
+        var stateMachine = new ProcessStateMachine(processRepo, _clock);
 
         // ── Step 1: Seed Reference Data (idempotent, serialized) ──
         await _seedLock.WaitAsync(ct);
@@ -1226,7 +1228,7 @@ public sealed class SimulationService
         var spotPriceRepo = new SpotPriceRepository(_connectionString);
         var meteringRepo = new MeteringDataRepository(_connectionString);
         var processRepo = new ProcessRepository(_connectionString);
-        var stateMachine = new ProcessStateMachine(processRepo);
+        var stateMachine = new ProcessStateMachine(processRepo, _clock);
 
         // ── Step 1: Mark process as offboarding ──
         Guid processId;
@@ -1463,7 +1465,7 @@ public sealed class SimulationService
         var spotPriceRepo = new SpotPriceRepository(_connectionString);
         var meteringRepo = new MeteringDataRepository(_connectionString);
         var processRepo = new ProcessRepository(_connectionString);
-        var stateMachine = new ProcessStateMachine(processRepo);
+        var stateMachine = new ProcessStateMachine(processRepo, _clock);
 
         // ── Step 1: Seed Reference Data (idempotent, serialized) ──
         await _seedLock.WaitAsync(ct);
@@ -1696,7 +1698,7 @@ public sealed class SimulationService
         var spotPriceRepo = new SpotPriceRepository(_connectionString);
         var meteringRepo = new MeteringDataRepository(_connectionString);
         var processRepo = new ProcessRepository(_connectionString);
-        var stateMachine = new ProcessStateMachine(processRepo);
+        var stateMachine = new ProcessStateMachine(processRepo, _clock);
 
         // ── Step 1: Submit BRS-010 (Move Out) ──
         var uid = Guid.NewGuid().ToString("N")[..8];
@@ -1974,7 +1976,7 @@ public sealed class SimulationService
         if (ctx.IsSeeded && !ctx.IsBrsSubmitted && currentDate >= timeline.GetDate("Submit BRS-001"))
         {
             var processRepo = new ProcessRepository(_connectionString);
-            var stateMachine = new ProcessStateMachine(processRepo);
+            var stateMachine = new ProcessStateMachine(processRepo, _clock);
             var uid = Guid.NewGuid().ToString("N")[..8];
             var corrId = $"corr-ops-{uid}";
             var processRequest = await stateMachine.CreateRequestAsync(ctx.Gsrn, "supplier_switch", ed, ct);
@@ -1989,7 +1991,7 @@ public sealed class SimulationService
         if (ctx.IsBrsSubmitted && !ctx.IsAcknowledged && currentDate >= timeline.GetDate("DataHub Acknowledges"))
         {
             var processRepo = new ProcessRepository(_connectionString);
-            var stateMachine = new ProcessStateMachine(processRepo);
+            var stateMachine = new ProcessStateMachine(processRepo, _clock);
             await stateMachine.MarkAcknowledgedAsync(ctx.ProcessRequestId, ct);
             ctx.IsAcknowledged = true;
             executed.Add(new SimulationStep(3, "DataHub Acknowledges",
@@ -2023,7 +2025,7 @@ public sealed class SimulationService
         if (ctx.IsRsm007Received && !ctx.IsEffectuated && currentDate >= timeline.GetDate("Effectuation"))
         {
             var processRepo = new ProcessRepository(_connectionString);
-            var stateMachine = new ProcessStateMachine(processRepo);
+            var stateMachine = new ProcessStateMachine(processRepo, _clock);
             await stateMachine.MarkCompletedAsync(ctx.ProcessRequestId, ct);
             ctx.IsEffectuated = true;
             executed.Add(new SimulationStep(5, "Effectuation",
@@ -2197,7 +2199,7 @@ public sealed class SimulationService
         if (ctx.IsSeeded && !ctx.IsBrsSubmitted && currentDate >= timeline.GetDate("Submit BRS-009"))
         {
             var processRepo = new ProcessRepository(_connectionString);
-            var stateMachine = new ProcessStateMachine(processRepo);
+            var stateMachine = new ProcessStateMachine(processRepo, _clock);
             var uid = Guid.NewGuid().ToString("N")[..8];
             var corrId = $"corr-movein-{uid}";
             var processRequest = await stateMachine.CreateRequestAsync(ctx.Gsrn, "move_in", ed, ct);
@@ -2212,7 +2214,7 @@ public sealed class SimulationService
         if (ctx.IsBrsSubmitted && !ctx.IsAcknowledged && currentDate >= timeline.GetDate("DataHub Acknowledges"))
         {
             var processRepo = new ProcessRepository(_connectionString);
-            var stateMachine = new ProcessStateMachine(processRepo);
+            var stateMachine = new ProcessStateMachine(processRepo, _clock);
             await stateMachine.MarkAcknowledgedAsync(ctx.ProcessRequestId, ct);
             ctx.IsAcknowledged = true;
             executed.Add(new SimulationStep(3, "DataHub Acknowledges",
@@ -2256,7 +2258,7 @@ public sealed class SimulationService
         if (ctx.IsRsm007Received && !ctx.IsEffectuated && currentDate >= timeline.GetDate("Effectuation"))
         {
             var processRepo = new ProcessRepository(_connectionString);
-            var stateMachine = new ProcessStateMachine(processRepo);
+            var stateMachine = new ProcessStateMachine(processRepo, _clock);
             await stateMachine.MarkCompletedAsync(ctx.ProcessRequestId, ct);
             ctx.IsEffectuated = true;
             executed.Add(new SimulationStep(5, "Effectuation",

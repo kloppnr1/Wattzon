@@ -10,4 +10,5 @@ public interface IProcessRepository
     Task TransitionWithEventAsync(Guid id, string newStatus, string expectedStatus, string? correlationId, string eventType, CancellationToken ct);
     Task AddEventAsync(Guid processRequestId, string eventType, string? payload, string? source, CancellationToken ct);
     Task<IReadOnlyList<ProcessEvent>> GetEventsAsync(Guid processRequestId, CancellationToken ct);
+    Task<IReadOnlyList<ProcessRequest>> GetByStatusAsync(string status, CancellationToken ct);
 }

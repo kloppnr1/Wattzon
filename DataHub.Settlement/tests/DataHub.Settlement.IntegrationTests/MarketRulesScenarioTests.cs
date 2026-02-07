@@ -17,6 +17,7 @@ using DataHub.Settlement.Infrastructure.Portfolio;
 using DataHub.Settlement.Infrastructure.Settlement;
 using DataHub.Settlement.Infrastructure.Tariff;
 using DataHub.Settlement.Simulator;
+using DataHub.Settlement.UnitTests;
 using FluentAssertions;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -63,7 +64,7 @@ public sealed class MarketRulesScenarioTests : IClassFixture<WebApplicationFacto
         _spotPriceRepo = new SpotPriceRepository(Conn);
         _meteringRepo = new MeteringDataRepository(Conn);
         _processRepo = new ProcessRepository(Conn);
-        _stateMachine = new ProcessStateMachine(_processRepo);
+        _stateMachine = new ProcessStateMachine(_processRepo, new TestClock());
         _brsBuilder = new BrsRequestBuilder();
     }
 

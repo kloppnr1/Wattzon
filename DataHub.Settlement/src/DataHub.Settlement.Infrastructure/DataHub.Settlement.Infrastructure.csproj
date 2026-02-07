@@ -1,6 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
+    <InternalsVisibleTo Include="DataHub.Settlement.UnitTests" />
+    <InternalsVisibleTo Include="DataHub.Settlement.IntegrationTests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Dapper" Version="2.1.*" />
     <PackageReference Include="dbup-postgresql" Version="5.0.*" />
     <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="9.0.*" />

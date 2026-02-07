@@ -1,18 +1,26 @@
 using DataHub.Settlement.Application.AddressLookup;
 using DataHub.Settlement.Application.Authentication;
 using DataHub.Settlement.Application.DataHub;
+using DataHub.Settlement.Application.Lifecycle;
 using DataHub.Settlement.Application.Metering;
 using DataHub.Settlement.Application.Messaging;
 using DataHub.Settlement.Application.Parsing;
 using DataHub.Settlement.Application.Portfolio;
+using DataHub.Settlement.Application.Settlement;
+using DataHub.Settlement.Application.Tariff;
+using DataHub.Settlement.Domain;
+using DataHub.Settlement.Infrastructure;
 using DataHub.Settlement.Infrastructure.AddressLookup;
 using DataHub.Settlement.Infrastructure.Authentication;
 using DataHub.Settlement.Infrastructure.Database;
 using DataHub.Settlement.Infrastructure.DataHub;
+using DataHub.Settlement.Infrastructure.Lifecycle;
 using DataHub.Settlement.Infrastructure.Messaging;
 using DataHub.Settlement.Infrastructure.Metering;
 using DataHub.Settlement.Infrastructure.Parsing;
 using DataHub.Settlement.Infrastructure.Portfolio;
+using DataHub.Settlement.Infrastructure.Settlement;
+using DataHub.Settlement.Infrastructure.Tariff;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -90,12 +98,27 @@ else
     builder.Services.AddSingleton<IDataHubClient, StubDataHubClient>();
 }
 
+// Core services
+builder.Services.AddSingleton<IClock, SystemClock>();
 builder.Services.AddSingleton<IAddressLookupClient, StubAddressLookupClient>();
 builder.Services.AddSingleton<ICimParser, CimJsonParser>();
 builder.Services.AddSingleton<IMeteringDataRepository>(new MeteringDataRepository(connectionString));
+builder.Services.AddSingleton<ISpotPriceRepository>(new SpotPriceRepository(connectionString));
+builder.Services.AddSingleton<ITariffRepository>(new TariffRepository(connectionString));
 builder.Services.AddSingleton<IPortfolioRepository>(new PortfolioRepository(connectionString));
+builder.Services.AddSingleton<IProcessRepository>(new ProcessRepository(connectionString));
 builder.Services.AddSingleton<IMessageLog>(new MessageLog(connectionString));
+
+// Settlement services
+builder.Services.AddSingleton<ISettlementEngine, SettlementEngine>();
+builder.Services.AddSingleton<IMeteringCompletenessChecker>(new MeteringCompletenessChecker(connectionString));
+builder.Services.AddSingleton<ISettlementDataLoader, SettlementDataLoader>();
+builder.Services.AddSingleton<ISettlementResultStore>(new SettlementResultStore(connectionString));
+
+// Background services
 builder.Services.AddHostedService<QueuePollerService>();
+builder.Services.AddHostedService<ProcessSchedulerService>();
+builder.Services.AddHostedService<SettlementOrchestrationService>();
 
 var host = builder.Build();
 

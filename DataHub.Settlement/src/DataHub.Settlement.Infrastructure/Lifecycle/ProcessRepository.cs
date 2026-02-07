@@ -186,4 +186,20 @@ public sealed class ProcessRepository : IProcessRepository
             new CommandDefinition(sql, new { ProcessRequestId = processRequestId }, cancellationToken: ct));
         return rows.ToList();
     }
+
+    public async Task<IReadOnlyList<ProcessRequest>> GetByStatusAsync(string status, CancellationToken ct)
+    {
+        const string sql = """
+            SELECT id, process_type, gsrn, status, effective_date, datahub_correlation_id
+            FROM lifecycle.process_request
+            WHERE status = @Status
+            ORDER BY effective_date
+            """;
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+        await conn.OpenAsync(ct);
+        var rows = await conn.QueryAsync<ProcessRequest>(
+            new CommandDefinition(sql, new { Status = status }, cancellationToken: ct));
+        return rows.ToList();
+    }
 }

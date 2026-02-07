@@ -1,3 +1,5 @@
+using DataHub.Settlement.Domain;
+
 namespace DataHub.Settlement.Application.Lifecycle;
 
 public sealed class ProcessStateMachine
@@ -13,10 +15,12 @@ public sealed class ProcessStateMachine
     };
 
     private readonly IProcessRepository _repository;
+    private readonly IClock _clock;
 
-    public ProcessStateMachine(IProcessRepository repository)
+    public ProcessStateMachine(IProcessRepository repository, IClock clock)
     {
         _repository = repository;
+        _clock = clock;
     }
 
     public async Task<ProcessRequest> CreateRequestAsync(
@@ -39,6 +43,15 @@ public sealed class ProcessStateMachine
 
     public async Task MarkCompletedAsync(Guid requestId, CancellationToken ct)
     {
+        var request = await _repository.GetAsync(requestId, ct)
+            ?? throw new InvalidOperationException($"Process request {requestId} not found");
+
+        if (request.EffectiveDate.HasValue && _clock.Today < request.EffectiveDate.Value)
+        {
+            throw new InvalidOperationException(
+                $"Cannot effectuate process {requestId}: effective date {request.EffectiveDate.Value} is in the future (today is {_clock.Today})");
+        }
+
         await TransitionAsync(requestId, "completed", null, "completed", ct);
     }
 

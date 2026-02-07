@@ -11,6 +11,7 @@ using DataHub.Settlement.Infrastructure.Parsing;
 using DataHub.Settlement.Infrastructure.Portfolio;
 using DataHub.Settlement.Infrastructure.Settlement;
 using DataHub.Settlement.Infrastructure.Tariff;
+using DataHub.Settlement.Infrastructure;
 using DataHub.Settlement.UnitTests;
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -65,7 +66,7 @@ public class SunshineScenarioTests
             customer.Id, Gsrn, product.Id, "monthly", "post_payment", new DateOnly(2025, 1, 1), ct);
 
         // ──── 3. ACT: submit BRS-001 ────
-        var stateMachine = new ProcessStateMachine(_processRepo);
+        var stateMachine = new ProcessStateMachine(_processRepo, new TestClock());
         var processRequest = await stateMachine.CreateRequestAsync(Gsrn, "supplier_switch", new DateOnly(2025, 1, 1), ct);
 
         var fakeClient = new FakeDataHubClient();

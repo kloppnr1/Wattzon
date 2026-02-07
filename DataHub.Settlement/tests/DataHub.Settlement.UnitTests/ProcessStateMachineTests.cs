@@ -7,8 +7,9 @@ namespace DataHub.Settlement.UnitTests;
 public class ProcessStateMachineTests
 {
     private readonly InMemoryProcessRepository _repo = new();
+    private readonly TestClock _clock = new();
 
-    private ProcessStateMachine CreateSut() => new(_repo);
+    private ProcessStateMachine CreateSut() => new(_repo, _clock);
 
     [Fact]
     public async Task CreateRequest_creates_pending_process()
@@ -216,6 +217,12 @@ public class ProcessStateMachineTests
         {
             var events = _events.Where(e => e.ProcessRequestId == processRequestId).ToList();
             return Task.FromResult<IReadOnlyList<ProcessEvent>>(events);
+        }
+
+        public Task<IReadOnlyList<ProcessRequest>> GetByStatusAsync(string status, CancellationToken ct)
+        {
+            var matching = _requests.Values.Where(r => r.Status == status).ToList();
+            return Task.FromResult<IReadOnlyList<ProcessRequest>>(matching);
         }
     }
 }
