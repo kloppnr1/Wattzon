@@ -56,28 +56,39 @@ public sealed class SimulationService
         await using var conn = new NpgsqlConnection(_connectionString);
         await conn.OpenAsync(ct);
 
-        var mp = await conn.QuerySingleOrDefaultAsync<(string ConnectionStatus, DateTime? ActivatedAt, DateTime? DeactivatedAt)>(
+        var mpRow = await conn.QuerySingleOrDefaultAsync<dynamic>(
             "SELECT connection_status, activated_at, deactivated_at FROM portfolio.metering_point WHERE gsrn = @Gsrn",
             new { Gsrn = gsrn });
-        if (mp.ConnectionStatus is null)
+        if (mpRow is null)
             return null;
 
-        var processes = (await conn.QueryAsync<MeteringPointSummary.ProcessInfo>(
+        string connectionStatus = mpRow.connection_status;
+        DateTime? activatedAt = mpRow.activated_at;
+        DateTime? deactivatedAt = mpRow.deactivated_at;
+
+        var processRows = await conn.QueryAsync<dynamic>(
             "SELECT id, process_type, status, effective_date FROM lifecycle.process_request WHERE gsrn = @Gsrn ORDER BY created_at",
-            new { Gsrn = gsrn })).ToList();
-
-        var supplyPeriods = (await conn.QueryAsync<MeteringPointSummary.SupplyInfo>(
-            "SELECT start_date, end_date, end_reason FROM portfolio.supply_period WHERE gsrn = @Gsrn ORDER BY start_date",
-            new { Gsrn = gsrn })).ToList();
-
-        var meteringRaw = await conn.QuerySingleOrDefaultAsync<(DateTime? First, DateTime? Last, int Count, decimal Total)>(
-            "SELECT MIN(timestamp), MAX(timestamp), COUNT(*)::int, COALESCE(SUM(quantity), 0) FROM metering.metering_data WHERE metering_point_id = @Gsrn",
             new { Gsrn = gsrn });
-        var metering = meteringRaw.First.HasValue
-            ? new MeteringPointSummary.MeteringInfo(meteringRaw.First.Value, meteringRaw.Last!.Value, meteringRaw.Count, meteringRaw.Total)
+        var processes = processRows.Select(r => new MeteringPointSummary.ProcessInfo(
+            (Guid)r.id, (string)r.process_type, (string)r.status,
+            r.effective_date is null ? null : DateOnly.FromDateTime((DateTime)r.effective_date))).ToList();
+
+        var spRows = await conn.QueryAsync<dynamic>(
+            "SELECT start_date, end_date, end_reason FROM portfolio.supply_period WHERE gsrn = @Gsrn ORDER BY start_date",
+            new { Gsrn = gsrn });
+        var supplyPeriods = spRows.Select(r => new MeteringPointSummary.SupplyInfo(
+            DateOnly.FromDateTime((DateTime)r.start_date),
+            r.end_date is null ? null : DateOnly.FromDateTime((DateTime)r.end_date),
+            (string?)r.end_reason)).ToList();
+
+        var mRow = await conn.QuerySingleAsync<dynamic>(
+            "SELECT MIN(timestamp) AS first_ts, MAX(timestamp) AS last_ts, COUNT(*)::int AS cnt, COALESCE(SUM(quantity_kwh), 0) AS total FROM metering.metering_data WHERE metering_point_id = @Gsrn",
+            new { Gsrn = gsrn });
+        MeteringPointSummary.MeteringInfo? metering = mRow.first_ts is not null
+            ? new MeteringPointSummary.MeteringInfo((DateTime)mRow.first_ts, (DateTime)mRow.last_ts, (int)mRow.cnt, (decimal)mRow.total)
             : null;
 
-        var settlements = (await conn.QueryAsync<MeteringPointSummary.SettlementInfo>("""
+        var sRows = await conn.QueryAsync<dynamic>("""
             SELECT bp.period_start, bp.period_end,
                    COALESCE(SUM(sl.total_amount), 0) AS total_amount,
                    COALESCE(SUM(sl.vat_amount), 0) AS vat_amount,
@@ -88,14 +99,22 @@ public sealed class SimulationService
             WHERE sl.metering_point_id = @Gsrn
             GROUP BY bp.period_start, bp.period_end, sr.status, sr.created_at
             ORDER BY bp.period_start
-            """, new { Gsrn = gsrn })).ToList();
+            """, new { Gsrn = gsrn });
+        var settlements = sRows.Select(r => new MeteringPointSummary.SettlementInfo(
+            DateOnly.FromDateTime((DateTime)r.period_start),
+            DateOnly.FromDateTime((DateTime)r.period_end),
+            (decimal)r.total_amount, (decimal)r.vat_amount, (string)r.status)).ToList();
 
-        var acontoPayments = (await conn.QueryAsync<MeteringPointSummary.AcontoInfo>(
+        var aRows = await conn.QueryAsync<dynamic>(
             "SELECT period_start, period_end, amount FROM billing.aconto_payment WHERE gsrn = @Gsrn ORDER BY period_start",
-            new { Gsrn = gsrn })).ToList();
+            new { Gsrn = gsrn });
+        var acontoPayments = aRows.Select(r => new MeteringPointSummary.AcontoInfo(
+            DateOnly.FromDateTime((DateTime)r.period_start),
+            DateOnly.FromDateTime((DateTime)r.period_end),
+            (decimal)r.amount)).ToList();
 
         return new MeteringPointSummary(
-            mp.ConnectionStatus, mp.ActivatedAt, mp.DeactivatedAt,
+            connectionStatus, activatedAt, deactivatedAt,
             processes, supplyPeriods, metering, settlements, acontoPayments);
     }
 
