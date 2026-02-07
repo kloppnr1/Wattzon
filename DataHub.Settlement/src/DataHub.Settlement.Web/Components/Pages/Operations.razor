@@ -1,0 +1,271 @@
+@page "/operations"
+@using System.Text.Json
+@using DataHub.Settlement.Application.AddressLookup
+@using DataHub.Settlement.Infrastructure.Dashboard
+@inject IAddressLookupClient AddressLookup
+@inject SimulationService Simulator
+@inject IHttpClientFactory HttpClientFactory
+
+<h1>Operations</h1>
+<p style="color: var(--text-muted); margin-bottom: 1.5rem;">
+    Search an address, find metering points, and run concurrent change-of-supplier actions.
+</p>
+
+<!-- Address Search -->
+<div class="ops-search-section">
+    <div class="ops-search-wrapper">
+        <input type="text"
+               class="ops-search-input"
+               placeholder="Search Danish address (e.g. Rendsburggade 1)..."
+               value="@_searchQuery"
+               @oninput="OnSearchInput" />
+        @if (_suggestions.Count > 0 && !_addressSelected)
+        {
+            <div class="ops-suggestions">
+                @foreach (var s in _suggestions)
+                {
+                    <div class="ops-suggestion" @onclick="() => SelectAddress(s)">@s.Text</div>
+                }
+            </div>
+        }
+    </div>
+    @if (_searching)
+    {
+        <span style="color: var(--text-muted); font-size: 0.85rem; margin-left: 0.5rem;">Searching...</span>
+    }
+</div>
+
+<!-- Metering Point Card -->
+@if (_selectedMeteringPoints.Count > 0)
+{
+    <div class="ops-mp-cards">
+        @foreach (var mp in _selectedMeteringPoints)
+        {
+            <div class="ops-mp-card">
+                <div class="ops-mp-header">
+                    <span class="ops-mp-gsrn">@mp.Gsrn</span>
+                    <span class="badge badge-completed">@mp.Type</span>
+                </div>
+                <div class="ops-mp-details">
+                    <span>Grid Area: @mp.GridAreaCode</span>
+                    <span>@_selectedAddress</span>
+                </div>
+                <button class="btn" style="margin-top: 0.75rem;" @onclick="() => StartChangeOfSupplier(mp)">
+                    Change of Supplier
+                </button>
+            </div>
+        }
+    </div>
+}
+
+<!-- Action List -->
+@if (_actions.Count > 0)
+{
+    <h2 style="margin-top: 2rem; font-size: 1.1rem; font-weight: 600;">Actions</h2>
+    <div class="ops-action-list">
+        @foreach (var action in _actions)
+        {
+            var rowCss = action.Status switch
+            {
+                ActionStatus.Running => "ops-action ops-action-running",
+                ActionStatus.Completed => "ops-action ops-action-completed",
+                ActionStatus.Failed => "ops-action ops-action-failed",
+                _ => "ops-action",
+            };
+            <div class="@rowCss">
+                <div class="ops-action-id">#@action.Id</div>
+                <div style="flex: 1; min-width: 0;">
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <span style="font-weight: 600; font-size: 0.95rem;">@action.ActionType</span>
+                        <span style="font-size: 0.8rem; color: var(--text-muted);">@action.Gsrn</span>
+                    </div>
+                    <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.15rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                        @if (action.CurrentStepDetails is not null)
+                        {
+                            @action.CurrentStepDetails
+                        }
+                        else
+                        {
+                            @action.Address
+                        }
+                    </div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.75rem; flex-shrink: 0;">
+                    @if (action.Result is not null)
+                    {
+                        <span style="font-weight: 700; font-size: 0.95rem; color: var(--green);">@action.Result</span>
+                    }
+                    @switch (action.Status)
+                    {
+                        case ActionStatus.Running:
+                            <span class="badge badge-sent">@action.CurrentStepName (@action.CompletedSteps/@TotalSteps)</span>
+                            break;
+                        case ActionStatus.Completed:
+                            <span class="badge badge-completed">done</span>
+                            break;
+                        case ActionStatus.Failed:
+                            <span class="badge badge-dead-letter">failed</span>
+                            break;
+                    }
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    private const int TotalSteps = 8;
+
+    private enum ActionStatus { Pending, Running, Completed, Failed }
+
+    private sealed class ActionViewModel
+    {
+        public int Id { get; init; }
+        public string Gsrn { get; init; } = "";
+        public string Address { get; init; } = "";
+        public string ActionType { get; init; } = "";
+        public ActionStatus Status { get; set; }
+        public int CompletedSteps { get; set; }
+        public string? CurrentStepName { get; set; }
+        public string? CurrentStepDetails { get; set; }
+        public string? Result { get; set; }
+        public string? ErrorMessage { get; set; }
+    }
+
+    private record DawaSuggestion(string Text, string DarId);
+
+    private string _searchQuery = "";
+    private bool _searching;
+    private bool _addressSelected;
+    private string _selectedAddress = "";
+    private readonly List<DawaSuggestion> _suggestions = new();
+    private readonly List<MeteringPointInfo> _selectedMeteringPoints = new();
+    private readonly List<ActionViewModel> _actions = new();
+    private int _actionCounter;
+    private Timer? _debounceTimer;
+
+    private void OnSearchInput(ChangeEventArgs e)
+    {
+        _searchQuery = e.Value?.ToString() ?? "";
+        _addressSelected = false;
+        _debounceTimer?.Dispose();
+        if (_searchQuery.Length < 2)
+        {
+            _suggestions.Clear();
+            return;
+        }
+        var query = _searchQuery;
+        _debounceTimer = new Timer(_ => InvokeAsync(() => SearchAddressAsync(query)), null, 300, Timeout.Infinite);
+    }
+
+    private async Task SearchAddressAsync(string query)
+    {
+        _searching = true;
+        StateHasChanged();
+
+        try
+        {
+            var client = HttpClientFactory.CreateClient();
+            var url = $"https://api.dataforsyningen.dk/adresser/autocomplete?q={Uri.EscapeDataString(query)}";
+            var response = await client.GetStringAsync(url);
+            var items = JsonSerializer.Deserialize<JsonElement[]>(response) ?? [];
+
+            _suggestions.Clear();
+            foreach (var item in items.Take(8))
+            {
+                var text = item.GetProperty("tekst").GetString() ?? "";
+                var darId = item.GetProperty("adresse").GetProperty("id").GetString() ?? "";
+                _suggestions.Add(new DawaSuggestion(text, darId));
+            }
+        }
+        catch
+        {
+            _suggestions.Clear();
+        }
+        finally
+        {
+            _searching = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task SelectAddress(DawaSuggestion suggestion)
+    {
+        _searchQuery = suggestion.Text;
+        _selectedAddress = suggestion.Text;
+        _addressSelected = true;
+        _suggestions.Clear();
+        _selectedMeteringPoints.Clear();
+
+        var result = await AddressLookup.LookupByDarIdAsync(suggestion.DarId, CancellationToken.None);
+        _selectedMeteringPoints.AddRange(result.MeteringPoints);
+        StateHasChanged();
+    }
+
+    private void StartChangeOfSupplier(MeteringPointInfo mp)
+    {
+        var actionId = Interlocked.Increment(ref _actionCounter);
+        var action = new ActionViewModel
+        {
+            Id = actionId,
+            Gsrn = mp.Gsrn,
+            Address = _selectedAddress,
+            ActionType = "Change of Supplier",
+            Status = ActionStatus.Running,
+            CurrentStepName = "Starting...",
+        };
+        _actions.Insert(0, action);
+
+        // Clear metering points so user can search again
+        _selectedMeteringPoints.Clear();
+        _searchQuery = "";
+        _addressSelected = false;
+
+        _ = RunActionAsync(action);
+    }
+
+    private async Task RunActionAsync(ActionViewModel action)
+    {
+        try
+        {
+            await Simulator.RunChangeOfSupplierAsync(
+                action.Gsrn,
+                $"Customer #{action.Id}",
+                async step =>
+                {
+                    await InvokeAsync(() =>
+                    {
+                        action.CompletedSteps = step.Number;
+                        action.CurrentStepName = step.Name;
+                        action.CurrentStepDetails = step.Details;
+
+                        if (step.Number == TotalSteps && step.Details is not null)
+                            action.Result = step.Details;
+
+                        StateHasChanged();
+                    });
+                },
+                CancellationToken.None);
+
+            await InvokeAsync(() =>
+            {
+                action.Status = ActionStatus.Completed;
+                StateHasChanged();
+            });
+        }
+        catch (Exception ex)
+        {
+            await InvokeAsync(() =>
+            {
+                action.Status = ActionStatus.Failed;
+                action.ErrorMessage = ex.Message;
+                StateHasChanged();
+            });
+        }
+    }
+
+    public void Dispose()
+    {
+        _debounceTimer?.Dispose();
+    }
+}
