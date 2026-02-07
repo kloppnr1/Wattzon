@@ -6,7 +6,12 @@
 @inject SimulationService Simulator
 @inject IHttpClientFactory HttpClientFactory
 
-<h1>Operations</h1>
+<div style="display: flex; align-items: center; justify-content: space-between;">
+    <h1>Operations</h1>
+    <button class="ops-reset-btn" @onclick="ResetDatabaseAsync" disabled="@_resetting">
+        @(_resetting ? "Resetting..." : "Reset Database")
+    </button>
+</div>
 <p style="color: var(--text-muted); margin-bottom: 1.5rem;">
     Search an address, find metering points, and run concurrent change-of-supplier actions.
 </p>
@@ -342,6 +347,28 @@
         color: var(--text-muted);
         font-size: 0.75rem;
     }
+
+    .ops-reset-btn {
+        padding: 0.35rem 0.75rem;
+        font-size: 0.78rem;
+        font-weight: 600;
+        border: 1px solid var(--red);
+        border-radius: 4px;
+        background: transparent;
+        color: var(--red);
+        cursor: pointer;
+        transition: background 0.15s;
+    }
+
+    .ops-reset-btn:hover:not(:disabled) {
+        background: var(--red);
+        color: #fff;
+    }
+
+    .ops-reset-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
 </style>
 
 @code {
@@ -369,6 +396,7 @@
 
     private string _searchQuery = "";
     private bool _searching;
+    private bool _resetting;
     private bool _addressSelected;
     private string _selectedAddress = "";
     private int? _expandedActionId;
@@ -377,6 +405,19 @@
     private readonly List<ActionViewModel> _actions = new();
     private int _actionCounter;
     private Timer? _debounceTimer;
+
+    private async Task ResetDatabaseAsync()
+    {
+        _resetting = true;
+        StateHasChanged();
+
+        await Simulator.ResetAsync();
+
+        _actions.Clear();
+        _expandedActionId = null;
+        _resetting = false;
+        StateHasChanged();
+    }
 
     private async Task ToggleExpandAsync(ActionViewModel action)
     {
