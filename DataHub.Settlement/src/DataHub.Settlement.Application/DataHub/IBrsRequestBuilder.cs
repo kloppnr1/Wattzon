@@ -9,4 +9,5 @@ public interface IBrsRequestBuilder
     string BuildBrs010(string gsrn, DateOnly effectiveDate);
     string BuildBrs043(string gsrn, string cprCvr, DateOnly effectiveDate);
     string BuildBrs044(string gsrn, string originalCorrelationId);
+    string BuildBrs042(string gsrn, DateOnly effectiveDate);
 }
