@@ -104,7 +104,7 @@ public class SunshineScenarioTests
         var rsm012Json = File.ReadAllText(Path.Combine("..", "..", "..", "..", "..", "fixtures", "rsm012-multi-day.json"));
         fakeClient.Enqueue(QueueName.Timeseries, new DataHubMessage("msg-rsm012", "RSM-012", null, rsm012Json));
 
-        var poller = new QueuePollerService(fakeClient, parser, _meteringRepo, _messageLog,
+        var poller = new QueuePollerService(fakeClient, parser, _meteringRepo, _portfolio, _messageLog,
             NullLogger<QueuePollerService>.Instance);
         await poller.PollQueueAsync(QueueName.Timeseries, ct);
 

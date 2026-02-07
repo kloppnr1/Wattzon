@@ -1,14 +1,18 @@
 using DataHub.Settlement.Application.AddressLookup;
+using DataHub.Settlement.Application.Authentication;
 using DataHub.Settlement.Application.DataHub;
 using DataHub.Settlement.Application.Metering;
 using DataHub.Settlement.Application.Messaging;
 using DataHub.Settlement.Application.Parsing;
+using DataHub.Settlement.Application.Portfolio;
 using DataHub.Settlement.Infrastructure.AddressLookup;
+using DataHub.Settlement.Infrastructure.Authentication;
 using DataHub.Settlement.Infrastructure.Database;
 using DataHub.Settlement.Infrastructure.DataHub;
 using DataHub.Settlement.Infrastructure.Messaging;
 using DataHub.Settlement.Infrastructure.Metering;
 using DataHub.Settlement.Infrastructure.Parsing;
+using DataHub.Settlement.Infrastructure.Portfolio;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -49,10 +53,47 @@ builder.Services.AddOpenTelemetry()
 var connectionString = builder.Configuration.GetConnectionString("SettlementDb")
     ?? "Host=localhost;Port=5432;Database=datahub_settlement;Username=settlement;Password=settlement";
 
-builder.Services.AddSingleton<IDataHubClient, StubDataHubClient>();
+// DataHub client: use HTTP + resilience when configured, otherwise stub
+var dataHubBaseUrl = builder.Configuration["DataHub:BaseUrl"];
+if (!string.IsNullOrEmpty(dataHubBaseUrl))
+{
+    builder.Services.AddHttpClient<HttpDataHubClient>(client =>
+    {
+        client.BaseAddress = new Uri(dataHubBaseUrl);
+    });
+
+    builder.Services.AddHttpClient<OAuth2TokenProvider>();
+
+    builder.Services.AddSingleton<IAuthTokenProvider>(sp =>
+    {
+        var options = new AuthTokenOptions(
+            builder.Configuration["DataHub:TenantId"] ?? "",
+            builder.Configuration["DataHub:ClientId"] ?? "",
+            builder.Configuration["DataHub:ClientSecret"] ?? "",
+            builder.Configuration["DataHub:Scope"] ?? "");
+        var httpClient = sp.GetRequiredService<IHttpClientFactory>().CreateClient();
+        return new OAuth2TokenProvider(httpClient, options);
+    });
+
+    builder.Services.AddSingleton<IDataHubClient>(sp =>
+    {
+        var innerHttpClient = sp.GetRequiredService<IHttpClientFactory>().CreateClient();
+        innerHttpClient.BaseAddress = new Uri(dataHubBaseUrl);
+        var inner = new HttpDataHubClient(innerHttpClient);
+        var tokenProvider = sp.GetRequiredService<IAuthTokenProvider>();
+        var logger = sp.GetRequiredService<ILogger<ResilientDataHubClient>>();
+        return new ResilientDataHubClient(inner, tokenProvider, logger);
+    });
+}
+else
+{
+    builder.Services.AddSingleton<IDataHubClient, StubDataHubClient>();
+}
+
 builder.Services.AddSingleton<IAddressLookupClient, StubAddressLookupClient>();
 builder.Services.AddSingleton<ICimParser, CimJsonParser>();
 builder.Services.AddSingleton<IMeteringDataRepository>(new MeteringDataRepository(connectionString));
+builder.Services.AddSingleton<IPortfolioRepository>(new PortfolioRepository(connectionString));
 builder.Services.AddSingleton<IMessageLog>(new MessageLog(connectionString));
 builder.Services.AddHostedService<QueuePollerService>();
 

@@ -318,7 +318,7 @@ public sealed class MarketRulesScenarioTests : IClassFixture<WebApplicationFacto
         // Process RSM-012 through the poller into DB
         var messageLog = new MessageLog(Conn);
         var meteringRepo = new MeteringDataRepository(Conn);
-        var poller = new QueuePollerService(_datahub, parser, meteringRepo, messageLog,
+        var poller = new QueuePollerService(_datahub, parser, meteringRepo, _portfolio, messageLog,
             NullLogger<QueuePollerService>.Instance);
         await poller.PollQueueAsync(QueueName.Timeseries, ct);
 
