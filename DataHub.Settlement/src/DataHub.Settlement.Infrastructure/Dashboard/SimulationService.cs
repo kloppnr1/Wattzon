@@ -97,7 +97,7 @@ public sealed class SimulationService
             JOIN settlement.settlement_run sr ON sr.id = sl.settlement_run_id
             JOIN settlement.billing_period bp ON bp.id = sr.billing_period_id
             WHERE sl.metering_point_id = @Gsrn
-            GROUP BY bp.period_start, bp.period_end, sr.status, sr.created_at
+            GROUP BY bp.period_start, bp.period_end, sr.status
             ORDER BY bp.period_start
             """, new { Gsrn = gsrn });
         var settlements = sRows.Select(r => new MeteringPointSummary.SettlementInfo(
