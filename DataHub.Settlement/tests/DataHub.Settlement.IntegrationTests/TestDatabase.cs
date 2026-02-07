@@ -43,6 +43,8 @@ public sealed class TestDatabase : IAsyncLifetime
         cmd.CommandText = """
             TRUNCATE
                 billing.aconto_payment,
+                settlement.erroneous_switch_reversal,
+                settlement.correction_settlement,
                 settlement.settlement_line,
                 settlement.settlement_run,
                 settlement.billing_period,
@@ -61,6 +63,8 @@ public sealed class TestDatabase : IAsyncLifetime
                 portfolio.metering_point,
                 portfolio.product,
                 portfolio.customer,
+                metering.annual_consumption_tracker,
+                metering.metering_data_history,
                 metering.metering_data,
                 metering.spot_price
             CASCADE;

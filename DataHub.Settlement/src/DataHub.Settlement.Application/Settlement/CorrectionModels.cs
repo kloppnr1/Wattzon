@@ -3,36 +3,30 @@ using DataHub.Settlement.Application.Tariff;
 
 namespace DataHub.Settlement.Application.Settlement;
 
-public record SettlementRequest(
+public record CorrectionRequest(
     string MeteringPointId,
     DateOnly PeriodStart,
     DateOnly PeriodEnd,
-    IReadOnlyList<MeteringDataRow> Consumption,
+    IReadOnlyList<ConsumptionDelta> Deltas,
     IReadOnlyList<SpotPriceRow> SpotPrices,
     IReadOnlyList<TariffRateRow> GridTariffRates,
     decimal SystemTariffRate,
     decimal TransmissionTariffRate,
     decimal ElectricityTaxRate,
-    decimal GridSubscriptionPerMonth,
     decimal MarginPerKwh,
-    decimal SupplementPerKwh,
-    decimal SupplierSubscriptionPerMonth,
-    ElvarmeOptions? Elvarme = null,
-    IReadOnlyList<MeteringDataRow>? Production = null);
+    decimal SupplementPerKwh);
 
-public record ElvarmeOptions(
-    decimal ReducedElectricityTaxRate,
-    decimal CumulativeKwhBeforePeriod,
-    decimal AnnualThreshold = 4000m);
+public record ConsumptionDelta(DateTime Timestamp, decimal OldKwh, decimal NewKwh)
+{
+    public decimal DeltaKwh => NewKwh - OldKwh;
+}
 
-public record SettlementResult(
+public record CorrectionResult(
     string MeteringPointId,
     DateOnly PeriodStart,
     DateOnly PeriodEnd,
-    decimal TotalKwh,
+    decimal TotalDeltaKwh,
     IReadOnlyList<SettlementLine> Lines,
     decimal Subtotal,
     decimal VatAmount,
     decimal Total);
-
-public record SettlementLine(string ChargeType, decimal? Kwh, decimal Amount);

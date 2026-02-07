@@ -57,6 +57,12 @@ public sealed class OAuth2TokenProvider : IAuthTokenProvider
         }
     }
 
+    public void InvalidateToken()
+    {
+        _cachedToken = null;
+        _expiresAtUtc = DateTime.MinValue;
+    }
+
     private sealed record TokenResponse
     {
         [JsonPropertyName("access_token")]
