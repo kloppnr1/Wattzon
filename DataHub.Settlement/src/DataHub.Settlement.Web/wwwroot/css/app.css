@@ -118,3 +118,29 @@ tr:hover td { background: rgba(255,255,255,0.02); }
 .btn { padding: 0.6rem 1.25rem; background: var(--accent); color: white; border: none; border-radius: 6px; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: opacity 0.15s; }
 .btn:hover { opacity: 0.9; }
 .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Operations page */
+.ops-search-section { margin-bottom: 1.5rem; display: flex; align-items: center; }
+.ops-search-wrapper { position: relative; flex: 1; max-width: 500px; }
+.ops-search-input { width: 100%; padding: 0.6rem 1rem; background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 6px; font-size: 0.9rem; outline: none; transition: border-color 0.15s; }
+.ops-search-input:focus { border-color: var(--accent); }
+.ops-search-input::placeholder { color: var(--text-muted); }
+.ops-suggestions { position: absolute; top: 100%; left: 0; right: 0; background: var(--surface); border: 1px solid var(--border); border-top: none; border-radius: 0 0 6px 6px; z-index: 10; max-height: 300px; overflow-y: auto; }
+.ops-suggestion { padding: 0.5rem 1rem; font-size: 0.85rem; cursor: pointer; transition: background 0.1s; }
+.ops-suggestion:hover { background: rgba(59,130,246,0.12); color: var(--text); }
+
+.ops-mp-cards { display: flex; flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem; }
+.ops-mp-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 1rem 1.25rem; min-width: 320px; }
+.ops-mp-header { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem; }
+.ops-mp-gsrn { font-family: monospace; font-size: 0.95rem; font-weight: 600; }
+.ops-mp-details { font-size: 0.8rem; color: var(--text-muted); display: flex; flex-direction: column; gap: 0.15rem; }
+
+.ops-action-list { display: flex; flex-direction: column; gap: 0.5rem; margin-top: 0.75rem; }
+.ops-action { display: flex; align-items: center; gap: 1rem; padding: 0.75rem 1rem; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; }
+.ops-action-running { border-color: var(--accent); }
+.ops-action-completed { border-color: var(--green); }
+.ops-action-failed { border-color: var(--red); }
+.ops-action-id { width: 2.25rem; height: 2.25rem; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.8rem; background: var(--border); color: var(--text-muted); flex-shrink: 0; }
+.ops-action-running .ops-action-id { background: var(--accent); color: white; animation: pulse 1.5s infinite; }
+.ops-action-completed .ops-action-id { background: var(--green); color: white; }
+.ops-action-failed .ops-action-id { background: var(--red); color: white; }

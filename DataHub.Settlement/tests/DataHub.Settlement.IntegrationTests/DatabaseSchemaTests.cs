@@ -150,7 +150,7 @@ public class DatabaseSchemaTests : IAsyncLifetime
         await using var insert = new NpgsqlCommand(
             @"INSERT INTO metering.spot_price (price_area, hour, price_per_kwh, source)
               VALUES ('DK1', '2025-01-15T10:00:00Z', 1.234567, 'test')
-              ON CONFLICT DO NOTHING",
+              ON CONFLICT (price_area, hour) DO UPDATE SET price_per_kwh = EXCLUDED.price_per_kwh",
             _connection, tx);
         await insert.ExecuteNonQueryAsync();
 
