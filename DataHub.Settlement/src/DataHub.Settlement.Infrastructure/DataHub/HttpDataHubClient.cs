@@ -60,9 +60,9 @@ public sealed class HttpDataHubClient : IDataHubClient
         return new DataHubResponse(
             result!.CorrelationId,
             result.Accepted,
-            null);
+            result.RejectReason);
     }
 
     private record PeekResponse(string MessageId, string MessageType, string? CorrelationId, string Content);
-    private record SendResponse(string CorrelationId, bool Accepted);
+    private record SendResponse(string CorrelationId, bool Accepted, string? RejectReason = null);
 }

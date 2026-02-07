@@ -621,6 +621,10 @@ public sealed class SimulationService
         string gsrn, string customerName,
         Func<SimulationStep, Task> onStepCompleted, CancellationToken ct)
     {
+        var check = await MarketRules.CanChangeSupplierAsync(gsrn, _connectionString, ct);
+        if (!check.IsValid)
+            throw new InvalidOperationException(check.ErrorMessage);
+
         var portfolio = new PortfolioRepository(_connectionString);
         var tariffRepo = new TariffRepository(_connectionString);
         var spotPriceRepo = new SpotPriceRepository(_connectionString);
@@ -849,6 +853,10 @@ public sealed class SimulationService
     public async Task ReceiveMeteringOpsAsync(
         string gsrn, Func<SimulationStep, Task> onStepCompleted, CancellationToken ct)
     {
+        var check = await MarketRules.CanReceiveMeteringAsync(gsrn, _connectionString, ct);
+        if (!check.IsValid)
+            throw new InvalidOperationException(check.ErrorMessage);
+
         var spotPriceRepo = new SpotPriceRepository(_connectionString);
         var meteringRepo = new MeteringDataRepository(_connectionString);
 
@@ -902,6 +910,10 @@ public sealed class SimulationService
     public async Task RunSettlementOpsAsync(
         string gsrn, Func<SimulationStep, Task> onStepCompleted, CancellationToken ct)
     {
+        var check = await MarketRules.CanRunSettlementAsync(gsrn, _connectionString, ct);
+        if (!check.IsValid)
+            throw new InvalidOperationException(check.ErrorMessage);
+
         var portfolio = new PortfolioRepository(_connectionString);
         var tariffRepo = new TariffRepository(_connectionString);
         var spotPriceRepo = new SpotPriceRepository(_connectionString);
@@ -1020,6 +1032,10 @@ public sealed class SimulationService
     public async Task OffboardOpsAsync(
         string gsrn, Func<SimulationStep, Task> onStepCompleted, CancellationToken ct)
     {
+        var check = await MarketRules.CanOffboardAsync(gsrn, _connectionString, ct);
+        if (!check.IsValid)
+            throw new InvalidOperationException(check.ErrorMessage);
+
         var portfolio = new PortfolioRepository(_connectionString);
         var tariffRepo = new TariffRepository(_connectionString);
         var spotPriceRepo = new SpotPriceRepository(_connectionString);
@@ -1129,6 +1145,10 @@ public sealed class SimulationService
     public async Task AcontoBillingOpsAsync(
         string gsrn, Func<SimulationStep, Task> onStepCompleted, CancellationToken ct)
     {
+        var check = await MarketRules.CanBillAcontoAsync(gsrn, _connectionString, ct);
+        if (!check.IsValid)
+            throw new InvalidOperationException(check.ErrorMessage);
+
         var portfolio = new PortfolioRepository(_connectionString);
         var tariffRepo = new TariffRepository(_connectionString);
         var spotPriceRepo = new SpotPriceRepository(_connectionString);

@@ -46,22 +46,44 @@ public sealed class ConcurrentOperationsTests
     }
 
     [Fact]
-    public async Task RunChangeOfSupplier_same_gsrn_twice_succeeds_idempotently()
+    public async Task RunChangeOfSupplier_same_gsrn_twice_rejected_by_market_rules()
     {
-        var steps1 = new List<SimulationStep>();
         await _sut.RunChangeOfSupplierAsync(
             "571313100000099701", "Run 1",
-            step => { steps1.Add(step); return Task.CompletedTask; },
+            _ => Task.CompletedTask,
             CancellationToken.None);
 
-        var steps2 = new List<SimulationStep>();
-        await _sut.RunChangeOfSupplierAsync(
+        var act = () => _sut.RunChangeOfSupplierAsync(
             "571313100000099701", "Run 2",
-            step => { steps2.Add(step); return Task.CompletedTask; },
+            _ => Task.CompletedTask,
             CancellationToken.None);
 
-        steps1.Should().HaveCount(8);
-        steps2.Should().HaveCount(8);
+        var ex = await act.Should().ThrowAsync<InvalidOperationException>();
+        ex.WithMessage("*Already supplying*571313100000099701*");
+    }
+
+    [Fact]
+    public async Task ReceiveMetering_without_active_supply_throws()
+    {
+        var act = () => _sut.ReceiveMeteringOpsAsync(
+            "571313100000099999",
+            _ => Task.CompletedTask,
+            CancellationToken.None);
+
+        var ex = await act.Should().ThrowAsync<InvalidOperationException>();
+        ex.WithMessage("*No active supply period*");
+    }
+
+    [Fact]
+    public async Task Offboard_without_completed_process_throws()
+    {
+        var act = () => _sut.OffboardOpsAsync(
+            "571313100000099998",
+            _ => Task.CompletedTask,
+            CancellationToken.None);
+
+        var ex = await act.Should().ThrowAsync<InvalidOperationException>();
+        ex.WithMessage("*No active supply period*");
     }
 
     [Fact]

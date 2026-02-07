@@ -6,7 +6,12 @@ public sealed class SimulatorState
 {
     private readonly ConcurrentDictionary<string, ConcurrentQueue<QueueMessage>> _queues = new();
     private readonly ConcurrentBag<OutboundRequest> _requests = new();
+    private readonly ConcurrentDictionary<string, string> _activeGsrns = new();
     private int _messageCounter;
+
+    public bool IsGsrnActive(string gsrn) => _activeGsrns.ContainsKey(gsrn);
+    public void ActivateGsrn(string gsrn) => _activeGsrns[gsrn] = "active";
+    public void DeactivateGsrn(string gsrn) => _activeGsrns.TryRemove(gsrn, out _);
 
     public string EnqueueMessage(string queue, string messageType, string? correlationId, string payload)
     {
@@ -60,6 +65,7 @@ public sealed class SimulatorState
     {
         _queues.Clear();
         _requests.Clear();
+        _activeGsrns.Clear();
         Interlocked.Exchange(ref _messageCounter, 0);
     }
 }

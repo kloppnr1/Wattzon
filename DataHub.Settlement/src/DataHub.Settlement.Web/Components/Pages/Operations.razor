@@ -92,8 +92,12 @@
                                 }
                             }
                         </div>
-                        <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.15rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                            @if (action.Status == ActionStatus.Running)
+                        <div style="font-size: 0.8rem; color: @(action.Status == ActionStatus.Failed ? "var(--red)" : "var(--text-muted)"); margin-top: 0.15rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                            @if (action.Status == ActionStatus.Failed && action.ErrorMessage is not null)
+                            {
+                                <span>@action.ErrorMessage</span>
+                            }
+                            else if (action.Status == ActionStatus.Running)
                             {
                                 <span>@action.ActionType — @action.CurrentStepDetails</span>
                             }
