@@ -760,6 +760,405 @@ public sealed class SimulationService
             $"Total: {result.Total:N2} DKK (subtotal {result.Subtotal:N2}, VAT {result.VatAmount:N2})"));
     }
 
+    // ── Operations: Receive Metering ────────────────────────────────
+
+    public async Task ReceiveMeteringOpsAsync(
+        string gsrn, Func<SimulationStep, Task> onStepCompleted, CancellationToken ct)
+    {
+        var spotPriceRepo = new SpotPriceRepository(_connectionString);
+        var meteringRepo = new MeteringDataRepository(_connectionString);
+
+        // ── Step 1: Determine next month + seed spot prices ──
+        DateTime latestTimestamp;
+        await using (var conn = new NpgsqlConnection(_connectionString))
+        {
+            await conn.OpenAsync(ct);
+            latestTimestamp = await conn.QuerySingleAsync<DateTime>(
+                "SELECT MAX(timestamp) FROM metering.metering_data WHERE metering_point_id = @Gsrn",
+                new { Gsrn = gsrn });
+        }
+
+        var nextMonthStart = new DateTime(latestTimestamp.Year, latestTimestamp.Month, 1, 0, 0, 0, DateTimeKind.Utc)
+            .AddMonths(1);
+        var hoursInMonth = (int)(nextMonthStart.AddMonths(1) - nextMonthStart).TotalHours;
+
+        var prices = GenerateSpotPrices("DK1", nextMonthStart, hoursInMonth);
+        await spotPriceRepo.StorePricesAsync(prices, ct);
+
+        var monthName = nextMonthStart.ToString("MMMM yyyy");
+        await onStepCompleted(new SimulationStep(1, "Seed Spot Prices",
+            $"Seeded {hoursInMonth} spot prices for {monthName}"));
+        await Task.Delay(1000, ct);
+
+        // ── Step 2: Generate + store hourly readings ──
+        var uid = Guid.NewGuid().ToString("N")[..8];
+        var msgId = $"msg-rsm012-ops-{uid}";
+        var rows = GenerateMeteringData(nextMonthStart, hoursInMonth, 0.55m, msgId);
+        await meteringRepo.StoreTimeSeriesAsync(gsrn, rows, ct);
+
+        await using (var msgConn = new NpgsqlConnection(_connectionString))
+        {
+            await msgConn.OpenAsync(ct);
+            await msgConn.ExecuteAsync("""
+                INSERT INTO datahub.inbound_message (datahub_message_id, message_type, correlation_id, queue_name, status, raw_payload_size)
+                VALUES (@MsgId, 'RSM-012', NULL, 'Timeseries', 'processed', 52000)
+                """, new { MsgId = msgId });
+            await msgConn.ExecuteAsync("""
+                INSERT INTO datahub.processed_message_id (message_id) VALUES (@MsgId)
+                """, new { MsgId = msgId });
+        }
+
+        var totalKwh = hoursInMonth * 0.55m;
+        await onStepCompleted(new SimulationStep(2, "Receive RSM-012",
+            $"{hoursInMonth} hourly readings for {monthName} ({totalKwh:N1} kWh)"));
+    }
+
+    // ── Operations: Run Settlement ───────────────────────────────────
+
+    public async Task RunSettlementOpsAsync(
+        string gsrn, Func<SimulationStep, Task> onStepCompleted, CancellationToken ct)
+    {
+        var portfolio = new PortfolioRepository(_connectionString);
+        var tariffRepo = new TariffRepository(_connectionString);
+        var spotPriceRepo = new SpotPriceRepository(_connectionString);
+        var meteringRepo = new MeteringDataRepository(_connectionString);
+
+        // ── Step 1: Load unsettled data ──
+        DateTime meteringStart, meteringEnd;
+        await using (var conn = new NpgsqlConnection(_connectionString))
+        {
+            await conn.OpenAsync(ct);
+            // Find the full metering range for this GSRN
+            var range = await conn.QuerySingleAsync<(DateTime min, DateTime max)>(
+                "SELECT MIN(timestamp), MAX(timestamp) + interval '1 hour' FROM metering.metering_data WHERE metering_point_id = @Gsrn",
+                new { Gsrn = gsrn });
+            meteringStart = range.min;
+            meteringEnd = range.max;
+
+            // Find already-settled range
+            var settledEnd = await conn.QuerySingleOrDefaultAsync<DateTime?>("""
+                SELECT MAX(bp.period_end)
+                FROM settlement.settlement_line sl
+                JOIN settlement.settlement_run sr ON sr.id = sl.settlement_run_id
+                JOIN settlement.billing_period bp ON bp.id = sr.billing_period_id
+                WHERE sl.metering_point_id = @Gsrn
+                """, new { Gsrn = gsrn });
+
+            if (settledEnd.HasValue)
+                meteringStart = settledEnd.Value;
+        }
+
+        var periodStart = DateOnly.FromDateTime(meteringStart);
+        var periodEnd = DateOnly.FromDateTime(meteringEnd);
+
+        var contract = await portfolio.GetActiveContractAsync(gsrn, ct)
+            ?? throw new InvalidOperationException($"No active contract for GSRN {gsrn}");
+        var product = await portfolio.GetProductAsync(contract.ProductId, ct)
+            ?? throw new InvalidOperationException($"Product {contract.ProductId} not found");
+
+        var consumption = await meteringRepo.GetConsumptionAsync(gsrn, meteringStart, meteringEnd, ct);
+        var spotPrices = await spotPriceRepo.GetPricesAsync("DK1", meteringStart, meteringEnd, ct);
+        var rates = await tariffRepo.GetRatesAsync("344", "grid", periodStart, ct);
+        var elTax = await tariffRepo.GetElectricityTaxAsync(periodStart, ct);
+        var gridSub = await tariffRepo.GetSubscriptionAsync("344", "grid", periodStart, ct);
+
+        await onStepCompleted(new SimulationStep(1, "Load Data",
+            $"Period {periodStart} to {periodEnd}: {consumption.Count} readings, {spotPrices.Count} prices"));
+        await Task.Delay(1000, ct);
+
+        // ── Step 2: Calculate settlement ──
+        var engine = new SettlementEngine();
+        var result = engine.Calculate(new SettlementRequest(
+            gsrn, periodStart, periodEnd,
+            consumption, spotPrices,
+            rates, 0.054m, 0.049m, elTax,
+            gridSub,
+            product.MarginOrePerKwh / 100m,
+            (product.SupplementOrePerKwh ?? 0m) / 100m,
+            product.SubscriptionKrPerMonth));
+
+        await onStepCompleted(new SimulationStep(2, "Calculate Settlement",
+            $"Subtotal {result.Subtotal:N2}, VAT {result.VatAmount:N2}, total {result.Total:N2} DKK"));
+        await Task.Delay(1000, ct);
+
+        // ── Step 3: Store settlement ──
+        await using (var conn = new NpgsqlConnection(_connectionString))
+        {
+            await conn.OpenAsync(ct);
+            await conn.ExecuteAsync("SELECT pg_advisory_lock(8675309)");
+            try
+            {
+                var billingPeriodId = await conn.QuerySingleAsync<Guid>("""
+                    INSERT INTO settlement.billing_period (period_start, period_end, frequency)
+                    VALUES (@PeriodStart, @PeriodEnd, 'monthly')
+                    ON CONFLICT (period_start, period_end) DO UPDATE SET frequency = 'monthly'
+                    RETURNING id
+                    """, new { PeriodStart = result.PeriodStart, PeriodEnd = result.PeriodEnd });
+
+                var settlementRunId = await conn.QuerySingleAsync<Guid>("""
+                    INSERT INTO settlement.settlement_run (billing_period_id, grid_area_code, version, status, metering_points_count)
+                    VALUES (
+                        @BillingPeriodId, '344',
+                        COALESCE((SELECT MAX(version) FROM settlement.settlement_run
+                                  WHERE billing_period_id = @BillingPeriodId AND grid_area_code = '344'), 0) + 1,
+                        'completed', 1)
+                    RETURNING id
+                    """, new { BillingPeriodId = billingPeriodId });
+
+                foreach (var line in result.Lines)
+                {
+                    await conn.ExecuteAsync("""
+                        INSERT INTO settlement.settlement_line (settlement_run_id, metering_point_id, charge_type, total_kwh, total_amount, vat_amount, currency)
+                        VALUES (@RunId, @Gsrn, @ChargeType, @TotalKwh, @TotalAmount, @VatAmount, 'DKK')
+                        """, new
+                    {
+                        RunId = settlementRunId,
+                        Gsrn = gsrn,
+                        line.ChargeType,
+                        TotalKwh = line.Kwh ?? 0m,
+                        TotalAmount = line.Amount,
+                        VatAmount = Math.Round(line.Amount * 0.25m, 2),
+                    });
+                }
+            }
+            finally
+            {
+                await conn.ExecuteAsync("SELECT pg_advisory_unlock(8675309)");
+            }
+        }
+
+        await onStepCompleted(new SimulationStep(3, "Store Settlement",
+            $"Total: {result.Total:N2} DKK ({result.TotalKwh:N1} kWh, {periodStart}–{periodEnd})"));
+    }
+
+    // ── Operations: Offboard ─────────────────────────────────────────
+
+    public async Task OffboardOpsAsync(
+        string gsrn, Func<SimulationStep, Task> onStepCompleted, CancellationToken ct)
+    {
+        var portfolio = new PortfolioRepository(_connectionString);
+        var tariffRepo = new TariffRepository(_connectionString);
+        var spotPriceRepo = new SpotPriceRepository(_connectionString);
+        var meteringRepo = new MeteringDataRepository(_connectionString);
+        var processRepo = new ProcessRepository(_connectionString);
+        var stateMachine = new ProcessStateMachine(processRepo);
+
+        // ── Step 1: Mark process as offboarding ──
+        Guid processId;
+        await using (var conn = new NpgsqlConnection(_connectionString))
+        {
+            await conn.OpenAsync(ct);
+            processId = await conn.QuerySingleAsync<Guid>(
+                "SELECT id FROM lifecycle.process_request WHERE gsrn = @Gsrn AND status = 'completed' ORDER BY created_at DESC LIMIT 1",
+                new { Gsrn = gsrn });
+        }
+        await stateMachine.MarkOffboardingAsync(processId, ct);
+
+        await onStepCompleted(new SimulationStep(1, "Start Offboarding",
+            $"Process {processId:N} marked as offboarding"));
+        await Task.Delay(1200, ct);
+
+        // ── Step 2: Seed spot prices + receive final metering ──
+        DateTime latestTimestamp;
+        await using (var conn = new NpgsqlConnection(_connectionString))
+        {
+            await conn.OpenAsync(ct);
+            latestTimestamp = await conn.QuerySingleAsync<DateTime>(
+                "SELECT MAX(timestamp) FROM metering.metering_data WHERE metering_point_id = @Gsrn",
+                new { Gsrn = gsrn });
+        }
+
+        var departureStart = new DateTime(latestTimestamp.Year, latestTimestamp.Month, 1, 0, 0, 0, DateTimeKind.Utc)
+            .AddMonths(1);
+        const int finalHours = 360; // ~15 days partial month
+
+        var prices = GenerateSpotPrices("DK1", departureStart, finalHours);
+        await spotPriceRepo.StorePricesAsync(prices, ct);
+
+        var uid = Guid.NewGuid().ToString("N")[..8];
+        var msgId = $"msg-rsm012-final-{uid}";
+        var rows = GenerateMeteringData(departureStart, finalHours, 0.55m, msgId);
+        await meteringRepo.StoreTimeSeriesAsync(gsrn, rows, ct);
+
+        await using (var msgConn = new NpgsqlConnection(_connectionString))
+        {
+            await msgConn.OpenAsync(ct);
+            await msgConn.ExecuteAsync("""
+                INSERT INTO datahub.inbound_message (datahub_message_id, message_type, correlation_id, queue_name, status, raw_payload_size)
+                VALUES (@MsgId, 'RSM-012', NULL, 'Timeseries', 'processed', 25000)
+                """, new { MsgId = msgId });
+        }
+
+        var departureEnd = departureStart.AddHours(finalHours);
+        await onStepCompleted(new SimulationStep(2, "Final Metering Data",
+            $"{finalHours} hourly readings ({finalHours * 0.55m:N1} kWh), departure period"));
+        await Task.Delay(1000, ct);
+
+        // ── Step 3: Run final settlement ──
+        var contract = await portfolio.GetActiveContractAsync(gsrn, ct)
+            ?? throw new InvalidOperationException($"No active contract for GSRN {gsrn}");
+        var product = await portfolio.GetProductAsync(contract.ProductId, ct)
+            ?? throw new InvalidOperationException($"Product {contract.ProductId} not found");
+
+        var finalConsumption = await meteringRepo.GetConsumptionAsync(gsrn, departureStart, departureEnd, ct);
+        var finalSpotPrices = await spotPriceRepo.GetPricesAsync("DK1", departureStart, departureEnd, ct);
+        var rates = await tariffRepo.GetRatesAsync("344", "grid", DateOnly.FromDateTime(departureStart), ct);
+        var elTax = await tariffRepo.GetElectricityTaxAsync(DateOnly.FromDateTime(departureStart), ct);
+        var gridSub = await tariffRepo.GetSubscriptionAsync("344", "grid", DateOnly.FromDateTime(departureStart), ct);
+
+        var engine = new SettlementEngine();
+        var finalService = new FinalSettlementService(engine);
+        var finalRequest = new SettlementRequest(
+            gsrn,
+            DateOnly.FromDateTime(departureStart), DateOnly.FromDateTime(departureEnd),
+            finalConsumption, finalSpotPrices,
+            rates, 0.054m, 0.049m, elTax,
+            gridSub,
+            product.MarginOrePerKwh / 100m,
+            (product.SupplementOrePerKwh ?? 0m) / 100m,
+            product.SubscriptionKrPerMonth);
+        var finalResult = finalService.CalculateFinal(finalRequest, acontoPaid: null);
+
+        await onStepCompleted(new SimulationStep(3, "Final Settlement",
+            $"Total due: {finalResult.TotalDue:N2} DKK"));
+        await Task.Delay(1000, ct);
+
+        // ── Step 4: End supply + contract + deactivate ──
+        var departureDate = DateOnly.FromDateTime(departureEnd);
+        await portfolio.EndSupplyPeriodAsync(gsrn, departureDate, "supplier_switch", ct);
+        await portfolio.EndContractAsync(gsrn, departureDate, ct);
+        await portfolio.DeactivateMeteringPointAsync(gsrn, departureEnd, ct);
+
+        await onStepCompleted(new SimulationStep(4, "Deactivate",
+            $"Supply ended, contract closed, metering point deactivated"));
+        await Task.Delay(800, ct);
+
+        // ── Step 5: Mark process as final_settled ──
+        await stateMachine.MarkFinalSettledAsync(processId, ct);
+
+        await onStepCompleted(new SimulationStep(5, "Final Settled",
+            "Process marked as final_settled — offboarding complete"));
+    }
+
+    // ── Operations: Aconto Billing ───────────────────────────────────
+
+    public async Task AcontoBillingOpsAsync(
+        string gsrn, Func<SimulationStep, Task> onStepCompleted, CancellationToken ct)
+    {
+        var portfolio = new PortfolioRepository(_connectionString);
+        var tariffRepo = new TariffRepository(_connectionString);
+        var spotPriceRepo = new SpotPriceRepository(_connectionString);
+        var meteringRepo = new MeteringDataRepository(_connectionString);
+        var acontoRepo = new AcontoPaymentRepository(_connectionString);
+
+        var contract = await portfolio.GetActiveContractAsync(gsrn, ct)
+            ?? throw new InvalidOperationException($"No active contract for GSRN {gsrn}");
+        var product = await portfolio.GetProductAsync(contract.ProductId, ct)
+            ?? throw new InvalidOperationException($"Product {contract.ProductId} not found");
+
+        // ── Step 1: Estimate quarterly aconto ──
+        var expectedPrice = AcontoEstimator.CalculateExpectedPricePerKwh(
+            averageSpotPriceOrePerKwh: 75m, marginOrePerKwh: product.MarginOrePerKwh,
+            systemTariffRate: 0.054m, transmissionTariffRate: 0.049m,
+            electricityTaxRate: 0.008m, averageGridTariffRate: 0.18m);
+        var gridSubRate = 49.00m;
+        var supplierSubRate = product.SubscriptionKrPerMonth;
+        var quarterlyEstimate = AcontoEstimator.EstimateQuarterlyAmount(
+            annualConsumptionKwh: 4000m, expectedPrice, gridSubRate, supplierSubRate);
+
+        await onStepCompleted(new SimulationStep(1, "Estimate Aconto",
+            $"Quarterly estimate: {quarterlyEstimate:N2} DKK (4,000 kWh/year)"));
+        await Task.Delay(1000, ct);
+
+        // ── Step 2: Record aconto payment ──
+        // Determine quarter start from latest metering data
+        DateTime latestTimestamp;
+        await using (var conn = new NpgsqlConnection(_connectionString))
+        {
+            await conn.OpenAsync(ct);
+            latestTimestamp = await conn.QuerySingleAsync<DateTime>(
+                "SELECT MAX(timestamp) FROM metering.metering_data WHERE metering_point_id = @Gsrn",
+                new { Gsrn = gsrn });
+        }
+
+        var quarterStart = new DateTime(latestTimestamp.Year, latestTimestamp.Month, 1, 0, 0, 0, DateTimeKind.Utc)
+            .AddMonths(1);
+        var qStartDate = DateOnly.FromDateTime(quarterStart);
+        var qEndDate = qStartDate.AddMonths(3).AddDays(-1);
+
+        await acontoRepo.RecordPaymentAsync(gsrn, qStartDate, qEndDate, quarterlyEstimate, ct);
+
+        await onStepCompleted(new SimulationStep(2, "Record Payment",
+            $"Aconto payment of {quarterlyEstimate:N2} DKK recorded for {qStartDate}–{qEndDate}"));
+        await Task.Delay(1000, ct);
+
+        // ── Step 3: Receive 2 more months of metering data ──
+        var month1Start = quarterStart;
+        var month1Hours = (int)(month1Start.AddMonths(1) - month1Start).TotalHours;
+        var month2Start = month1Start.AddMonths(1);
+        var month2Hours = (int)(month2Start.AddMonths(1) - month2Start).TotalHours;
+
+        var uid = Guid.NewGuid().ToString("N")[..8];
+
+        var month1Prices = GenerateSpotPrices("DK1", month1Start, month1Hours);
+        await spotPriceRepo.StorePricesAsync(month1Prices, ct);
+        var month1Rows = GenerateMeteringData(month1Start, month1Hours, 0.55m, $"msg-aconto-m1-{uid}");
+        await meteringRepo.StoreTimeSeriesAsync(gsrn, month1Rows, ct);
+
+        var month2Prices = GenerateSpotPrices("DK1", month2Start, month2Hours);
+        await spotPriceRepo.StorePricesAsync(month2Prices, ct);
+        var month2Rows = GenerateMeteringData(month2Start, month2Hours, 0.55m, $"msg-aconto-m2-{uid}");
+        await meteringRepo.StoreTimeSeriesAsync(gsrn, month2Rows, ct);
+
+        var totalNewKwh = (month1Hours + month2Hours) * 0.55m;
+        await onStepCompleted(new SimulationStep(3, "Receive Metering",
+            $"2 months: {month1Hours + month2Hours} readings ({totalNewKwh:N1} kWh)"));
+        await Task.Delay(1000, ct);
+
+        // ── Step 4: Reconcile — actual vs aconto ──
+        // We now have 3 months: original month (already in DB) + 2 new months
+        // Calculate actual cost for the quarter
+        var originalEnd = new DateTime(latestTimestamp.Year, latestTimestamp.Month, 1, 0, 0, 0, DateTimeKind.Utc)
+            .AddMonths(1);
+        // Settle each of the 3 months in the quarter range
+        // Month already settled = Jan (from Change of Supplier). New months = the 2 we just added.
+        // Reconcile against the 2 new months only (Jan already settled separately)
+        var reconcileStart = month1Start;
+        var reconcileEnd = month2Start.AddMonths(1);
+
+        var rates = await tariffRepo.GetRatesAsync("344", "grid", qStartDate, ct);
+        var elTax = await tariffRepo.GetElectricityTaxAsync(qStartDate, ct);
+        var gridSub = await tariffRepo.GetSubscriptionAsync("344", "grid", qStartDate, ct);
+
+        var consumption = await meteringRepo.GetConsumptionAsync(gsrn, reconcileStart, reconcileEnd, ct);
+        var spotPrices = await spotPriceRepo.GetPricesAsync("DK1", reconcileStart, reconcileEnd, ct);
+
+        // Calculate per-month and sum
+        var engine = new SettlementEngine();
+        var m1Result = engine.Calculate(new SettlementRequest(gsrn,
+            DateOnly.FromDateTime(month1Start), DateOnly.FromDateTime(month2Start),
+            consumption.Where(r => r.Timestamp < month2Start).ToList(),
+            spotPrices.Where(p => p.Hour < month2Start).ToList(),
+            rates, 0.054m, 0.049m, elTax, gridSub,
+            product.MarginOrePerKwh / 100m,
+            (product.SupplementOrePerKwh ?? 0m) / 100m,
+            product.SubscriptionKrPerMonth));
+        var m2Result = engine.Calculate(new SettlementRequest(gsrn,
+            DateOnly.FromDateTime(month2Start), DateOnly.FromDateTime(reconcileEnd),
+            consumption.Where(r => r.Timestamp >= month2Start).ToList(),
+            spotPrices.Where(p => p.Hour >= month2Start).ToList(),
+            rates, 0.054m, 0.049m, elTax, gridSub,
+            product.MarginOrePerKwh / 100m,
+            (product.SupplementOrePerKwh ?? 0m) / 100m,
+            product.SubscriptionKrPerMonth));
+
+        var actualTotal = m1Result.Total + m2Result.Total;
+        var difference = actualTotal - quarterlyEstimate;
+
+        await onStepCompleted(new SimulationStep(4, "Reconcile",
+            $"Actual: {actualTotal:N2} DKK, aconto paid: {quarterlyEstimate:N2}, difference: {difference:N2} DKK"));
+    }
+
     // ── Helpers ──────────────────────────────────────────────────────
 
     private async Task<SettlementResult> RunSettlementAsync(CommonSetup setup, DateTime periodStart, DateTime periodEnd, CancellationToken ct)

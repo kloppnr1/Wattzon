@@ -98,10 +98,19 @@
                     @switch (action.Status)
                     {
                         case ActionStatus.Running:
-                            <span class="badge badge-sent">@action.CurrentStepName (@action.CompletedSteps/@TotalSteps)</span>
+                            <span class="badge badge-sent">@action.CurrentStepName (@action.CompletedSteps/@action.TotalSteps)</span>
                             break;
                         case ActionStatus.Completed:
                             <span class="badge badge-completed">done</span>
+                            @if (!action.IsOffboarded)
+                            {
+                                <div class="ops-followup">
+                                    <button class="ops-followup-btn" @onclick="@(() => StartFollowUp(action.Gsrn, action.Address, "Receive Metering", 2))">Metering</button>
+                                    <button class="ops-followup-btn" @onclick="@(() => StartFollowUp(action.Gsrn, action.Address, "Run Settlement", 3))">Settlement</button>
+                                    <button class="ops-followup-btn ops-followup-btn-warn" @onclick="@(() => StartFollowUp(action.Gsrn, action.Address, "Offboard", 5))">Offboard</button>
+                                    <button class="ops-followup-btn" @onclick="@(() => StartFollowUp(action.Gsrn, action.Address, "Aconto Billing", 4))">Aconto</button>
+                                </div>
+                            }
                             break;
                         case ActionStatus.Failed:
                             <span class="badge badge-dead-letter">failed</span>
@@ -113,9 +122,38 @@
     </div>
 }
 
-@code {
-    private const int TotalSteps = 8;
+<style>
+    .ops-followup {
+        display: flex;
+        gap: 0.35rem;
+        margin-left: 0.5rem;
+    }
 
+    .ops-followup-btn {
+        padding: 0.2rem 0.5rem;
+        font-size: 0.72rem;
+        font-weight: 600;
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        background: var(--bg-card);
+        color: var(--text);
+        cursor: pointer;
+        white-space: nowrap;
+        transition: background 0.15s, border-color 0.15s;
+    }
+
+    .ops-followup-btn:hover {
+        background: var(--bg-hover);
+        border-color: var(--accent);
+    }
+
+    .ops-followup-btn-warn:hover {
+        border-color: var(--red);
+        color: var(--red);
+    }
+</style>
+
+@code {
     private enum ActionStatus { Pending, Running, Completed, Failed }
 
     private sealed class ActionViewModel
@@ -124,6 +162,8 @@
         public string Gsrn { get; init; } = "";
         public string Address { get; init; } = "";
         public string ActionType { get; init; } = "";
+        public int TotalSteps { get; init; } = 8;
+        public bool IsOffboarded { get; set; }
         public ActionStatus Status { get; set; }
         public int CompletedSteps { get; set; }
         public string? CurrentStepName { get; set; }
@@ -211,6 +251,7 @@
             Gsrn = mp.Gsrn,
             Address = _selectedAddress,
             ActionType = "Change of Supplier",
+            TotalSteps = 8,
             Status = ActionStatus.Running,
             CurrentStepName = "Starting...",
         };
@@ -224,32 +265,71 @@
         _ = RunActionAsync(action);
     }
 
+    private void StartFollowUp(string gsrn, string address, string actionType, int totalSteps)
+    {
+        var actionId = Interlocked.Increment(ref _actionCounter);
+        var action = new ActionViewModel
+        {
+            Id = actionId,
+            Gsrn = gsrn,
+            Address = address,
+            ActionType = actionType,
+            TotalSteps = totalSteps,
+            Status = ActionStatus.Running,
+            CurrentStepName = "Starting...",
+        };
+        _actions.Insert(0, action);
+        _ = RunActionAsync(action);
+    }
+
     private async Task RunActionAsync(ActionViewModel action)
     {
         try
         {
-            await Simulator.RunChangeOfSupplierAsync(
-                action.Gsrn,
-                $"Customer #{action.Id}",
-                async step =>
+            var stepCallback = new Func<SimulationStep, Task>(async step =>
+            {
+                await InvokeAsync(() =>
                 {
-                    await InvokeAsync(() =>
-                    {
-                        action.CompletedSteps = step.Number;
-                        action.CurrentStepName = step.Name;
-                        action.CurrentStepDetails = step.Details;
+                    action.CompletedSteps = step.Number;
+                    action.CurrentStepName = step.Name;
+                    action.CurrentStepDetails = step.Details;
 
-                        if (step.Number == TotalSteps && step.Details is not null)
-                            action.Result = step.Details;
+                    if (step.Number == action.TotalSteps && step.Details is not null)
+                        action.Result = step.Details;
 
-                        StateHasChanged();
-                    });
-                },
-                CancellationToken.None);
+                    StateHasChanged();
+                });
+            });
+
+            switch (action.ActionType)
+            {
+                case "Change of Supplier":
+                    await Simulator.RunChangeOfSupplierAsync(action.Gsrn, $"Customer #{action.Id}", stepCallback, CancellationToken.None);
+                    break;
+                case "Receive Metering":
+                    await Simulator.ReceiveMeteringOpsAsync(action.Gsrn, stepCallback, CancellationToken.None);
+                    break;
+                case "Run Settlement":
+                    await Simulator.RunSettlementOpsAsync(action.Gsrn, stepCallback, CancellationToken.None);
+                    break;
+                case "Offboard":
+                    await Simulator.OffboardOpsAsync(action.Gsrn, stepCallback, CancellationToken.None);
+                    break;
+                case "Aconto Billing":
+                    await Simulator.AcontoBillingOpsAsync(action.Gsrn, stepCallback, CancellationToken.None);
+                    break;
+            }
 
             await InvokeAsync(() =>
             {
                 action.Status = ActionStatus.Completed;
+                if (action.ActionType == "Offboard")
+                {
+                    action.IsOffboarded = true;
+                    // Also mark the original action for this GSRN as offboarded
+                    foreach (var a in _actions.Where(a => a.Gsrn == action.Gsrn && a != action))
+                        a.IsOffboarded = true;
+                }
                 StateHasChanged();
             });
         }
