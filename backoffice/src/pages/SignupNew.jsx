@@ -1,31 +1,38 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { api } from '../api';
+
+const STEPS = [
+  { key: 'address', label: 'Address', desc: 'Look up metering point' },
+  { key: 'product', label: 'Product', desc: 'Choose energy product' },
+  { key: 'customer', label: 'Customer', desc: 'Customer details' },
+  { key: 'confirm', label: 'Confirm', desc: 'Review and submit' },
+];
 
 export default function SignupNew() {
   const navigate = useNavigate();
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState(0);
   const [products, setProducts] = useState([]);
   const [error, setError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
-  // Step 1: Address
+  // Step 0: Address
   const [darId, setDarId] = useState('');
   const [meteringPoints, setMeteringPoints] = useState(null);
   const [selectedGsrn, setSelectedGsrn] = useState(null);
   const [lookingUp, setLookingUp] = useState(false);
 
-  // Step 2: Product
+  // Step 1: Product
   const [selectedProduct, setSelectedProduct] = useState(null);
 
-  // Step 3: Customer
+  // Step 2: Customer
   const [customerName, setCustomerName] = useState('');
   const [cprCvr, setCprCvr] = useState('');
   const [contactType, setContactType] = useState('private');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
 
-  // Step 4: Process
+  // Step 3: Process
   const [type, setType] = useState('switch');
   const [effectiveDate, setEffectiveDate] = useState('');
 
@@ -40,9 +47,7 @@ export default function SignupNew() {
     try {
       const result = await api.lookupAddress(darId);
       setMeteringPoints(result);
-      if (result.length === 1) {
-        setSelectedGsrn(result[0].gsrn);
-      }
+      if (result.length === 1) setSelectedGsrn(result[0].gsrn);
     } catch (e) {
       setError(e.message);
     } finally {
@@ -54,7 +59,7 @@ export default function SignupNew() {
     setSubmitting(true);
     setError(null);
     try {
-      const response = await api.createSignup({
+      await api.createSignup({
         dar_id: darId,
         customer_name: customerName,
         cpr_cvr: cprCvr,
@@ -65,261 +70,333 @@ export default function SignupNew() {
         type,
         effective_date: effectiveDate,
       });
-      navigate(`/signups`);
+      navigate('/signups');
     } catch (e) {
       setError(e.message);
       setSubmitting(false);
     }
   }
 
+  const selectedProductObj = products.find((p) => p.id === selectedProduct);
+
   return (
-    <div className="max-w-2xl">
-      <h2 className="text-xl font-semibold text-gray-900 mb-6">New Signup</h2>
+    <div className="max-w-2xl mx-auto">
+      {/* Breadcrumb */}
+      <Link to="/signups" className="inline-flex items-center gap-1 text-xs text-slate-400 hover:text-indigo-500 mb-6 transition-colors">
+        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
+        </svg>
+        Back to signups
+      </Link>
 
       {/* Step indicator */}
-      <div className="flex gap-2 mb-6">
-        {['Address', 'Product', 'Customer', 'Process'].map((label, i) => (
-          <div
-            key={label}
-            className={`flex items-center gap-1.5 text-xs font-medium ${
-              step === i + 1 ? 'text-blue-600' : step > i + 1 ? 'text-green-600' : 'text-gray-400'
-            }`}
-          >
-            <span className={`w-5 h-5 rounded-full flex items-center justify-center text-white text-xs ${
-              step === i + 1 ? 'bg-blue-600' : step > i + 1 ? 'bg-green-500' : 'bg-gray-300'
-            }`}>
-              {step > i + 1 ? '\u2713' : i + 1}
-            </span>
-            {label}
-          </div>
-        ))}
+      <div className="bg-white rounded-xl shadow-sm ring-1 ring-slate-200 p-5 mb-6">
+        <div className="flex items-center">
+          {STEPS.map((s, i) => (
+            <div key={s.key} className="flex items-center flex-1 last:flex-none">
+              <div className="flex items-center gap-2.5">
+                <div
+                  className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold transition-all ${
+                    i < step
+                      ? 'bg-emerald-500 text-white'
+                      : i === step
+                      ? 'bg-indigo-500 text-white shadow-md shadow-indigo-200'
+                      : 'bg-slate-100 text-slate-400'
+                  }`}
+                >
+                  {i < step ? (
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                    </svg>
+                  ) : (
+                    i + 1
+                  )}
+                </div>
+                <div className="hidden sm:block">
+                  <p className={`text-xs font-medium ${i <= step ? 'text-slate-700' : 'text-slate-400'}`}>
+                    {s.label}
+                  </p>
+                  <p className="text-[11px] text-slate-400">{s.desc}</p>
+                </div>
+              </div>
+              {i < STEPS.length - 1 && (
+                <div className={`flex-1 h-px mx-4 ${i < step ? 'bg-emerald-300' : 'bg-slate-200'}`} />
+              )}
+            </div>
+          ))}
+        </div>
       </div>
 
-      {error && <p className="text-red-600 text-sm mb-4 bg-red-50 border border-red-200 rounded px-3 py-2">{error}</p>}
+      {error && (
+        <div className="mb-6 bg-red-50 border border-red-200 rounded-lg px-4 py-3 flex items-start gap-3">
+          <svg className="w-5 h-5 text-red-400 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
+          </svg>
+          <p className="text-sm text-red-700">{error}</p>
+        </div>
+      )}
 
-      {/* Step 1: Address lookup */}
-      {step === 1 && (
-        <div className="space-y-4">
-          <label className="block">
-            <span className="text-sm font-medium text-gray-700">DAR ID (address identifier)</span>
-            <div className="flex gap-2 mt-1">
-              <input
-                type="text"
-                value={darId}
-                onChange={(e) => setDarId(e.target.value)}
-                placeholder="0a3f50a0-75eb-32b8-e044-0003ba298018"
-                className="flex-1 border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <button
-                onClick={lookupAddress}
-                disabled={!darId || lookingUp}
-                className="px-4 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 disabled:opacity-50"
-              >
-                {lookingUp ? 'Looking up...' : 'Look up'}
-              </button>
-            </div>
-          </label>
+      {/* Step content card */}
+      <div className="bg-white rounded-xl shadow-sm ring-1 ring-slate-200 p-6">
 
-          {meteringPoints && meteringPoints.length === 0 && (
-            <p className="text-sm text-red-600">No metering points found for this address.</p>
-          )}
-
-          {meteringPoints && meteringPoints.length > 0 && (
+        {/* Step 0: Address */}
+        {step === 0 && (
+          <div className="space-y-5">
             <div>
-              <p className="text-sm font-medium text-gray-700 mb-2">
-                {meteringPoints.length === 1
-                  ? 'Metering point found:'
-                  : `${meteringPoints.length} metering points found — select one:`}
-              </p>
-              <div className="space-y-2">
-                {meteringPoints.map((mp) => (
-                  <label
-                    key={mp.gsrn}
-                    className={`flex items-center gap-3 border rounded px-3 py-2 cursor-pointer ${
-                      selectedGsrn === mp.gsrn ? 'border-blue-500 bg-blue-50' : 'border-gray-200'
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="gsrn"
-                      checked={selectedGsrn === mp.gsrn}
-                      onChange={() => setSelectedGsrn(mp.gsrn)}
-                    />
-                    <span className="font-mono text-sm">{mp.gsrn}</span>
-                    <span className="text-xs text-gray-500">{mp.type} / {mp.grid_area_code}</span>
-                  </label>
-                ))}
+              <h3 className="text-base font-semibold text-slate-800 mb-1">Address Lookup</h3>
+              <p className="text-sm text-slate-500">Enter the DAR ID to find the metering point.</p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">DAR ID</label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={darId}
+                  onChange={(e) => setDarId(e.target.value)}
+                  placeholder="0a3f50a0-75eb-32b8-e044-0003ba298018"
+                  className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-shadow"
+                />
+                <button
+                  onClick={lookupAddress}
+                  disabled={!darId || lookingUp}
+                  className="px-4 py-2 bg-slate-800 text-white text-sm font-medium rounded-lg hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                >
+                  {lookingUp ? 'Searching...' : 'Look up'}
+                </button>
               </div>
             </div>
-          )}
 
-          <div className="flex justify-end">
-            <button
-              onClick={() => setStep(2)}
-              disabled={!selectedGsrn}
-              className="px-4 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 disabled:opacity-50"
-            >
-              Next
-            </button>
-          </div>
-        </div>
-      )}
+            {meteringPoints && meteringPoints.length === 0 && (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 text-sm text-amber-700">
+                No metering points found for this address.
+              </div>
+            )}
 
-      {/* Step 2: Product selection */}
-      {step === 2 && (
-        <div className="space-y-4">
-          <p className="text-sm font-medium text-gray-700">Select a product:</p>
-          <div className="space-y-2">
-            {products.map((p) => (
-              <label
-                key={p.id}
-                className={`block border rounded px-4 py-3 cursor-pointer ${
-                  selectedProduct === p.id ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <input
-                    type="radio"
-                    name="product"
-                    checked={selectedProduct === p.id}
-                    onChange={() => setSelectedProduct(p.id)}
-                  />
-                  <div>
-                    <span className="font-medium text-sm">{p.name}</span>
-                    {p.green_energy && <span className="ml-2 text-xs text-green-600 font-medium">Green</span>}
-                    <div className="text-xs text-gray-500 mt-0.5">
-                      {p.energyModel} &middot; margin {p.margin_ore_per_kwh} ore/kWh &middot; {p.subscription_kr_per_month} kr/month
-                    </div>
-                    {p.description && <p className="text-xs text-gray-400 mt-1">{p.description}</p>}
-                  </div>
+            {meteringPoints && meteringPoints.length > 0 && (
+              <div>
+                <p className="text-sm font-medium text-slate-700 mb-2">
+                  {meteringPoints.length === 1
+                    ? 'Metering point found:'
+                    : `${meteringPoints.length} metering points \u2014 select one:`}
+                </p>
+                <div className="space-y-2">
+                  {meteringPoints.map((mp) => (
+                    <label
+                      key={mp.gsrn}
+                      className={`flex items-center gap-3 border rounded-lg px-4 py-3 cursor-pointer transition-all ${
+                        selectedGsrn === mp.gsrn
+                          ? 'border-indigo-400 bg-indigo-50 ring-1 ring-indigo-400'
+                          : 'border-slate-200 hover:border-slate-300'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="gsrn"
+                        checked={selectedGsrn === mp.gsrn}
+                        onChange={() => setSelectedGsrn(mp.gsrn)}
+                        className="accent-indigo-500"
+                      />
+                      <div>
+                        <span className="font-mono text-sm text-slate-800">{mp.gsrn}</span>
+                        <span className="ml-3 text-xs text-slate-400">{mp.type} / Grid area {mp.grid_area_code}</span>
+                      </div>
+                    </label>
+                  ))}
                 </div>
-              </label>
-            ))}
-          </div>
-          <div className="flex justify-between">
-            <button onClick={() => setStep(1)} className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900">Back</button>
-            <button
-              onClick={() => setStep(3)}
-              disabled={!selectedProduct}
-              className="px-4 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 disabled:opacity-50"
-            >
-              Next
-            </button>
-          </div>
-        </div>
-      )}
+              </div>
+            )}
 
-      {/* Step 3: Customer details */}
-      {step === 3 && (
-        <div className="space-y-4">
-          <label className="block">
-            <span className="text-sm font-medium text-gray-700">Customer name</span>
-            <input
-              type="text"
-              value={customerName}
-              onChange={(e) => setCustomerName(e.target.value)}
-              className="mt-1 w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </label>
-          <label className="block">
-            <span className="text-sm font-medium text-gray-700">CPR/CVR</span>
-            <input
-              type="text"
-              value={cprCvr}
-              onChange={(e) => setCprCvr(e.target.value)}
-              placeholder="0101901234"
-              className="mt-1 w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </label>
-          <label className="block">
-            <span className="text-sm font-medium text-gray-700">Contact type</span>
-            <select
-              value={contactType}
-              onChange={(e) => setContactType(e.target.value)}
-              className="mt-1 w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="private">Private</option>
-              <option value="business">Business</option>
-            </select>
-          </label>
-          <label className="block">
-            <span className="text-sm font-medium text-gray-700">Email</span>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="mt-1 w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </label>
-          <label className="block">
-            <span className="text-sm font-medium text-gray-700">Phone</span>
-            <input
-              type="tel"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="+4512345678"
-              className="mt-1 w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </label>
-          <div className="flex justify-between">
-            <button onClick={() => setStep(2)} className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900">Back</button>
-            <button
-              onClick={() => setStep(4)}
-              disabled={!customerName || !cprCvr || !email}
-              className="px-4 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 disabled:opacity-50"
-            >
-              Next
-            </button>
+            <div className="flex justify-end pt-2">
+              <button
+                onClick={() => { setError(null); setStep(1); }}
+                disabled={!selectedGsrn}
+                className="px-5 py-2 bg-indigo-500 text-white text-sm font-medium rounded-lg shadow-sm hover:bg-indigo-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                Continue
+              </button>
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Step 4: Process type and effective date */}
-      {step === 4 && (
-        <div className="space-y-4">
-          <label className="block">
-            <span className="text-sm font-medium text-gray-700">Type</span>
-            <select
-              value={type}
-              onChange={(e) => setType(e.target.value)}
-              className="mt-1 w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="switch">Supplier switch (BRS-001, 15 business days notice)</option>
-              <option value="move_in">Move-in (BRS-009, immediate)</option>
-            </select>
-          </label>
-          <label className="block">
-            <span className="text-sm font-medium text-gray-700">Effective date</span>
-            <input
-              type="date"
-              value={effectiveDate}
-              onChange={(e) => setEffectiveDate(e.target.value)}
-              className="mt-1 w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </label>
-
-          {/* Summary */}
-          <div className="bg-gray-50 border border-gray-200 rounded p-4 text-sm space-y-1">
-            <p className="font-medium text-gray-700 mb-2">Summary</p>
-            <p>GSRN: <span className="font-mono">{selectedGsrn}</span></p>
-            <p>Product: {products.find((p) => p.id === selectedProduct)?.name}</p>
-            <p>Customer: {customerName} ({cprCvr})</p>
-            <p>Type: {type === 'move_in' ? 'Move-in' : 'Supplier switch'}</p>
-            <p>Effective: {effectiveDate || '(not set)'}</p>
+        {/* Step 1: Product */}
+        {step === 1 && (
+          <div className="space-y-5">
+            <div>
+              <h3 className="text-base font-semibold text-slate-800 mb-1">Select Product</h3>
+              <p className="text-sm text-slate-500">Choose the energy product for this customer.</p>
+            </div>
+            <div className="space-y-2">
+              {products.map((p) => (
+                <label
+                  key={p.id}
+                  className={`block border rounded-lg px-4 py-3.5 cursor-pointer transition-all ${
+                    selectedProduct === p.id
+                      ? 'border-indigo-400 bg-indigo-50 ring-1 ring-indigo-400'
+                      : 'border-slate-200 hover:border-slate-300'
+                  }`}
+                >
+                  <div className="flex items-start gap-3">
+                    <input
+                      type="radio"
+                      name="product"
+                      checked={selectedProduct === p.id}
+                      onChange={() => setSelectedProduct(p.id)}
+                      className="accent-indigo-500 mt-0.5"
+                    />
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-slate-800">{p.name}</span>
+                        {p.green_energy && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-emerald-50 text-emerald-600 ring-1 ring-inset ring-emerald-200">
+                            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                            </svg>
+                            Green
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex gap-4 mt-1.5 text-xs text-slate-500">
+                        <span>{p.energyModel}</span>
+                        <span>{p.margin_ore_per_kwh} ore/kWh margin</span>
+                        <span>{p.subscription_kr_per_month} kr/mo</span>
+                      </div>
+                      {p.description && <p className="text-xs text-slate-400 mt-1">{p.description}</p>}
+                    </div>
+                  </div>
+                </label>
+              ))}
+            </div>
+            <div className="flex justify-between pt-2">
+              <button onClick={() => setStep(0)} className="px-4 py-2 text-sm text-slate-500 hover:text-slate-700 transition-colors">Back</button>
+              <button
+                onClick={() => { setError(null); setStep(2); }}
+                disabled={!selectedProduct}
+                className="px-5 py-2 bg-indigo-500 text-white text-sm font-medium rounded-lg shadow-sm hover:bg-indigo-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                Continue
+              </button>
+            </div>
           </div>
+        )}
 
-          <div className="flex justify-between">
-            <button onClick={() => setStep(3)} className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900">Back</button>
-            <button
-              onClick={handleSubmit}
-              disabled={!effectiveDate || submitting}
-              className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 disabled:opacity-50"
-            >
-              {submitting ? 'Submitting...' : 'Create Signup'}
-            </button>
+        {/* Step 2: Customer */}
+        {step === 2 && (
+          <div className="space-y-5">
+            <div>
+              <h3 className="text-base font-semibold text-slate-800 mb-1">Customer Details</h3>
+              <p className="text-sm text-slate-500">Enter the customer information.</p>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="col-span-2">
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">Full name</label>
+                <input type="text" value={customerName} onChange={(e) => setCustomerName(e.target.value)}
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">CPR/CVR</label>
+                <input type="text" value={cprCvr} onChange={(e) => setCprCvr(e.target.value)} placeholder="0101901234"
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">Contact type</label>
+                <select value={contactType} onChange={(e) => setContactType(e.target.value)}
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                  <option value="private">Private</option>
+                  <option value="business">Business</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">Email</label>
+                <input type="email" value={email} onChange={(e) => setEmail(e.target.value)}
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">Phone</label>
+                <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+4512345678"
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent" />
+              </div>
+            </div>
+            <div className="flex justify-between pt-2">
+              <button onClick={() => setStep(1)} className="px-4 py-2 text-sm text-slate-500 hover:text-slate-700 transition-colors">Back</button>
+              <button
+                onClick={() => { setError(null); setStep(3); }}
+                disabled={!customerName || !cprCvr || !email}
+                className="px-5 py-2 bg-indigo-500 text-white text-sm font-medium rounded-lg shadow-sm hover:bg-indigo-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                Continue
+              </button>
+            </div>
           </div>
-        </div>
-      )}
+        )}
+
+        {/* Step 3: Confirm */}
+        {step === 3 && (
+          <div className="space-y-5">
+            <div>
+              <h3 className="text-base font-semibold text-slate-800 mb-1">Review & Submit</h3>
+              <p className="text-sm text-slate-500">Choose the process type and confirm all details.</p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">Process type</label>
+                <select value={type} onChange={(e) => setType(e.target.value)}
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                  <option value="switch">Supplier switch (BRS-001)</option>
+                  <option value="move_in">Move-in (BRS-009)</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">Effective date</label>
+                <input type="date" value={effectiveDate} onChange={(e) => setEffectiveDate(e.target.value)}
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent" />
+              </div>
+            </div>
+
+            {/* Summary card */}
+            <div className="bg-slate-50 border border-slate-200 rounded-lg overflow-hidden">
+              <div className="px-4 py-2.5 bg-slate-100 border-b border-slate-200">
+                <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Summary</p>
+              </div>
+              <div className="divide-y divide-slate-100">
+                <SummaryRow label="GSRN" value={<span className="font-mono">{selectedGsrn}</span>} />
+                <SummaryRow label="Product" value={selectedProductObj?.name} />
+                <SummaryRow label="Customer" value={`${customerName} (${cprCvr})`} />
+                <SummaryRow label="Contact" value={`${contactType} \u2022 ${email} \u2022 ${phone || '\u2014'}`} />
+                <SummaryRow label="Type" value={type === 'move_in' ? 'Move-in (BRS-009)' : 'Supplier switch (BRS-001)'} />
+                <SummaryRow label="Effective" value={effectiveDate || 'Not set'} highlight={!effectiveDate} />
+              </div>
+            </div>
+
+            <div className="flex justify-between pt-2">
+              <button onClick={() => setStep(2)} className="px-4 py-2 text-sm text-slate-500 hover:text-slate-700 transition-colors">Back</button>
+              <button
+                onClick={handleSubmit}
+                disabled={!effectiveDate || submitting}
+                className="px-6 py-2.5 bg-indigo-500 text-white text-sm font-semibold rounded-lg shadow-sm hover:bg-indigo-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                {submitting ? (
+                  <span className="flex items-center gap-2">
+                    <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Creating...
+                  </span>
+                ) : (
+                  'Create Signup'
+                )}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function SummaryRow({ label, value, highlight }) {
+  return (
+    <div className="flex px-4 py-2.5">
+      <span className="w-24 text-xs font-medium text-slate-400 uppercase shrink-0">{label}</span>
+      <span className={`text-sm ${highlight ? 'text-amber-600 italic' : 'text-slate-700'}`}>{value}</span>
     </div>
   );
 }
