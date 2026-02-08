@@ -179,6 +179,30 @@ public sealed class CimJsonParser : ICimParser
             points);
     }
 
+    public Rsm009Result ParseRsm009(string json)
+    {
+        using var doc = JsonDocument.Parse(json);
+        var root = doc.RootElement.GetProperty("MarketDocument");
+
+        var correlationId = root.GetProperty("mRID").GetString()!;
+
+        var activity = root.GetProperty("MktActivityRecord");
+        var statusCode = activity.GetProperty("status").GetProperty("value").GetString()!;
+
+        // A01 = accepted, A02 = rejected
+        var accepted = statusCode == "A01";
+
+        string? rejectionReason = null;
+        string? rejectionCode = null;
+        if (!accepted && activity.TryGetProperty("Reason", out var reason))
+        {
+            rejectionCode = reason.TryGetProperty("code", out var code) ? code.GetString() : null;
+            rejectionReason = reason.TryGetProperty("text", out var text) ? text.GetString() : null;
+        }
+
+        return new Rsm009Result(correlationId, accepted, rejectionReason, rejectionCode);
+    }
+
     private static TimeSpan GetStep(string resolution, DateTimeOffset periodStart, DateTimeOffset periodEnd)
     {
         if (ResolutionMap.TryGetValue(resolution, out var step))

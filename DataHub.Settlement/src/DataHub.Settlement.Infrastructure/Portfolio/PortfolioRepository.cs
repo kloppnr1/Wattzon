@@ -71,7 +71,8 @@ public sealed class PortfolioRepository : IPortfolioRepository
         const string sql = """
             INSERT INTO portfolio.product (name, energy_model, margin_ore_per_kwh, supplement_ore_per_kwh, subscription_kr_per_month)
             VALUES (@Name, @EnergyModel, @MarginOrePerKwh, @SupplementOrePerKwh, @SubscriptionKrPerMonth)
-            RETURNING id, name, energy_model, margin_ore_per_kwh, supplement_ore_per_kwh, subscription_kr_per_month
+            RETURNING id, name, energy_model, margin_ore_per_kwh, supplement_ore_per_kwh, subscription_kr_per_month,
+                      description, green_energy, display_order
             """;
 
         await using var conn = new NpgsqlConnection(_connectionString);
@@ -153,7 +154,8 @@ public sealed class PortfolioRepository : IPortfolioRepository
     public async Task<Product?> GetProductAsync(Guid productId, CancellationToken ct)
     {
         const string sql = """
-            SELECT id, name, energy_model, margin_ore_per_kwh, supplement_ore_per_kwh, subscription_kr_per_month
+            SELECT id, name, energy_model, margin_ore_per_kwh, supplement_ore_per_kwh, subscription_kr_per_month,
+                   description, green_energy, display_order
             FROM portfolio.product
             WHERE id = @ProductId
             """;
@@ -234,5 +236,86 @@ public sealed class PortfolioRepository : IPortfolioRepository
         await conn.OpenAsync(ct);
         await conn.ExecuteAsync(new CommandDefinition(sql,
             new { Gsrn = gsrn, NewGridAreaCode = newGridAreaCode, NewPriceArea = newPriceArea }, cancellationToken: ct));
+    }
+
+    public async Task<IReadOnlyList<Product>> GetActiveProductsAsync(CancellationToken ct)
+    {
+        const string sql = """
+            SELECT id, name, energy_model, margin_ore_per_kwh, supplement_ore_per_kwh,
+                   subscription_kr_per_month, description, green_energy, display_order
+            FROM portfolio.product
+            WHERE is_active = true
+            ORDER BY display_order, name
+            """;
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+        await conn.OpenAsync(ct);
+        var result = await conn.QueryAsync<Product>(
+            new CommandDefinition(sql, cancellationToken: ct));
+        return result.ToList();
+    }
+
+    public async Task<Customer?> GetCustomerAsync(Guid id, CancellationToken ct)
+    {
+        const string sql = """
+            SELECT id, name, cpr_cvr, contact_type, status
+            FROM portfolio.customer
+            WHERE id = @Id
+            """;
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+        await conn.OpenAsync(ct);
+        return await conn.QuerySingleOrDefaultAsync<Customer>(
+            new CommandDefinition(sql, new { Id = id }, cancellationToken: ct));
+    }
+
+    public async Task<IReadOnlyList<Customer>> GetCustomersAsync(CancellationToken ct)
+    {
+        const string sql = """
+            SELECT id, name, cpr_cvr, contact_type, status
+            FROM portfolio.customer
+            ORDER BY name
+            """;
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+        await conn.OpenAsync(ct);
+        var result = await conn.QueryAsync<Customer>(
+            new CommandDefinition(sql, cancellationToken: ct));
+        return result.ToList();
+    }
+
+    public async Task<IReadOnlyList<Contract>> GetContractsForCustomerAsync(Guid customerId, CancellationToken ct)
+    {
+        const string sql = """
+            SELECT id, customer_id, gsrn, product_id, billing_frequency, payment_model, start_date
+            FROM portfolio.contract
+            WHERE customer_id = @CustomerId
+            ORDER BY start_date DESC
+            """;
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+        await conn.OpenAsync(ct);
+        var result = await conn.QueryAsync<Contract>(
+            new CommandDefinition(sql, new { CustomerId = customerId }, cancellationToken: ct));
+        return result.ToList();
+    }
+
+    public async Task<IReadOnlyList<MeteringPointWithSupply>> GetMeteringPointsForCustomerAsync(Guid customerId, CancellationToken ct)
+    {
+        const string sql = """
+            SELECT DISTINCT mp.gsrn, mp.type, mp.settlement_method, mp.grid_area_code,
+                   mp.price_area, mp.connection_status,
+                   sp.start_date AS supply_start, sp.end_date AS supply_end
+            FROM portfolio.contract c
+            JOIN portfolio.metering_point mp ON mp.gsrn = c.gsrn
+            LEFT JOIN portfolio.supply_period sp ON sp.gsrn = c.gsrn AND sp.end_date IS NULL
+            WHERE c.customer_id = @CustomerId
+            """;
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+        await conn.OpenAsync(ct);
+        var result = await conn.QueryAsync<MeteringPointWithSupply>(
+            new CommandDefinition(sql, new { CustomerId = customerId }, cancellationToken: ct));
+        return result.ToList();
     }
 }

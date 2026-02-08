@@ -1,6 +1,24 @@
 # DataHub Settlement System
 
-A settlement system for Danish electricity suppliers integrating with Energinet's DataHub 3 platform. Handles customer onboarding, metering data ingestion, hourly settlement, billing, and the full customer lifecycle.
+A settlement system for a Danish electricity supplier (elleverandør) integrating with Energinet's DataHub 3 — the central market hub that coordinates all electricity suppliers, grid companies, and metering data in Denmark.
+
+## What this system does
+
+In Denmark, every electricity customer has a metering point (identified by a GSRN number) that measures hourly consumption. When a customer signs up with us, we become responsible for billing them — not just for our own margin, but for the full invoice including grid tariffs, system tariffs, and taxes set by other parties. The complexity is in calculating every hour correctly and keeping in sync with DataHub.
+
+The system covers the full customer lifecycle:
+
+1. **[Products & Pricing](#1-products--pricing)** — What we sell: margin + subscription. Everything else on the invoice is pass-through.
+2. **[Onboarding](#2-onboarding)** — A customer signs up, we tell DataHub, and after validation + a waiting period the metering point becomes ours.
+3. **[Settlement](#3-settlement)** — Every hour of consumption is calculated: energy + grid tariff + system tariff + transmission + electricity tax + subscriptions + VAT.
+4. **[Billing & Payment](#4-billing--payment)** — Settlement results become invoices. Two models: pay for actual use (arrears) or estimated quarterly payments (aconto).
+5. **[Offboarding](#5-offboarding)** — Customer leaves (switches supplier, moves out, or non-payment). Final settlement, final invoice.
+6. **[Corrections & Edge Cases](#6-corrections--edge-cases)** — Corrected metering data, erroneous switches, tariff changes mid-period, electrical heating thresholds, solar net settlement.
+7. **[Reconciliation](#7-reconciliation)** — DataHub calculates aggregated totals independently. We compare against ours and investigate discrepancies.
+8. **[DataHub Communication](#8-datahub-communication)** — Queue-based integration: we poll 4 queues for incoming data and send BRS requests for market processes.
+
+All communication with DataHub happens through CIM JSON messages over HTTP queues. We never call DataHub on demand — data arrives when DataHub has something for us, and we send requests when we need to initiate a market process.
+
 
 ### Quick Start
 
@@ -25,7 +43,7 @@ dotnet run --project src/DataHub.Settlement.Web       # Dashboard at localhost:5
 
 A customer choosing an electricity supplier is really choosing **two numbers**: a margin and a subscription fee. Everything else on the invoice — grid tariffs, system tariffs, transmission, electricity tax — is identical regardless of supplier. These are pass-through costs.
 
-DDQ's product is defined by:
+The supplier's product is defined by:
 
 | Parameter | Example | What it means |
 |-----------|---------|--------------|
@@ -33,22 +51,23 @@ DDQ's product is defined by:
 | **Supplement** | 0 øre/kWh (optional) | Extra per-kWh charge (e.g., "green energy" surcharge) |
 | **Subscription** | 39 DKK/month | Fixed monthly fee, independent of consumption |
 | **Energy model** | Spot | Customer pays the hourly Nord Pool price + margin. Alternative: fixed price per kWh |
-| **Binding period** | None / 3 / 6 / 12 months | How long the customer commits |
 
-Grid tariffs, system tariffs, transmission, and electricity tax are set by the grid company, Energinet, and the state respectively. The customer can't negotiate these — they're the same whether the customer is with DDQ or any other supplier. There are ~40 grid companies in Denmark, each with different rates, but which one applies is determined by the customer's address, not their choice of supplier.
+Note: binding periods are not allowed for electricity supply contracts in Denmark. Customers can switch supplier at any time with 15 business days notice.
 
-This matters for the onboarding API: **the sales channel only needs to show DDQ's own pricing** (margin + subscription). No need to estimate grid tariffs at signup — the customer can't compare those between suppliers anyway.
+Grid tariffs, system tariffs, transmission, and electricity tax are set by the grid company, Energinet, and the state respectively. The customer can't negotiate these — they're the same regardless of supplier. There are ~40 grid companies in Denmark, each with different rates, but which one applies is determined by the customer's address, not their choice of supplier.
+
+This matters for the onboarding API: **the sales channel only needs to show our own pricing** (margin + subscription). No need to estimate grid tariffs at signup — the customer can't compare those between suppliers anyway.
 
 ```
-Invoice line               Who sets the price      DDQ controls?
+Invoice line               Who sets the price      We control?
 ─────────────────────────  ─────────────────────── ─────────────
-Energy (spot + margin)     Nord Pool + DDQ         ✓ margin
+Energy (spot + margin)     Nord Pool + us          ✓ margin
 Grid tariff                Grid company            ✗ pass-through
 System tariff              Energinet               ✗ pass-through
 Transmission               Energinet               ✗ pass-through
 Electricity tax (elafgift) The state               ✗ pass-through
 Grid subscription          Grid company            ✗ pass-through
-Supplier subscription      DDQ                     ✓ subscription
+Supplier subscription      Us                      ✓ subscription
 VAT (25%)                  The state               ✗ calculated
 ```
 
@@ -100,6 +119,7 @@ DataHub validates:
             ▼
     Status → active
 ```
+
 
 ### Why it takes 15 business days
 
@@ -232,7 +252,7 @@ Recalculated automatically at each quarterly settlement, or on customer request.
 
 | Scenario | Trigger | BRS process |
 |----------|---------|-------------|
-| **Switches to another supplier** | Another DDQ sends BRS-001 for our metering point | We receive notification, don't initiate |
+| **Switches to another supplier** | The new supplier sends BRS-001 for our metering point | We receive notification, don't initiate |
 | **Terminates contract** | Customer calls to cancel | We send BRS-002 (end of supply) |
 | **Moves out** | Customer moves to a new address | We or grid company sends BRS-010 |
 | **Non-payment** | Collections process exhausted | We send BRS-002 with non-payment reason |
@@ -460,7 +480,7 @@ All DataHub messages use CIM (Common Information Model) JSON format — a standa
 
 ---
 
-## Verified Reference Invoices
+## Reference Invoices (Golden Masters)
 
 10 hand-calculated invoices that the settlement engine must reproduce exactly. If any of these break, something is wrong.
 

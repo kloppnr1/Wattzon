@@ -1,9 +1,12 @@
 using DataHub.Settlement.Application.DataHub;
+using DataHub.Settlement.Application.Lifecycle;
 using DataHub.Settlement.Application.Metering;
 using DataHub.Settlement.Application.Messaging;
+using DataHub.Settlement.Application.Onboarding;
 using DataHub.Settlement.Application.Parsing;
 using DataHub.Settlement.Application.Portfolio;
 using DataHub.Settlement.Application.Settlement;
+using DataHub.Settlement.Domain;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
@@ -15,6 +18,10 @@ public sealed class QueuePollerService : BackgroundService
     private readonly ICimParser _parser;
     private readonly IMeteringDataRepository _meteringRepo;
     private readonly IPortfolioRepository _portfolioRepo;
+    private readonly IProcessRepository _processRepo;
+    private readonly ISignupRepository _signupRepo;
+    private readonly IOnboardingService _onboardingService;
+    private readonly IClock _clock;
     private readonly IMessageLog _messageLog;
     private readonly ILogger<QueuePollerService> _logger;
     private readonly TimeSpan _pollInterval;
@@ -32,6 +39,10 @@ public sealed class QueuePollerService : BackgroundService
         ICimParser parser,
         IMeteringDataRepository meteringRepo,
         IPortfolioRepository portfolioRepo,
+        IProcessRepository processRepo,
+        ISignupRepository signupRepo,
+        IOnboardingService onboardingService,
+        IClock clock,
         IMessageLog messageLog,
         ILogger<QueuePollerService> logger,
         TimeSpan? pollInterval = null)
@@ -40,6 +51,10 @@ public sealed class QueuePollerService : BackgroundService
         _parser = parser;
         _meteringRepo = meteringRepo;
         _portfolioRepo = portfolioRepo;
+        _processRepo = processRepo;
+        _signupRepo = signupRepo;
+        _onboardingService = onboardingService;
+        _clock = clock;
         _messageLog = messageLog;
         _logger = logger;
         _pollInterval = pollInterval ?? TimeSpan.FromSeconds(5);
@@ -169,11 +184,78 @@ public sealed class QueuePollerService : BackgroundService
 
             await _portfolioRepo.ActivateMeteringPointAsync(
                 masterData.MeteringPointId, masterData.SupplyStart.UtcDateTime, ct);
-            await _portfolioRepo.CreateSupplyPeriodAsync(
-                masterData.MeteringPointId, DateOnly.FromDateTime(masterData.SupplyStart.UtcDateTime), ct);
 
-            _logger.LogInformation("RSM-007: Activated metering point {Gsrn}, supply from {Start}",
-                masterData.MeteringPointId, masterData.SupplyStart);
+            // Create portfolio from signup if one exists for this GSRN
+            var signup = await _signupRepo.GetActiveByGsrnAsync(masterData.MeteringPointId, ct);
+            if (signup is not null)
+            {
+                var effectiveDate = DateOnly.FromDateTime(masterData.SupplyStart.UtcDateTime);
+
+                await _portfolioRepo.CreateContractAsync(
+                    signup.CustomerId, masterData.MeteringPointId, signup.ProductId,
+                    "quarterly", "aconto", effectiveDate, ct);
+
+                await _portfolioRepo.CreateSupplyPeriodAsync(masterData.MeteringPointId, effectiveDate, ct);
+
+                // Transition process to completed and sync signup
+                if (signup.ProcessRequestId.HasValue)
+                {
+                    var stateMachine = new ProcessStateMachine(_processRepo, _clock);
+                    try
+                    {
+                        await stateMachine.MarkCompletedAsync(signup.ProcessRequestId.Value, ct);
+                    }
+                    catch (InvalidOperationException)
+                    {
+                        // Process may already be completed by the scheduler
+                    }
+                    await _onboardingService.SyncFromProcessAsync(signup.ProcessRequestId.Value, "completed", null, ct);
+                }
+
+                _logger.LogInformation(
+                    "RSM-007: Created portfolio from signup {SignupNumber} for GSRN {Gsrn}, supply from {Start}",
+                    signup.SignupNumber, masterData.MeteringPointId, masterData.SupplyStart);
+            }
+            else
+            {
+                // No signup — create supply period without contract (pre-onboarding metering points)
+                await _portfolioRepo.CreateSupplyPeriodAsync(
+                    masterData.MeteringPointId, DateOnly.FromDateTime(masterData.SupplyStart.UtcDateTime), ct);
+
+                _logger.LogInformation("RSM-007: Activated metering point {Gsrn}, supply from {Start} (no signup)",
+                    masterData.MeteringPointId, masterData.SupplyStart);
+            }
+        }
+        else if (message.MessageType is "RSM-009" or "rsm-009" or "RSM009")
+        {
+            var receipt = _parser.ParseRsm009(message.RawPayload);
+
+            var process = await _processRepo.GetByCorrelationIdAsync(receipt.CorrelationId, ct);
+            if (process is null)
+            {
+                _logger.LogWarning("RSM-009: No process found for correlation {CorrelationId}", receipt.CorrelationId);
+                return;
+            }
+
+            var stateMachine = new ProcessStateMachine(_processRepo, _clock);
+
+            if (receipt.Accepted)
+            {
+                await stateMachine.MarkAcknowledgedAsync(process.Id, ct);
+                await _onboardingService.SyncFromProcessAsync(process.Id, "effectuation_pending", null, ct);
+
+                _logger.LogInformation("RSM-009: Process {ProcessId} accepted for GSRN {Gsrn}",
+                    process.Id, process.Gsrn);
+            }
+            else
+            {
+                var reason = receipt.RejectionReason ?? receipt.RejectionCode ?? "Unknown rejection";
+                await stateMachine.MarkRejectedAsync(process.Id, reason, ct);
+                await _onboardingService.SyncFromProcessAsync(process.Id, "rejected", reason, ct);
+
+                _logger.LogWarning("RSM-009: Process {ProcessId} rejected for GSRN {Gsrn}: {Reason}",
+                    process.Id, process.Gsrn, reason);
+            }
         }
         else if (message.MessageType is "RSM-004" or "rsm-004" or "RSM004")
         {

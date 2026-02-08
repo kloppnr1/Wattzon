@@ -78,7 +78,7 @@ Track A has no dependencies on Track B. They can be developed in parallel.
 | Wire `QueuePollerService` | On RSM-014: parse → store → trigger reconciliation |
 | Auto-reconciliation | After storing aggregation, compare against own settlement for same grid area + period |
 | Store discrepancies | `datahub.reconciliation_result` table with match/mismatch status, delta, deviating GSRNs |
-| Dashboard: Reconciliation page | Show reconciliation results, highlight discrepancies |
+| API: Reconciliation results | Expose reconciliation results via API for back-office consumption |
 
 **Tests:**
 
@@ -217,12 +217,12 @@ Track A has no dependencies on Track B. They can be developed in parallel.
 **Design principles:**
 - **API-first.** All sales channels call the same endpoints. One API, multiple callers.
 - **Simple API, smart backend.** The sales channel just submits a signup and tracks status. All DataHub complexity (which BRS process, notice periods, rejections, retries) is handled internally by the orchestration layer.
-- **Margin is the product.** Customers choose a supplier based on margin + subscription — grid tariffs, system tariffs, and taxes are pass-through costs identical across all suppliers. The API only needs to present DDQ's own pricing, not a full invoice estimate.
+- **Margin is the product.** Customers choose a supplier based on margin + subscription — grid tariffs, system tariffs, and taxes are pass-through costs identical across all suppliers. The API only needs to present our own pricing, not a full invoice estimate.
 
 ```
 ┌──────────────┐  ┌──────────────┐  ┌──────────────┐
-│  Website     │  │  Mobile App  │  │  Customer    │
-│  (self-serv) │  │  (self-serv) │  │  Service UI  │
+│  Website     │  │  Mobile App  │  │  Back Office  │
+│  (self-serv) │  │  (self-serv) │  │  (cust. svc)  │
 └──────┬───────┘  └──────┬───────┘  └──────┬───────┘
        │                 │                 │
        └─────────────────┼─────────────────┘
@@ -236,10 +236,13 @@ Track A has no dependencies on Track B. They can be developed in parallel.
               │  Orchestration      │  Owns the complexity:
               │  Layer              │  • BRS-001 vs BRS-009
               │                     │  • 15 business day calc
-              │                     │  • Rejection → retry
+              │                     │  • RSM-009 → status
               │                     │  • RSM-007 → activation
               └─────────────────────┘
 ```
+
+**Scope boundary:** The back-office web application (for handling rejections, GSRN disambiguation, manual corrections) will be a **separate project within this repo** — it shares the same database and domain models but is not part of the B1 scope. The existing `DataHub.Settlement.Web` project is a development/testing dashboard only.
+
 
 ---
 
@@ -253,7 +256,7 @@ The Danish energy market has structural complexity that the API must hide from t
 | **BRS-001 vs BRS-009** — supplier switch or move-in? Different processes, different notice periods | Orchestration maps `type` to correct BRS process | `type`: `switch` or `move_in` |
 | **Effective date and notice periods** — BRS-001 requires 15 business days, BRS-009 can be immediate | Orchestration validates the date against process-specific rules | Desired effective date |
 | **Grid area unknown at signup** — tariffs only arrive via RSM-007 after activation | Irrelevant for signup — grid tariffs are pass-through, same regardless of supplier | Nothing — products show margin + subscription only |
-| **Rejection handling** — CPR/CVR mismatch, conflicting process (E16), invalid GSRN | Orchestration handles internally. Retryable errors are retried. Fatal errors surface to status | Nothing — status shows `rejected` with reason |
+| **Rejection handling** — CPR/CVR mismatch, conflicting process (E16), invalid GSRN | Status shows `rejected` with reason. Back office reviews and handles correction manually | Nothing — status shows `rejected` with reason |
 | **RSM-007 activation** — master data arrives on effective date, reveals grid area, settlement method, meter type | Orchestration processes RSM-007, assigns tariffs, activates metering point | Nothing — status changes to `active` |
 
 **The sales channel's mental model:** "I submitted a signup. It's either processing, active, rejected, or cancelled."
@@ -269,7 +272,7 @@ The Danish energy market has structural complexity that the API must hide from t
 | `GET /api/signup/{id}/status` | Check signup progress |
 | `POST /api/signup/{id}/cancel` | Cancel before activation |
 
-Four endpoints. The sales channel handles GSRN disambiguation (multiple meters per address) on their side before calling the API.
+Four endpoints. Back office handles GSRN disambiguation (multiple meters per address) before calling the API.
 
 **Request/response:**
 
@@ -344,7 +347,7 @@ This is where the real complexity lives. A key design decision shapes the entire
 ```
 1. Look up GSRN from DAR ID via address lookup service
    - If no GSRN found: return 400 with error
-   - If multiple GSRNs: return 400 — sales channel handles disambiguation on their side
+   - If multiple GSRNs: return 400 — back office handles disambiguation
 2. Validate GSRN format (18 digits, starts with "57")
 3. Check no active signup already exists for this GSRN
 4. Validate product exists and is active
@@ -399,7 +402,7 @@ On RSM-007 from MasterData queue:
 
   NEW — create portfolio from signup:
   - Look up signup by GSRN
-  - Create contract (customer_id from signup, product_id from signup, GSRN, effective_date)
+  - Create contract (customer_id from signup, product_id from signup, GSRN, effective_date, billing_frequency=quarterly, payment_model=aconto)
   - Create supply period (GSRN, effective_date)
   - Activate metering point
   - Transition process: effectuation_pending → completed
@@ -430,20 +433,21 @@ POST /api/signup/{id}/cancel:
 
 The API accepts a **DAR ID** (Danish Address Register identifier), not a raw GSRN. The `AddressLookupService` resolves DAR ID → GSRN(s) internally.
 
-**Edge case: multiple GSRNs per address.** An apartment building may have multiple metering points at the same DAR ID. For this phase, we return 400 if the lookup returns multiple GSRNs. The sales channel handles disambiguation on their side (e.g., letting the customer pick in the signup form) and re-submits with the correct address.
+**Edge case: multiple GSRNs per address.** An apartment building may have multiple metering points at the same DAR ID. The API returns 400 if the lookup returns multiple GSRNs. Back office handles disambiguation (identifying the correct metering point) and re-submits with the right address.
 
 **Stub implementation:** The existing `StubAddressLookupClient` generates deterministic GSRNs from DAR IDs. Real Energinet API integration is a future task — the interface is already abstracted via `IAddressLookupClient`.
 
 ---
 
-#### Open business decisions
+#### Business decisions (resolved)
 
-| Decision | Options | Recommendation |
-|----------|---------|---------------|
-| **Default billing model** | Aconto (pre-payment) or arrears (post-payment) | Start with arrears only — industry trend, simpler, no estimation needed. Add aconto as product option later |
-| **Rejection retry** | Auto-retry or surface to customer service | Auto-retry for transient errors (E16 conflict). Surface CPR mismatch to customer service for manual correction |
-| **Multiple GSRNs per DAR ID** | Sales channel handles disambiguation before calling the API | API returns 400 if lookup yields multiple GSRNs |
-| **Multiple signups per customer** | Allow or block | Allow — one customer can have multiple metering points (e.g., house + garage) |
+| Decision | Resolution |
+|----------|-----------|
+| **Default billing model** | **Aconto.** Quarterly pre-payment is the standard. Settlement still calculates actual consumption per hour — the difference between actual and aconto paid is reconciled each quarter. |
+| **Rejection handling** | **Back office handles all rejections.** The system surfaces the rejection reason via the status endpoint. No auto-retry logic. Back office staff (customer service) review the rejection, correct the data, and re-submit manually. |
+| **Multiple GSRNs per DAR ID** | **Back office handles disambiguation.** If the address lookup returns multiple metering points, back office resolves which one is correct before creating the signup. The API does not need a disambiguation flow. |
+| **Switch vs. move-in determination** | **Back office decides.** The sales channel / back office provides the `type` field. The system does not attempt to figure out whether there's a current supplier — that's a back-office concern. |
+| **Multiple signups per customer** | **Allowed.** One customer can have multiple metering points (e.g., house + garage). |
 
 ---
 
@@ -451,7 +455,7 @@ The API accepts a **DAR ID** (Danish Address Register identifier), not a raw GSR
 
 | Layer | Task |
 |-------|------|
-| **Migration V021** | `portfolio.signup` table (dar_id, gsrn, customer_id, product_id, process_request_id, type, effective_date, status). Product table enhancements (description, pricing_type, green_energy, display_order) |
+| **Migration V021** | `portfolio.signup` table (dar_id, gsrn, customer_id, product_id, process_request_id, type, effective_date, status). Product table fixes: drop `binding_period_months` (binding periods not allowed in DK electricity market), add `description`, `green_energy`, `display_order` |
 | **Application** | `OnboardingService` (DAR ID → GSRN lookup, validate, create signup, cancel, sync from process), `GsrnValidator`, `BusinessDayCalculator`, `ISignupRepository`, models |
 | **Infrastructure** | `SignupRepository` (Dapper), `BusinessDayCalculator` (Danish holidays), product listing query |
 | **API** | 4 endpoints in `DataHub.Settlement.Api`, DI wiring, OpenAPI/Swagger |
@@ -490,6 +494,124 @@ The API accepts a **DAR ID** (Danish Address Register identifier), not a raw GSR
 - Portfolio only contains confirmed data — no placeholders
 - Cancellation works at all stages (registered, processing)
 - Full signup → activation flow works end-to-end against the simulator
+
+---
+
+### B1b. Back-Office Web Application
+
+**Problem:** Back-office staff (customer service) need a UI to create signups, handle DataHub rejections, disambiguate GSRNs, and monitor the onboarding pipeline. The settlement system provides the API — this is the application that consumes it.
+
+**Technology:** React + Vite + Tailwind CSS. Plain HTML tables and forms. No component library. Lives in `backoffice/` at the repo root alongside `DataHub.Settlement/`. Calls the API over HTTP.
+
+**Scope boundary:** This is a separate project within the same repo. It shares no code with the .NET backend — it talks exclusively through the REST API.
+
+---
+
+#### What back-office staff do
+
+| Task | How it works today | What the app provides |
+|------|-------------------|----------------------|
+| **Create a signup** | Manual / not possible | Form: enter address → resolve GSRN → select product → submit |
+| **Handle rejected signup** | Not visible | See rejection reason, correct data, re-submit as new signup |
+| **Disambiguate address** | Not possible | Address lookup shows all GSRNs, staff picks the right one |
+| **Monitor signups** | Not visible | Table of all signups, filterable by status |
+| **Cancel signup** | Not possible | Cancel button on signup detail |
+| **View customer** | Database query | Customer detail: contracts, metering points, supply periods |
+
+---
+
+#### Pages
+
+| Page | Route | What it shows |
+|------|-------|---------------|
+| **Signup list** | `/signups` | Table of all signups with status filter (all, registered, processing, active, rejected, cancelled). Columns: signup number, customer name, GSRN, type, effective date, status, created. Click row → detail |
+| **New signup** | `/signups/new` | Step 1: Enter DAR ID → API returns GSRN(s). If multiple, show picker. Step 2: Select product. Step 3: Enter customer details (name, CPR/CVR, contact type, email, phone). Step 4: Choose type (switch/move-in), effective date. Submit. |
+| **Signup detail** | `/signups/:id` | Full signup info, current status, rejection reason if rejected, process event timeline, cancel button (if cancellable) |
+| **Customer list** | `/customers` | Table of all customers. Columns: name, CPR/CVR, contact type, status. Click → detail |
+| **Customer detail** | `/customers/:id` | Customer info, list of signups, active contracts, metering points, supply periods |
+| **Products** | `/products` | Table of products. Inline edit for description, display order, green energy flag |
+
+---
+
+#### API endpoints needed (missing from B1)
+
+The current API has 4 endpoints for the signup flow. The back-office app needs more:
+
+| Endpoint | Purpose | Status |
+|----------|---------|--------|
+| `GET /api/products` | List active products | Exists |
+| `POST /api/signup` | Create signup | Exists |
+| `GET /api/signup/{id}/status` | Signup status | Exists |
+| `POST /api/signup/{id}/cancel` | Cancel signup | Exists |
+| **`GET /api/signups`** | List all signups, filter by status | **New** |
+| **`GET /api/signups/{id}`** | Full signup detail (includes customer info) | **New** |
+| **`GET /api/signups/{id}/events`** | Process event timeline for a signup | **New** |
+| **`GET /api/address/{darId}`** | Look up address → list of GSRNs | **New** |
+| **`GET /api/customers`** | List customers | **New** |
+| **`GET /api/customers/{id}`** | Customer detail with contracts, metering points | **New** |
+
+No product CRUD yet — back-office can view products, creation/editing stays in the database for now.
+
+---
+
+#### What to build
+
+| Layer | Task |
+|-------|------|
+| **API** (extend `DataHub.Settlement.Api`) | 6 new endpoints listed above. Add CORS for local dev (React on :5173, API on :5001). |
+| **Repository** (extend) | `ISignupRepository.GetAllAsync(status?)`, `IPortfolioRepository.GetCustomerAsync(id)`, `IPortfolioRepository.GetCustomersAsync()`, `IPortfolioRepository.GetContractsForCustomerAsync(id)` |
+| **Frontend project** (`backoffice/`) | Vite + React + Tailwind. `fetch()` wrapper for API calls. Pages: signup list, new signup, signup detail, customer list, customer detail, products. |
+
+---
+
+#### Frontend structure
+
+```
+backoffice/
+├── index.html
+├── package.json
+├── vite.config.js
+├── tailwind.config.js
+├── src/
+│   ├── main.jsx
+│   ├── api.js              — fetch wrapper (base URL, error handling)
+│   ├── App.jsx             — routes
+│   ├── layout/
+│   │   └── Layout.jsx      — sidebar nav + main content area
+│   ├── pages/
+│   │   ├── SignupList.jsx
+│   │   ├── SignupNew.jsx
+│   │   ├── SignupDetail.jsx
+│   │   ├── CustomerList.jsx
+│   │   ├── CustomerDetail.jsx
+│   │   └── Products.jsx
+│   └── index.css           — Tailwind imports
+```
+
+No state management library. React state + `useEffect` for data fetching. Simple.
+
+---
+
+#### Implementation order
+
+1. **API first** — add the 6 missing endpoints + CORS. This is backend work, testable independently.
+2. **Frontend scaffold** — Vite + React + Tailwind project setup, routing, layout with sidebar nav.
+3. **Signup list page** — table with status filter, the most immediately useful page.
+4. **Address lookup + new signup** — the full creation flow with GSRN resolution.
+5. **Signup detail** — view details, event timeline, cancel.
+6. **Customer pages** — list and detail.
+7. **Products page** — read-only listing.
+
+---
+
+#### Exit criteria
+
+- Back-office staff can create signups through the UI, including GSRN disambiguation
+- Rejected signups are visible with reasons — staff can create a corrected re-submission
+- All signups are listed and filterable by status
+- Process event timeline visible on signup detail
+- Customer list and detail pages functional
+- Frontend runs on `localhost:5173`, API on `localhost:5001`
 
 ---
 
@@ -700,7 +822,7 @@ These items are **not** in this phase:
 
 | Migration | Track | Purpose |
 |-----------|-------|---------|
-| V021 | B1 | `portfolio.product` enhancements (description, pricing_type, green_energy, display_order) + `portfolio.signup` table (dar_id, gsrn, type, effective_date, status) |
+| V021 | B1 | `portfolio.product` fixes: drop `binding_period_months`, add `description`, `green_energy`, `display_order`. New `portfolio.signup` table (dar_id, gsrn, customer_id, product_id, process_request_id, type, effective_date, status) |
 | V022 | A1 | `datahub.aggregation_data` + `datahub.reconciliation_result` tables |
 | V023 | B3 | `billing.invoice` + `billing.credit_note` tables |
 

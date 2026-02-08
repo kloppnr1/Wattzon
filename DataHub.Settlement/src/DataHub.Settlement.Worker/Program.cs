@@ -4,6 +4,7 @@ using DataHub.Settlement.Application.DataHub;
 using DataHub.Settlement.Application.Lifecycle;
 using DataHub.Settlement.Application.Metering;
 using DataHub.Settlement.Application.Messaging;
+using DataHub.Settlement.Application.Onboarding;
 using DataHub.Settlement.Application.Parsing;
 using DataHub.Settlement.Application.Portfolio;
 using DataHub.Settlement.Application.Settlement;
@@ -17,6 +18,7 @@ using DataHub.Settlement.Infrastructure.DataHub;
 using DataHub.Settlement.Infrastructure.Lifecycle;
 using DataHub.Settlement.Infrastructure.Messaging;
 using DataHub.Settlement.Infrastructure.Metering;
+using DataHub.Settlement.Infrastructure.Onboarding;
 using DataHub.Settlement.Infrastructure.Parsing;
 using DataHub.Settlement.Infrastructure.Portfolio;
 using DataHub.Settlement.Infrastructure.Settlement;
@@ -107,7 +109,10 @@ builder.Services.AddSingleton<ISpotPriceRepository>(new SpotPriceRepository(conn
 builder.Services.AddSingleton<ITariffRepository>(new TariffRepository(connectionString));
 builder.Services.AddSingleton<IPortfolioRepository>(new PortfolioRepository(connectionString));
 builder.Services.AddSingleton<IProcessRepository>(new ProcessRepository(connectionString));
+builder.Services.AddSingleton<ISignupRepository>(new SignupRepository(connectionString));
 builder.Services.AddSingleton<IMessageLog>(new MessageLog(connectionString));
+builder.Services.AddSingleton<IBrsRequestBuilder, BrsRequestBuilder>();
+builder.Services.AddSingleton<IOnboardingService, OnboardingService>();
 
 // Settlement services
 builder.Services.AddSingleton<ISettlementEngine, SettlementEngine>();

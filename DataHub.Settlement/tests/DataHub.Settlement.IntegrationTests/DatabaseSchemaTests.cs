@@ -75,7 +75,7 @@ public class DatabaseSchemaTests : IAsyncLifetime
             _connection);
 
         var count = (long)(await cmd.ExecuteScalarAsync())!;
-        count.Should().Be(26, "MVP 3 requires exactly 26 tables");
+        count.Should().Be(27, "MVP 3 + B1 onboarding (V021) requires exactly 27 tables");
     }
 
     [Fact]
