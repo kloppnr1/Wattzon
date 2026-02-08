@@ -325,60 +325,101 @@ The consumer never sees `sent_to_datahub` vs. `acknowledged` vs. `effectuation_p
 
 #### Orchestration layer (internal — what the API hides)
 
-This is where the real complexity lives. When `POST /api/signup` is called:
+This is where the real complexity lives. A key design decision shapes the entire flow:
 
-**Step 1: Validate and create**
+**Portfolio entities are NOT created at signup.** The signup only creates a customer record, a signup tracking record, and a process request. Metering point, contract, and supply period are created later when RSM-007 arrives with confirmed data from DataHub. This avoids placeholder data and conflicts with the existing `QueuePollerService` which creates metering points from RSM-007.
+
+**Existing orchestration gaps that must be filled:**
+
+| Gap | What's missing | What to build |
+|-----|---------------|---------------|
+| Sending BRS-001/009 | No service picks up pending process requests and sends them to DataHub | Extend `ProcessSchedulerService` to send pending requests via `HttpDataHubClient` |
+| Processing RSM-009 | `QueuePollerService` doesn't handle acceptance/rejection receipts | Add RSM-009 handling to `QueuePollerService.ProcessMasterDataAsync()` |
+| Signup status sync | No link between process state changes and signup status | Wire `OnboardingService.SyncFromProcessAsync()` into queue poller |
+| Portfolio creation on activation | Current RSM-007 handler creates metering point but not contract | Extend RSM-007 handler to also create contract + supply period from signup data |
+
+**Step 1: Validate and create (synchronous, in API request)**
 ```
 1. Look up GSRN from DAR ID via address lookup service
    - If no GSRN found: return 400 with error
    - If multiple GSRNs: return 400 — consumer must disambiguate (future: support selection)
 2. Validate GSRN format (18 digits, starts with "57")
-3. Check no active signup/contract already exists for this GSRN
+3. Check no active signup already exists for this GSRN
 4. Validate product exists and is active
 5. Validate effective date:
    - type = "switch": must be ≥ 15 business days from today
    - type = "move_in": must be ≥ today
-6. Map type to process type: "switch" → supplier_switch (BRS-001), "move_in" → move_in (BRS-009)
-7. Create customer, metering point (placeholder — type/grid area unknown until RSM-007),
-   contract, supply period
-8. Create process request (pending) with the consumer's effective date
-9. Return signup ID + resolved GSRN immediately
+6. Map type to process type: "switch" → supplier_switch, "move_in" → move_in
+7. Create customer record (name, CPR/CVR, contact type)
+8. Create signup record (dar_id, gsrn, customer_id, product_id, type, effective_date)
+9. Create process request (pending) with the effective date
+10. Return signup ID + resolved GSRN immediately
 ```
 
-**Step 2: Background processing (ProcessSchedulerService)**
+Portfolio entities NOT created here. No metering point, no contract, no supply period.
+
+**Step 2: Send to DataHub (background — ProcessSchedulerService, NEW)**
 ```
-1. Pick up pending process request
-2. Build BRS request based on process type (already determined at signup):
-   - supplier_switch → BRS-001
-   - move_in → BRS-009
-3. Send to DataHub
-4. Update process state: pending → sent_to_datahub
-5. Sync signup status: registered → processing
+1. Pick up process requests with status "pending"
+2. Look up signup record by process_request_id to get CPR/CVR
+3. Build BRS request:
+   - supplier_switch → BRS-001 (gsrn, cpr_cvr, effective_date)
+   - move_in → BRS-009 (gsrn, cpr_cvr, effective_date)
+4. Send via HttpDataHubClient.SendRequestAsync()
+5. Store correlation ID from response
+6. Transition process: pending → sent_to_datahub
+7. Sync signup status: registered → processing
 ```
 
-**Step 3: Response handling (QueuePollerService)**
-```
-On RSM-009 (receipt):
-  - Accepted: process → acknowledged → effectuation_pending
-  - Rejected: process → rejected, store reason
-    - If retryable (E16 conflict): schedule retry
-    - If fatal (GSRN doesn't exist, CPR mismatch): sync rejection to signup
+This fills the existing gap where nothing sends pending requests to DataHub.
 
-On RSM-007 (master data, arrives on effective date):
-  - Update metering point with real data: grid area, type, settlement method
-  - Assign correct grid tariffs based on grid area
+**Step 3: Handle RSM-009 receipt (background — QueuePollerService, NEW)**
+```
+On RSM-009 from MasterData queue:
+  - Parse acceptance/rejection
+  - Look up process by correlation ID
+
+  If accepted:
+    - Transition: sent_to_datahub → acknowledged → effectuation_pending
+    - Sync signup status (stays "processing")
+
+  If rejected:
+    - Transition: sent_to_datahub → rejected
+    - Store rejection reason
+    - Sync signup status: processing → rejected (with reason)
+```
+
+**Step 4: Handle RSM-007 activation (background — QueuePollerService, EXTENDED)**
+```
+On RSM-007 from MasterData queue:
+  - Parse master data (grid area, type, settlement method, price area)
+  - Existing behavior: create/update metering point, ensure grid area
+
+  NEW — create portfolio from signup:
+  - Look up signup by GSRN
+  - Create contract (customer_id from signup, product_id from signup, GSRN, effective_date)
+  - Create supply period (GSRN, effective_date)
   - Activate metering point
-  - Process → completed
+  - Transition process: effectuation_pending → completed
   - Sync signup status: processing → active
 ```
 
-**Step 4: Cancellation**
+Now the portfolio only contains confirmed, real data from DataHub.
+
+**Step 5: Cancellation**
 ```
 POST /api/signup/{id}/cancel:
-  - If status is registered or processing:
-    - If BRS-001 already sent and before effective date: send BRS-003 (cancel switch)
-    - If not yet sent: just cancel internally
-  - If status is active: return 409 — too late, use offboarding (BRS-002) instead
+  - If signup status is "registered" (not yet sent):
+    - Cancel process internally
+    - Sync signup: registered → cancelled
+
+  - If signup status is "processing" (BRS sent, before effective date):
+    - Send BRS-003 (cancel switch) to DataHub
+    - Wait for confirmation
+    - Sync signup: processing → cancelled
+
+  - If signup status is "active":
+    - Return 409 — too late, use offboarding (BRS-002) instead
 ```
 
 ---
@@ -408,11 +449,13 @@ The API accepts a **DAR ID** (Danish Address Register identifier), not a raw GSR
 
 | Layer | Task |
 |-------|------|
-| **Migration V021** | `portfolio.signup` table (with `dar_id`, `type`), product table enhancements (description, pricing_type, green_energy, display_order) |
+| **Migration V021** | `portfolio.signup` table (dar_id, gsrn, customer_id, product_id, process_request_id, type, effective_date, status). Product table enhancements (description, pricing_type, green_energy, display_order) |
 | **Application** | `OnboardingService` (DAR ID → GSRN lookup, validate, create signup, cancel, sync from process), `GsrnValidator`, `BusinessDayCalculator`, `ISignupRepository`, models |
-| **Infrastructure** | `SignupRepository` (Dapper), `BusinessDayCalculator` (Danish holidays), product query |
-| **API** | 4 endpoints in `DataHub.Settlement.Api` |
-| **Orchestration** | Wire signup status sync into existing `QueuePollerService` (on RSM-009 and RSM-007) |
+| **Infrastructure** | `SignupRepository` (Dapper), `BusinessDayCalculator` (Danish holidays), product listing query |
+| **API** | 4 endpoints in `DataHub.Settlement.Api`, DI wiring, OpenAPI/Swagger |
+| **ProcessSchedulerService** (extend) | Pick up `pending` process requests, look up signup for CPR/CVR, build + send BRS-001/009 via `HttpDataHubClient`, transition to `sent_to_datahub` |
+| **QueuePollerService** (extend) | Add RSM-009 handling (accepted → acknowledged, rejected → rejected + reason). Extend RSM-007 handler to create contract + supply period from signup data |
+| **Signup status sync** | Wire `OnboardingService.SyncFromProcessAsync()` into queue poller on every process state change |
 | **Simulator** | Onboarding scenario: signup → BRS-001 → RSM-009 accepted → RSM-007 → active |
 
 **Tests:**
@@ -424,19 +467,26 @@ The API accepts a **DAR ID** (Danish Address Register identifier), not a raw GSR
 | Effective date validation: switch requires 15 days, move_in allows today | Unit |
 | DAR ID → GSRN lookup succeeds | Unit |
 | DAR ID with multiple GSRNs returns 400 | Unit |
-| Signup creates all portfolio entities with resolved GSRN | Integration |
+| Signup creates customer + signup + process (no metering point, no contract) | Integration |
 | Signup queues correct BRS process (BRS-001 for switch, BRS-009 for move_in) | Integration |
+| ProcessSchedulerService sends pending BRS-001 to DataHub | Integration |
+| RSM-009 accepted → process acknowledged | Integration |
+| RSM-009 rejected → signup status rejected with reason | Integration |
+| RSM-007 → creates metering point + contract + supply period from signup | Integration |
 | Status reflects simplified consumer states | Integration |
-| Cancel before activation | Integration |
+| Cancel before send (registered → cancelled) | Integration |
+| Cancel after send (processing → BRS-003 → cancelled) | Integration |
 | Cancel after activation returns 409 | Integration |
-| Rejection syncs reason to signup | Integration |
-| Full flow: signup → BRS-001 → RSM-009 → RSM-007 → status = active | Integration (simulator) |
+| Full flow: signup → BRS-001 → RSM-009 → RSM-007 → portfolio created → status = active | Integration (simulator) |
 
 **Exit criteria:**
 - All sales channels can create customers through 4 API endpoints
 - Consumer sees simple status progression (registered → processing → active)
-- Internal orchestration handles BRS-001, rejections, and RSM-007 activation
-- Cancellation works before activation
+- Pending process requests are automatically sent to DataHub (gap filled)
+- RSM-009 receipts are processed (gap filled)
+- RSM-007 creates portfolio entities from signup data (contract, supply period)
+- Portfolio only contains confirmed data — no placeholders
+- Cancellation works at all stages (registered, processing)
 - Full signup → activation flow works end-to-end against the simulator
 
 ---
