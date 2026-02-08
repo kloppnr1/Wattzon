@@ -77,8 +77,15 @@ export default function Layout() {
         <div className="px-5 pt-7 pb-6 relative z-10">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-white/15 backdrop-blur-sm flex items-center justify-center glow-pulse">
-              <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" d="m3.75 13.5 10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75Z" />
+              <svg className="w-6 h-6" viewBox="0 0 32 32" fill="none">
+                <path d="M18.5 3L7 18h7.5l-2 11L26 14h-7.5l2-11z" fill="white" />
+                <path d="M18.5 3L7 18h7.5l-2 11L26 14h-7.5l2-11z" fill="url(#volt-shine)" fillOpacity="0.3" />
+                <defs>
+                  <linearGradient id="volt-shine" x1="10" y1="3" x2="22" y2="29">
+                    <stop stopColor="white" stopOpacity="0.8" />
+                    <stop offset="1" stopColor="white" stopOpacity="0" />
+                  </linearGradient>
+                </defs>
               </svg>
             </div>
             <div>
