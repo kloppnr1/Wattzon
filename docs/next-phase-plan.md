@@ -245,13 +245,14 @@ Track A has no dependencies on Track B. They can be developed in parallel.
 
 The Danish energy market has structural complexity that the API must hide from the consumer:
 
-| Complexity | Who handles it | Consumer sees |
-|-----------|---------------|---------------|
-| **BRS-001 vs BRS-009** — supplier switch or move-in? Different processes, different notice periods | Orchestration layer decides based on context | Nothing — just "processing" |
-| **15 business day notice period** — BRS-001 requires minimum notice | Orchestration calculates earliest valid effective date automatically | Nothing — just the estimated activation date |
-| **Grid area unknown at signup** — tariffs only arrive via RSM-007 after activation | Irrelevant for signup — grid tariffs are pass-through, same regardless of supplier | Products show margin + subscription only |
-| **Rejection handling** — CPR/CVR mismatch, conflicting process (E16), invalid GSRN | Orchestration handles internally. Retryable errors are retried. Fatal errors surface to status | Status shows `rejected` with a human-readable reason |
-| **RSM-007 activation** — master data arrives on effective date, reveals grid area, settlement method, meter type | Orchestration processes RSM-007, assigns tariffs, activates metering point | Status changes to `active` |
+| Complexity | Who handles it | Consumer provides |
+|-----------|---------------|-------------------|
+| **GSRN discovery** — customer knows address, not GSRN | We look up GSRN from DAR ID via Energinet address API | DAR ID (address identifier) |
+| **BRS-001 vs BRS-009** — supplier switch or move-in? Different processes, different notice periods | Orchestration maps consumer's `type` to correct BRS process | `type`: `switch` or `move_in` |
+| **Effective date and notice periods** — BRS-001 requires 15 business days, BRS-009 can be immediate | Orchestration validates the date against process-specific rules | Desired effective date |
+| **Grid area unknown at signup** — tariffs only arrive via RSM-007 after activation | Irrelevant for signup — grid tariffs are pass-through, same regardless of supplier | Nothing — products show margin + subscription only |
+| **Rejection handling** — CPR/CVR mismatch, conflicting process (E16), invalid GSRN | Orchestration handles internally. Retryable errors are retried. Fatal errors surface to status | Nothing — status shows `rejected` with reason |
+| **RSM-007 activation** — master data arrives on effective date, reveals grid area, settlement method, meter type | Orchestration processes RSM-007, assigns tariffs, activates metering point | Nothing — status changes to `active` |
 
 **The consumer's mental model:** "I submitted a signup. It's either processing, active, rejected, or cancelled."
 
@@ -273,14 +274,15 @@ That's it. Four endpoints.
 ```
 POST /api/signup
 {
-  "gsrn": "571313180000000001",
+  "dar_id": "0a3f50a0-75eb-32b8-e044-0003ba298018",
   "customer_name": "Anders Jensen",
   "cpr_cvr": "0101901234",
   "contact_type": "private",
   "email": "anders@example.dk",
   "phone": "+4512345678",
   "product_id": "<uuid>",
-  "channel": "web"
+  "type": "switch",
+  "effective_date": "2026-04-01"
 }
 
 → 201 Created
@@ -288,9 +290,11 @@ POST /api/signup
   "signup_id": "SGN-2026-00042",
   "status": "registered",
   "gsrn": "571313180000000001",
-  "estimated_activation": "2026-04-01"
+  "effective_date": "2026-04-01"
 }
 ```
+
+The consumer provides a **DAR ID** (Danish Address Register identifier). We resolve the GSRN internally. The `type` field is either `switch` (BRS-001 — taking over from another supplier) or `move_in` (BRS-009 — no current supplier). The `effective_date` is the customer's desired start date.
 
 ```
 GET /api/signup/SGN-2026-00042/status
@@ -300,7 +304,7 @@ GET /api/signup/SGN-2026-00042/status
   "signup_id": "SGN-2026-00042",
   "status": "processing",
   "gsrn": "571313180000000001",
-  "estimated_activation": "2026-04-01",
+  "effective_date": "2026-04-01",
   "rejection_reason": null
 }
 ```
@@ -325,23 +329,29 @@ This is where the real complexity lives. When `POST /api/signup` is called:
 
 **Step 1: Validate and create**
 ```
-1. Validate GSRN format (18 digits, starts with "57")
-2. Check no active signup/contract already exists for this GSRN
-3. Validate product exists and is active
-4. Create customer, metering point (placeholder — type/grid area unknown until RSM-007),
+1. Look up GSRN from DAR ID via address lookup service
+   - If no GSRN found: return 400 with error
+   - If multiple GSRNs: return 400 — consumer must disambiguate (future: support selection)
+2. Validate GSRN format (18 digits, starts with "57")
+3. Check no active signup/contract already exists for this GSRN
+4. Validate product exists and is active
+5. Validate effective date:
+   - type = "switch": must be ≥ 15 business days from today
+   - type = "move_in": must be ≥ today
+6. Map type to process type: "switch" → supplier_switch (BRS-001), "move_in" → move_in (BRS-009)
+7. Create customer, metering point (placeholder — type/grid area unknown until RSM-007),
    contract, supply period
-5. Calculate earliest valid effective date (today + 15 business days, skip weekends/holidays)
-6. Create process request (pending)
-7. Return signup ID immediately
+8. Create process request (pending) with the consumer's effective date
+9. Return signup ID + resolved GSRN immediately
 ```
 
 **Step 2: Background processing (ProcessSchedulerService)**
 ```
 1. Pick up pending process request
-2. Determine BRS type:
-   - Default: BRS-001 (supplier switch) — most common case
-   - If DataHub rejects with "no current supplier": retry as BRS-009 (move-in)
-3. Build and send BRS request to DataHub
+2. Build BRS request based on process type (already determined at signup):
+   - supplier_switch → BRS-001
+   - move_in → BRS-009
+3. Send to DataHub
 4. Update process state: pending → sent_to_datahub
 5. Sync signup status: registered → processing
 ```
@@ -373,19 +383,13 @@ POST /api/signup/{id}/cancel:
 
 ---
 
-#### GSRN discovery: a separate concern
+#### Address-to-GSRN lookup
 
-Most customers don't know their 18-digit GSRN. They know their address. The typical flow:
+The API accepts a **DAR ID** (Danish Address Register identifier), not a raw GSRN. The `AddressLookupService` resolves DAR ID → GSRN(s) internally.
 
-1. Website shows an address input field
-2. Address autocomplete via DAWA (Danmarks Adressers Web API)
-3. Address → GSRN lookup via Energinet's API (one address can have multiple GSRNs)
-4. Customer selects the correct GSRN (or it's unambiguous)
-5. GSRN is passed to `POST /api/signup`
+**Edge case: multiple GSRNs per address.** An apartment building may have multiple metering points at the same DAR ID. For this phase, we return 400 if the lookup returns multiple GSRNs. Future enhancement: return the list and let the consumer select.
 
-**For this phase:** The API accepts a GSRN directly. Address-to-GSRN lookup is the website/app's responsibility, using DAWA/Energinet APIs directly. We provide a helper endpoint later if needed, but it's not part of the core onboarding API.
-
-**Rationale:** Keeping GSRN lookup in the frontend avoids coupling the onboarding API to address service availability. The website can cache, autocomplete, and handle the UX better than a backend proxy.
+**Stub implementation:** The existing `StubAddressLookupClient` generates deterministic GSRNs from DAR IDs. Real Energinet API integration is a future task — the interface is already abstracted via `IAddressLookupClient`.
 
 ---
 
@@ -394,8 +398,8 @@ Most customers don't know their 18-digit GSRN. They know their address. The typi
 | Decision | Options | Recommendation |
 |----------|---------|---------------|
 | **Default billing model** | Aconto (pre-payment) or arrears (post-payment) | Start with arrears only — industry trend, simpler, no estimation needed. Add aconto as product option later |
-| **BRS-001 rejection retry** | Auto-retry or surface to customer service | Auto-retry for transient errors (E16 conflict). Surface CPR mismatch to customer service for manual correction |
-| **Effective date** | Fixed (earliest valid) or customer-chosen | System calculates earliest valid date. Customer-chosen date is a future enhancement |
+| **Rejection retry** | Auto-retry or surface to customer service | Auto-retry for transient errors (E16 conflict). Surface CPR mismatch to customer service for manual correction |
+| **Multiple GSRNs per DAR ID** | Return error or let consumer select | Return 400 for now. Future: return list for selection |
 | **Multiple signups per customer** | Allow or block | Allow — one customer can have multiple metering points (e.g., house + garage) |
 
 ---
@@ -404,9 +408,9 @@ Most customers don't know their 18-digit GSRN. They know their address. The typi
 
 | Layer | Task |
 |-------|------|
-| **Migration V021** | `portfolio.signup` table, product table enhancements (description, pricing_type, green_energy, display_order) |
-| **Application** | `OnboardingService` (validate, create signup, cancel, sync from process), `GsrnValidator`, `ISignupRepository`, models |
-| **Infrastructure** | `SignupRepository` (Dapper), business day calculator, product query |
+| **Migration V021** | `portfolio.signup` table (with `dar_id`, `type`), product table enhancements (description, pricing_type, green_energy, display_order) |
+| **Application** | `OnboardingService` (DAR ID → GSRN lookup, validate, create signup, cancel, sync from process), `GsrnValidator`, `BusinessDayCalculator`, `ISignupRepository`, models |
+| **Infrastructure** | `SignupRepository` (Dapper), `BusinessDayCalculator` (Danish holidays), product query |
 | **API** | 4 endpoints in `DataHub.Settlement.Api` |
 | **Orchestration** | Wire signup status sync into existing `QueuePollerService` (on RSM-009 and RSM-007) |
 | **Simulator** | Onboarding scenario: signup → BRS-001 → RSM-009 accepted → RSM-007 → active |
@@ -417,8 +421,11 @@ Most customers don't know their 18-digit GSRN. They know their address. The typi
 |------|------|
 | GSRN validation: format, prefix, length | Unit |
 | Business day calculation: skip weekends, 15-day minimum | Unit |
-| Signup creates all portfolio entities | Integration |
-| Signup queues BRS-001 process | Integration |
+| Effective date validation: switch requires 15 days, move_in allows today | Unit |
+| DAR ID → GSRN lookup succeeds | Unit |
+| DAR ID with multiple GSRNs returns 400 | Unit |
+| Signup creates all portfolio entities with resolved GSRN | Integration |
+| Signup queues correct BRS process (BRS-001 for switch, BRS-009 for move_in) | Integration |
 | Status reflects simplified consumer states | Integration |
 | Cancel before activation | Integration |
 | Cancel after activation returns 409 | Integration |
@@ -641,9 +648,9 @@ These items are **not** in this phase:
 
 | Migration | Track | Purpose |
 |-----------|-------|---------|
-| V022 | B1 | `portfolio.product` enhancements (description, active, pricing_type, green_energy) + `portfolio.signup` tracking table |
-| V023 | A1 | `datahub.aggregation_data` + `datahub.reconciliation_result` tables |
-| V024 | B3 | `billing.invoice` + `billing.credit_note` tables |
+| V021 | B1 | `portfolio.product` enhancements (description, pricing_type, green_energy, display_order) + `portfolio.signup` table (dar_id, gsrn, type, effective_date, status) |
+| V022 | A1 | `datahub.aggregation_data` + `datahub.reconciliation_result` tables |
+| V023 | B3 | `billing.invoice` + `billing.credit_note` tables |
 
 ---
 
@@ -664,7 +671,8 @@ These items are **not** in this phase:
 
 | Risk | Impact | Mitigation |
 |------|--------|------------|
-| BRS-001 vs BRS-009 auto-detection unreliable | Wrong process sent, DataHub rejects | Default to BRS-001 (most common). On rejection indicating no current supplier, retry as BRS-009 |
+| DAR ID → GSRN lookup returns multiple GSRNs | Signup fails with 400, customer stuck | Return 400 with clear message. Future: return list for consumer to disambiguate |
+| DAR ID lookup service unavailable | Signup fails entirely | Retry with backoff. Future: allow direct GSRN input as fallback |
 | CPR/CVR mismatch discovered only after BRS-001 sent | Signup stuck in rejected state, customer confused | Surface rejection reason via status endpoint. Customer service can correct and re-submit |
 | 15+ business day gap causes customer dropout | Customer forgets or switches to competitor | Clear status communication. Future: email/SMS at each state change |
 | Effective date calculation wrong (holidays, weekends) | BRS-001 rejected for insufficient notice | Build robust business day calculator with Danish holiday calendar |
