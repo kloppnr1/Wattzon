@@ -66,12 +66,12 @@ const navSections = [
 
 export default function Layout() {
   return (
-    <div className="flex h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50/30">
-      {/* Sidebar — indigo-to-violet gradient */}
-      <aside className="w-[240px] bg-gradient-to-b from-indigo-600 via-indigo-700 to-violet-800 flex flex-col shrink-0 shadow-2xl shadow-indigo-900/20 relative overflow-hidden">
+    <div className="flex h-screen bg-gradient-to-br from-slate-50 via-white to-amber-50/30">
+      {/* Sidebar — amber-to-orange gradient */}
+      <aside className="w-[240px] bg-gradient-to-b from-amber-500 via-amber-600 to-orange-700 flex flex-col shrink-0 shadow-2xl shadow-amber-900/20 relative overflow-hidden">
         {/* Decorative orbs */}
         <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl" />
-        <div className="absolute bottom-20 left-0 w-24 h-24 bg-violet-400/10 rounded-full -translate-x-1/2 blur-xl" />
+        <div className="absolute bottom-20 left-0 w-24 h-24 bg-orange-400/10 rounded-full -translate-x-1/2 blur-xl" />
 
         {/* Brand */}
         <div className="px-5 pt-7 pb-6 relative z-10">
@@ -90,7 +90,7 @@ export default function Layout() {
             </div>
             <div>
               <span className="text-[18px] font-bold text-white tracking-tight">Volt</span>
-              <p className="text-[10px] text-indigo-200/60 font-medium">Energy Platform</p>
+              <p className="text-[10px] text-amber-100/60 font-medium">Energy Platform</p>
             </div>
           </div>
         </div>
@@ -99,7 +99,7 @@ export default function Layout() {
         <nav className="flex-1 px-3 pb-4 space-y-5 overflow-y-auto relative z-10">
           {navSections.map((section) => (
             <div key={section.label}>
-              <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-indigo-300/50">
+              <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-amber-200/50">
                 {section.label}
               </p>
               <div className="space-y-0.5">
@@ -112,7 +112,7 @@ export default function Layout() {
                       `group relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium transition-all duration-200 ${
                         isActive
                           ? 'bg-white/15 text-white shadow-lg shadow-black/10 backdrop-blur-sm'
-                          : 'text-indigo-200/70 hover:bg-white/10 hover:text-white'
+                          : 'text-amber-100/70 hover:bg-white/10 hover:text-white'
                       }`
                     }
                   >
@@ -138,9 +138,9 @@ export default function Layout() {
         <div className="px-5 py-4 border-t border-white/10 relative z-10">
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-sm shadow-emerald-400/50" />
-            <span className="text-[11px] text-indigo-200/60 font-medium">Development</span>
+            <span className="text-[11px] text-amber-100/60 font-medium">Development</span>
           </div>
-          <p className="text-[10px] text-indigo-300/30 mt-1">Volt v0.1</p>
+          <p className="text-[10px] text-amber-200/30 mt-1">Volt v0.1</p>
         </div>
       </aside>
 

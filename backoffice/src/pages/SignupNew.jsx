@@ -119,7 +119,7 @@ export default function SignupNew() {
   return (
     <div className="p-8 max-w-2xl mx-auto">
       {/* Breadcrumb */}
-      <Link to="/signups" className="inline-flex items-center gap-1.5 text-sm text-slate-400 hover:text-indigo-600 mb-6 transition-colors font-medium">
+      <Link to="/signups" className="inline-flex items-center gap-1.5 text-sm text-slate-400 hover:text-amber-600 mb-6 transition-colors font-medium">
         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
         </svg>
@@ -140,7 +140,7 @@ export default function SignupNew() {
                     i < step
                       ? 'bg-gradient-to-br from-emerald-400 to-teal-500 text-white shadow-md shadow-emerald-500/25'
                       : i === step
-                      ? 'bg-gradient-to-br from-indigo-500 to-violet-500 text-white shadow-lg shadow-indigo-500/30'
+                      ? 'bg-gradient-to-br from-amber-500 to-orange-500 text-white shadow-lg shadow-amber-500/30'
                       : 'bg-slate-100 text-slate-400'
                   }`}
                 >
@@ -235,10 +235,10 @@ export default function SignupNew() {
                           onChange={(e) => { setAddressQuery(e.target.value); setShowSuggestions(true); }}
                           onFocus={() => setShowSuggestions(true)}
                           placeholder="Start typing an address, e.g. Vestergade 10, 8000 Aarhus"
-                          className="w-full rounded-xl border-2 border-slate-200 bg-white pl-10 pr-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 transition-all"
+                          className="w-full rounded-xl border-2 border-slate-200 bg-white pl-10 pr-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/10 transition-all"
                         />
                         {searchingAddress && (
-                          <div className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 border-2 border-indigo-100 border-t-indigo-500 rounded-full animate-spin" />
+                          <div className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 border-2 border-amber-100 border-t-amber-500 rounded-full animate-spin" />
                         )}
                       </div>
                       {showSuggestions && addressSuggestions.length > 0 && (
@@ -247,7 +247,7 @@ export default function SignupNew() {
                             <button
                               key={i}
                               onClick={() => selectAddress(s)}
-                              className="w-full text-left px-4 py-3 text-sm text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 flex items-center gap-2.5 transition-colors"
+                              className="w-full text-left px-4 py-3 text-sm text-slate-700 hover:bg-amber-50 hover:text-amber-700 flex items-center gap-2.5 transition-colors"
                             >
                               <svg className="w-4 h-4 text-slate-400 shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
@@ -276,7 +276,7 @@ export default function SignupNew() {
                     value={darId}
                     onChange={(e) => setDarId(e.target.value)}
                     placeholder="0a3f50a0-75eb-32b8-e044-0003ba298018"
-                    className="flex-1 rounded-xl border-2 border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 transition-all"
+                    className="flex-1 rounded-xl border-2 border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/10 transition-all"
                   />
                   <button
                     onClick={() => lookupGsrn(darId)}
@@ -291,7 +291,7 @@ export default function SignupNew() {
 
             {lookingUp && (
               <div className="flex items-center gap-2 text-sm text-slate-500">
-                <div className="w-4 h-4 border-2 border-indigo-100 border-t-indigo-500 rounded-full animate-spin" />
+                <div className="w-4 h-4 border-2 border-amber-100 border-t-amber-500 rounded-full animate-spin" />
                 Looking up metering points...
               </div>
             )}
@@ -315,7 +315,7 @@ export default function SignupNew() {
                       key={mp.gsrn}
                       className={`flex items-center gap-3 border-2 rounded-xl px-4 py-3.5 cursor-pointer transition-all duration-200 ${
                         selectedGsrn === mp.gsrn
-                          ? 'border-indigo-400 bg-indigo-50 shadow-sm shadow-indigo-500/10'
+                          ? 'border-amber-400 bg-amber-50 shadow-sm shadow-amber-500/10'
                           : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
                       }`}
                     >
@@ -324,7 +324,7 @@ export default function SignupNew() {
                         name="gsrn"
                         checked={selectedGsrn === mp.gsrn}
                         onChange={() => setSelectedGsrn(mp.gsrn)}
-                        className="accent-indigo-500"
+                        className="accent-amber-500"
                       />
                       <div>
                         <span className="font-mono text-sm text-slate-900 font-medium">{mp.gsrn}</span>
@@ -340,7 +340,7 @@ export default function SignupNew() {
               <button
                 onClick={() => { setError(null); setStep(1); }}
                 disabled={!selectedGsrn}
-                className="px-6 py-2.5 bg-gradient-to-r from-indigo-500 to-violet-500 text-white text-sm font-semibold rounded-xl shadow-lg shadow-indigo-500/25 hover:shadow-xl hover:shadow-indigo-500/30 hover:-translate-y-0.5 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:transform-none disabled:hover:shadow-lg transition-all duration-200"
+                className="px-6 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-sm font-semibold rounded-xl shadow-lg shadow-amber-500/25 hover:shadow-xl hover:shadow-amber-500/30 hover:-translate-y-0.5 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:transform-none disabled:hover:shadow-lg transition-all duration-200"
               >
                 Continue
               </button>
@@ -361,7 +361,7 @@ export default function SignupNew() {
                   key={p.id}
                   className={`block border-2 rounded-xl px-4 py-4 cursor-pointer transition-all duration-200 ${
                     selectedProduct === p.id
-                      ? 'border-indigo-400 bg-indigo-50 shadow-sm shadow-indigo-500/10'
+                      ? 'border-amber-400 bg-amber-50 shadow-sm shadow-amber-500/10'
                       : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
                   }`}
                 >
@@ -371,7 +371,7 @@ export default function SignupNew() {
                       name="product"
                       checked={selectedProduct === p.id}
                       onChange={() => setSelectedProduct(p.id)}
-                      className="accent-indigo-500 mt-0.5"
+                      className="accent-amber-500 mt-0.5"
                     />
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
@@ -398,7 +398,7 @@ export default function SignupNew() {
               <button
                 onClick={() => { setError(null); setStep(2); }}
                 disabled={!selectedProduct}
-                className="px-6 py-2.5 bg-gradient-to-r from-indigo-500 to-violet-500 text-white text-sm font-semibold rounded-xl shadow-lg shadow-indigo-500/25 hover:shadow-xl hover:-translate-y-0.5 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:transform-none transition-all duration-200"
+                className="px-6 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-sm font-semibold rounded-xl shadow-lg shadow-amber-500/25 hover:shadow-xl hover:-translate-y-0.5 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:transform-none transition-all duration-200"
               >
                 Continue
               </button>
@@ -417,17 +417,17 @@ export default function SignupNew() {
               <div className="col-span-2">
                 <label className="block text-sm font-semibold text-slate-700 mb-1.5">Full name</label>
                 <input type="text" value={customerName} onChange={(e) => setCustomerName(e.target.value)}
-                  className="w-full rounded-xl border-2 border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 transition-all" />
+                  className="w-full rounded-xl border-2 border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/10 transition-all" />
               </div>
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-1.5">CPR/CVR</label>
                 <input type="text" value={cprCvr} onChange={(e) => setCprCvr(e.target.value)} placeholder="0101901234"
-                  className="w-full rounded-xl border-2 border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 transition-all" />
+                  className="w-full rounded-xl border-2 border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/10 transition-all" />
               </div>
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-1.5">Contact type</label>
                 <select value={contactType} onChange={(e) => setContactType(e.target.value)}
-                  className="w-full rounded-xl border-2 border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 focus:outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 transition-all">
+                  className="w-full rounded-xl border-2 border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 focus:outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/10 transition-all">
                   <option value="private">Private</option>
                   <option value="business">Business</option>
                 </select>
@@ -435,12 +435,12 @@ export default function SignupNew() {
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-1.5">Email</label>
                 <input type="email" value={email} onChange={(e) => setEmail(e.target.value)}
-                  className="w-full rounded-xl border-2 border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 transition-all" />
+                  className="w-full rounded-xl border-2 border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/10 transition-all" />
               </div>
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-1.5">Phone</label>
                 <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+4512345678"
-                  className="w-full rounded-xl border-2 border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 transition-all" />
+                  className="w-full rounded-xl border-2 border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/10 transition-all" />
               </div>
             </div>
             <div className="flex justify-between pt-2">
@@ -448,7 +448,7 @@ export default function SignupNew() {
               <button
                 onClick={() => { setError(null); setStep(3); }}
                 disabled={!customerName || !cprCvr || !email}
-                className="px-6 py-2.5 bg-gradient-to-r from-indigo-500 to-violet-500 text-white text-sm font-semibold rounded-xl shadow-lg shadow-indigo-500/25 hover:shadow-xl hover:-translate-y-0.5 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:transform-none transition-all duration-200"
+                className="px-6 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-sm font-semibold rounded-xl shadow-lg shadow-amber-500/25 hover:shadow-xl hover:-translate-y-0.5 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:transform-none transition-all duration-200"
               >
                 Continue
               </button>
@@ -468,7 +468,7 @@ export default function SignupNew() {
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-1.5">Process type</label>
                 <select value={type} onChange={(e) => setType(e.target.value)}
-                  className="w-full rounded-xl border-2 border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 focus:outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 transition-all">
+                  className="w-full rounded-xl border-2 border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 focus:outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/10 transition-all">
                   <option value="switch">Supplier switch (BRS-001)</option>
                   <option value="move_in">Move-in (BRS-009)</option>
                 </select>
@@ -476,14 +476,14 @@ export default function SignupNew() {
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-1.5">Effective date</label>
                 <input type="date" value={effectiveDate} onChange={(e) => setEffectiveDate(e.target.value)}
-                  className="w-full rounded-xl border-2 border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 focus:outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/10 transition-all" />
+                  className="w-full rounded-xl border-2 border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 focus:outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/10 transition-all" />
               </div>
             </div>
 
             <div className="bg-slate-50 border border-slate-200 rounded-xl overflow-hidden">
               <div className="px-4 py-3 border-b border-slate-200 bg-white">
                 <div className="flex items-center gap-2">
-                  <div className="w-1 h-4 rounded-full bg-gradient-to-b from-indigo-500 to-violet-500" />
+                  <div className="w-1 h-4 rounded-full bg-gradient-to-b from-amber-500 to-orange-500" />
                   <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Summary</p>
                 </div>
               </div>
@@ -503,7 +503,7 @@ export default function SignupNew() {
               <button
                 onClick={handleSubmit}
                 disabled={!effectiveDate || submitting}
-                className="px-7 py-2.5 bg-gradient-to-r from-indigo-500 to-violet-500 text-white text-sm font-bold rounded-xl shadow-lg shadow-indigo-500/25 hover:shadow-xl hover:-translate-y-0.5 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:transform-none transition-all duration-200"
+                className="px-7 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-sm font-bold rounded-xl shadow-lg shadow-amber-500/25 hover:shadow-xl hover:-translate-y-0.5 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:transform-none transition-all duration-200"
               >
                 {submitting ? (
                   <span className="flex items-center gap-2">

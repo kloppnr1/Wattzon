@@ -47,7 +47,7 @@ export default function SignupList() {
         </div>
         <Link
           to="/signups/new"
-          className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-indigo-500 to-violet-500 text-white text-sm font-semibold rounded-xl shadow-lg shadow-indigo-500/25 hover:shadow-xl hover:shadow-indigo-500/30 hover:-translate-y-0.5 transition-all duration-200"
+          className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-sm font-semibold rounded-xl shadow-lg shadow-amber-500/25 hover:shadow-xl hover:shadow-amber-500/30 hover:-translate-y-0.5 transition-all duration-200"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
@@ -64,7 +64,7 @@ export default function SignupList() {
             onClick={() => setFilter(s)}
             className={`px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all duration-200 ${
               filter === s
-                ? 'bg-gradient-to-r from-indigo-500 to-violet-500 text-white shadow-md shadow-indigo-500/20'
+                ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-md shadow-amber-500/20'
                 : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
             }`}
           >
@@ -86,7 +86,7 @@ export default function SignupList() {
       <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden animate-fade-in-up" style={{ animationDelay: '120ms' }}>
         {loading ? (
           <div className="p-14 text-center">
-            <div className="inline-block w-8 h-8 border-[3px] border-indigo-100 border-t-indigo-500 rounded-full animate-spin" />
+            <div className="inline-block w-8 h-8 border-[3px] border-amber-100 border-t-amber-500 rounded-full animate-spin" />
             <p className="text-sm text-slate-400 mt-3 font-medium">Loading signups...</p>
           </div>
         ) : signups.length === 0 ? (
@@ -117,9 +117,9 @@ export default function SignupList() {
             </thead>
             <tbody className="divide-y divide-slate-50">
               {signups.map((s, i) => (
-                <tr key={s.id} className="hover:bg-indigo-50/40 transition-colors duration-150 animate-slide-in opacity-0" style={{ animationDelay: `${i * 40}ms` }}>
+                <tr key={s.id} className="hover:bg-amber-50/40 transition-colors duration-150 animate-slide-in opacity-0" style={{ animationDelay: `${i * 40}ms` }}>
                   <td className="px-6 py-3.5">
-                    <Link to={`/signups/${s.id}`} className="text-sm font-semibold text-indigo-600 hover:text-indigo-800 transition-colors">
+                    <Link to={`/signups/${s.id}`} className="text-sm font-semibold text-amber-600 hover:text-amber-800 transition-colors">
                       {s.signupNumber}
                     </Link>
                   </td>
@@ -138,7 +138,7 @@ export default function SignupList() {
                     {new Date(s.createdAt).toLocaleDateString('da-DK')}
                   </td>
                   <td className="px-6 py-3.5 text-right">
-                    <Link to={`/signups/${s.id}`} className="text-slate-300 hover:text-indigo-500 transition-colors">
+                    <Link to={`/signups/${s.id}`} className="text-slate-300 hover:text-amber-500 transition-colors">
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
                       </svg>

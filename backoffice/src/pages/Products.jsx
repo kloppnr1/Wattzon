@@ -31,7 +31,7 @@ export default function Products() {
 
       {loading ? (
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-14 text-center">
-          <div className="inline-block w-8 h-8 border-[3px] border-indigo-100 border-t-indigo-500 rounded-full animate-spin" />
+          <div className="inline-block w-8 h-8 border-[3px] border-amber-100 border-t-amber-500 rounded-full animate-spin" />
           <p className="text-sm text-slate-400 mt-3 font-medium">Loading products...</p>
         </div>
       ) : products.length === 0 ? (
@@ -51,18 +51,18 @@ export default function Products() {
               className="card-lift bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden animate-fade-in-up opacity-0"
             >
               {/* Gradient top strip */}
-              <div className="h-1 bg-gradient-to-r from-indigo-500 via-violet-500 to-purple-500" />
+              <div className="h-1 bg-gradient-to-r from-amber-500 via-orange-500 to-red-500" />
               <div className="p-5">
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-500 flex items-center justify-center shadow-md shadow-indigo-500/20">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center shadow-md shadow-amber-500/20">
                       <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" d="m3.75 13.5 10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75Z" />
                       </svg>
                     </div>
                     <div>
                       <h3 className="text-base font-semibold text-slate-900">{p.name}</h3>
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-indigo-50 text-indigo-600 mt-0.5">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-amber-50 text-amber-600 mt-0.5">
                         {p.energyModel}
                       </span>
                     </div>

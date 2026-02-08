@@ -33,7 +33,7 @@ export default function CustomerList() {
       <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden animate-fade-in-up" style={{ animationDelay: '60ms' }}>
         {loading ? (
           <div className="p-14 text-center">
-            <div className="inline-block w-8 h-8 border-[3px] border-indigo-100 border-t-indigo-500 rounded-full animate-spin" />
+            <div className="inline-block w-8 h-8 border-[3px] border-amber-100 border-t-amber-500 rounded-full animate-spin" />
             <p className="text-sm text-slate-400 mt-3 font-medium">Loading customers...</p>
           </div>
         ) : customers.length === 0 ? (
@@ -59,15 +59,15 @@ export default function CustomerList() {
             </thead>
             <tbody className="divide-y divide-slate-50">
               {customers.map((c, i) => (
-                <tr key={c.id} className="hover:bg-indigo-50/40 transition-colors duration-150 animate-slide-in opacity-0" style={{ animationDelay: `${i * 40}ms` }}>
+                <tr key={c.id} className="hover:bg-amber-50/40 transition-colors duration-150 animate-slide-in opacity-0" style={{ animationDelay: `${i * 40}ms` }}>
                   <td className="px-6 py-3.5">
                     <Link to={`/customers/${c.id}`} className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-400 to-violet-500 flex items-center justify-center shadow-sm">
+                      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shadow-sm">
                         <span className="text-xs font-bold text-white">
                           {c.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
                         </span>
                       </div>
-                      <span className="text-sm font-semibold text-indigo-600 hover:text-indigo-800 transition-colors">
+                      <span className="text-sm font-semibold text-amber-600 hover:text-amber-800 transition-colors">
                         {c.name}
                       </span>
                     </Link>
@@ -85,7 +85,7 @@ export default function CustomerList() {
                     </span>
                   </td>
                   <td className="px-6 py-3.5 text-right">
-                    <Link to={`/customers/${c.id}`} className="text-slate-300 hover:text-indigo-500 transition-colors">
+                    <Link to={`/customers/${c.id}`} className="text-slate-300 hover:text-amber-500 transition-colors">
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
                       </svg>

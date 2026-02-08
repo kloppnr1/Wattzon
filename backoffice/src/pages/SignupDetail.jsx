@@ -54,7 +54,7 @@ export default function SignupDetail() {
     return (
       <div className="flex items-center justify-center py-20">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-[3px] border-indigo-100 border-t-indigo-500 rounded-full animate-spin" />
+          <div className="w-8 h-8 border-[3px] border-amber-100 border-t-amber-500 rounded-full animate-spin" />
           <p className="text-sm text-slate-400 font-medium">Loading...</p>
         </div>
       </div>
@@ -67,7 +67,7 @@ export default function SignupDetail() {
 
   return (
     <div className="p-8 max-w-3xl mx-auto">
-      <Link to="/signups" className="inline-flex items-center gap-1.5 text-sm text-slate-400 hover:text-indigo-600 mb-4 transition-colors font-medium">
+      <Link to="/signups" className="inline-flex items-center gap-1.5 text-sm text-slate-400 hover:text-amber-600 mb-4 transition-colors font-medium">
         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
         </svg>
@@ -106,7 +106,7 @@ export default function SignupDetail() {
               <p className="text-sm text-rose-600 mt-1">{signup.rejectionReason}</p>
               <Link
                 to="/signups/new"
-                className="inline-flex items-center gap-1 mt-3 text-sm font-semibold text-indigo-600 hover:text-indigo-800 transition-colors"
+                className="inline-flex items-center gap-1 mt-3 text-sm font-semibold text-amber-600 hover:text-amber-800 transition-colors"
               >
                 Create corrected signup
                 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
@@ -120,7 +120,7 @@ export default function SignupDetail() {
 
       <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden mb-5 animate-fade-in-up" style={{ animationDelay: '60ms' }}>
         <div className="px-5 py-3.5 border-b border-slate-100 flex items-center gap-2">
-          <div className="w-1 h-4 rounded-full bg-gradient-to-b from-indigo-500 to-violet-500" />
+          <div className="w-1 h-4 rounded-full bg-gradient-to-b from-amber-500 to-orange-500" />
           <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">Details</h3>
         </div>
         <div className="grid grid-cols-2 divide-y divide-slate-100">
@@ -135,14 +135,14 @@ export default function SignupDetail() {
 
       <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden mb-5 animate-fade-in-up" style={{ animationDelay: '120ms' }}>
         <div className="px-5 py-3.5 border-b border-slate-100 flex items-center gap-2">
-          <div className="w-1 h-4 rounded-full bg-gradient-to-b from-indigo-500 to-violet-500" />
+          <div className="w-1 h-4 rounded-full bg-gradient-to-b from-amber-500 to-orange-500" />
           <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">Customer</h3>
         </div>
         <div className="grid grid-cols-2 divide-y divide-slate-100">
           <Field
             label="Name"
             value={
-              <Link to={`/customers/${signup.customerId}`} className="font-semibold text-indigo-600 hover:text-indigo-800 transition-colors">
+              <Link to={`/customers/${signup.customerId}`} className="font-semibold text-amber-600 hover:text-amber-800 transition-colors">
                 {signup.customerName}
               </Link>
             }
@@ -154,7 +154,7 @@ export default function SignupDetail() {
 
       <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden animate-fade-in-up" style={{ animationDelay: '180ms' }}>
         <div className="px-5 py-3.5 border-b border-slate-100 flex items-center gap-2">
-          <div className="w-1 h-4 rounded-full bg-gradient-to-b from-indigo-500 to-violet-500" />
+          <div className="w-1 h-4 rounded-full bg-gradient-to-b from-amber-500 to-orange-500" />
           <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">Process Timeline</h3>
         </div>
         {events.length === 0 ? (
@@ -169,12 +169,12 @@ export default function SignupDetail() {
         ) : (
           <div className="p-5">
             <div className="relative">
-              <div className="absolute left-[14px] top-2 bottom-2 w-px bg-gradient-to-b from-indigo-200 to-transparent" />
+              <div className="absolute left-[14px] top-2 bottom-2 w-px bg-gradient-to-b from-amber-200 to-transparent" />
               <div className="space-y-4">
                 {events.map((evt, i) => (
                   <div key={i} className="flex gap-4 relative animate-slide-in opacity-0" style={{ animationDelay: `${i * 80}ms` }}>
                     <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 z-10 ${
-                      i === 0 ? 'bg-gradient-to-br from-indigo-400 to-violet-500 shadow-md shadow-indigo-500/25' : 'bg-slate-100 border-2 border-slate-200'
+                      i === 0 ? 'bg-gradient-to-br from-amber-400 to-orange-500 shadow-md shadow-amber-500/25' : 'bg-slate-100 border-2 border-slate-200'
                     }`}>
                       <div className={`w-2 h-2 rounded-full ${i === 0 ? 'bg-white' : 'bg-slate-400'}`} />
                     </div>

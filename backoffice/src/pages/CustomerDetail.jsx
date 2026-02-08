@@ -19,7 +19,7 @@ export default function CustomerDetail() {
     return (
       <div className="flex items-center justify-center py-20">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-[3px] border-indigo-100 border-t-indigo-500 rounded-full animate-spin" />
+          <div className="w-8 h-8 border-[3px] border-amber-100 border-t-amber-500 rounded-full animate-spin" />
           <p className="text-sm text-slate-400 font-medium">Loading...</p>
         </div>
       </div>
@@ -30,7 +30,7 @@ export default function CustomerDetail() {
 
   return (
     <div className="p-8 max-w-4xl mx-auto">
-      <Link to="/customers" className="inline-flex items-center gap-1.5 text-sm text-slate-400 hover:text-indigo-600 mb-4 transition-colors font-medium">
+      <Link to="/customers" className="inline-flex items-center gap-1.5 text-sm text-slate-400 hover:text-amber-600 mb-4 transition-colors font-medium">
         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
         </svg>
@@ -38,7 +38,7 @@ export default function CustomerDetail() {
       </Link>
 
       <div className="flex items-center gap-4 mb-6 animate-fade-in-up">
-        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-400 to-violet-500 flex items-center justify-center shadow-lg shadow-indigo-500/25">
+        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shadow-lg shadow-amber-500/25">
           <span className="text-base font-bold text-white">
             {customer.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
           </span>
@@ -60,10 +60,10 @@ export default function CustomerDetail() {
       <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden mb-5 animate-fade-in-up" style={{ animationDelay: '60ms' }}>
         <div className="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-1 h-4 rounded-full bg-gradient-to-b from-indigo-500 to-violet-500" />
+            <div className="w-1 h-4 rounded-full bg-gradient-to-b from-amber-500 to-orange-500" />
             <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">Contracts</h3>
           </div>
-          <span className="text-xs font-semibold text-indigo-600 bg-indigo-50 px-2.5 py-0.5 rounded-full">{customer.contracts.length}</span>
+          <span className="text-xs font-semibold text-amber-600 bg-amber-50 px-2.5 py-0.5 rounded-full">{customer.contracts.length}</span>
         </div>
         {customer.contracts.length === 0 ? (
           <div className="p-10 text-center">
@@ -81,7 +81,7 @@ export default function CustomerDetail() {
             </thead>
             <tbody className="divide-y divide-slate-50">
               {customer.contracts.map((c, i) => (
-                <tr key={c.id} className="hover:bg-indigo-50/40 transition-colors duration-150 animate-slide-in opacity-0" style={{ animationDelay: `${i * 40}ms` }}>
+                <tr key={c.id} className="hover:bg-amber-50/40 transition-colors duration-150 animate-slide-in opacity-0" style={{ animationDelay: `${i * 40}ms` }}>
                   <td className="px-5 py-3.5">
                     <span className="text-xs font-mono text-slate-500 bg-slate-100 px-2 py-1 rounded-md">{c.gsrn}</span>
                   </td>
@@ -98,10 +98,10 @@ export default function CustomerDetail() {
       <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden animate-fade-in-up" style={{ animationDelay: '120ms' }}>
         <div className="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-1 h-4 rounded-full bg-gradient-to-b from-indigo-500 to-violet-500" />
+            <div className="w-1 h-4 rounded-full bg-gradient-to-b from-amber-500 to-orange-500" />
             <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">Metering Points</h3>
           </div>
-          <span className="text-xs font-semibold text-indigo-600 bg-indigo-50 px-2.5 py-0.5 rounded-full">{customer.meteringPoints.length}</span>
+          <span className="text-xs font-semibold text-amber-600 bg-amber-50 px-2.5 py-0.5 rounded-full">{customer.meteringPoints.length}</span>
         </div>
         {customer.meteringPoints.length === 0 ? (
           <div className="p-10 text-center">
@@ -121,7 +121,7 @@ export default function CustomerDetail() {
             </thead>
             <tbody className="divide-y divide-slate-50">
               {customer.meteringPoints.map((mp, i) => (
-                <tr key={mp.gsrn} className="hover:bg-indigo-50/40 transition-colors duration-150 animate-slide-in opacity-0" style={{ animationDelay: `${i * 40}ms` }}>
+                <tr key={mp.gsrn} className="hover:bg-amber-50/40 transition-colors duration-150 animate-slide-in opacity-0" style={{ animationDelay: `${i * 40}ms` }}>
                   <td className="px-5 py-3.5">
                     <span className="text-xs font-mono text-slate-500 bg-slate-100 px-2 py-1 rounded-md">{mp.gsrn}</span>
                   </td>
