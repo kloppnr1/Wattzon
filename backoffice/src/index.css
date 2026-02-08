@@ -2,6 +2,17 @@
 
 @theme {
   --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --color-teal-50: #f3f8f6;
+  --color-teal-100: #e1ede9;
+  --color-teal-200: #c5ddd6;
+  --color-teal-300: #a9cdc3;
+  --color-teal-400: #95c2b6;
+  --color-teal-500: #6fa99b;
+  --color-teal-600: #578b7e;
+  --color-teal-700: #477265;
+  --color-teal-800: #3b5d53;
+  --color-teal-900: #334e46;
+  --color-teal-950: #1e2f2a;
 }
 
 /* Card hover lift */
@@ -10,7 +21,7 @@
 }
 .card-lift:hover {
   transform: translateY(-3px);
-  box-shadow: 0 12px 24px -8px rgba(20, 184, 166, 0.15), 0 4px 8px -4px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 12px 24px -8px rgba(111, 169, 155, 0.2), 0 4px 8px -4px rgba(0, 0, 0, 0.06);
 }
 
 /* Shimmer effect for loading */
@@ -26,7 +37,7 @@
 
 /* Gradient text */
 .gradient-text {
-  background: linear-gradient(135deg, #14b8a6, #0d9488, #0f766e);
+  background: linear-gradient(135deg, #6fa99b, #578b7e, #477265);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -34,8 +45,8 @@
 
 /* Sidebar glow pulse */
 @keyframes glow-pulse {
-  0%, 100% { box-shadow: 0 0 16px rgba(20, 184, 166, 0.3); }
-  50% { box-shadow: 0 0 24px rgba(13, 148, 136, 0.5); }
+  0%, 100% { box-shadow: 0 0 16px rgba(111, 169, 155, 0.35); }
+  50% { box-shadow: 0 0 24px rgba(87, 139, 126, 0.5); }
 }
 .glow-pulse {
   animation: glow-pulse 3s ease-in-out infinite;
@@ -157,7 +168,7 @@
   inset: 0;
   border-radius: inherit;
   padding: 1px;
-  background: linear-gradient(135deg, #14b8a6, #0d9488, #0f766e);
+  background: linear-gradient(135deg, #6fa99b, #578b7e, #477265);
   mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   mask-composite: exclude;
   -webkit-mask-composite: xor;
