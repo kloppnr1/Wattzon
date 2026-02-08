@@ -78,7 +78,7 @@ Track A has no dependencies on Track B. They can be developed in parallel.
 | Wire `QueuePollerService` | On RSM-014: parse → store → trigger reconciliation |
 | Auto-reconciliation | After storing aggregation, compare against own settlement for same grid area + period |
 | Store discrepancies | `datahub.reconciliation_result` table with match/mismatch status, delta, deviating GSRNs |
-| Dashboard: Reconciliation page | Show reconciliation results, highlight discrepancies |
+| API: Reconciliation results | Expose reconciliation results via API for back-office consumption |
 
 **Tests:**
 
@@ -221,8 +221,8 @@ Track A has no dependencies on Track B. They can be developed in parallel.
 
 ```
 ┌──────────────┐  ┌──────────────┐  ┌──────────────┐
-│  Website     │  │  Mobile App  │  │  Customer    │
-│  (self-serv) │  │  (self-serv) │  │  Service UI  │
+│  Website     │  │  Mobile App  │  │  Back Office  │
+│  (self-serv) │  │  (self-serv) │  │  (cust. svc)  │
 └──────┬───────┘  └──────┬───────┘  └──────┬───────┘
        │                 │                 │
        └─────────────────┼─────────────────┘
@@ -236,10 +236,12 @@ Track A has no dependencies on Track B. They can be developed in parallel.
               │  Orchestration      │  Owns the complexity:
               │  Layer              │  • BRS-001 vs BRS-009
               │                     │  • 15 business day calc
-              │                     │  • Rejection → retry
+              │                     │  • RSM-009 → status
               │                     │  • RSM-007 → activation
               └─────────────────────┘
 ```
+
+**Scope boundary:** This settlement system provides the API. The back-office web application (for handling rejections, GSRN disambiguation, manual corrections) is a **separate project** — it consumes this API. The existing `DataHub.Settlement.Web` project is a development/testing dashboard only.
 
 ---
 
@@ -269,7 +271,7 @@ The Danish energy market has structural complexity that the API must hide from t
 | `GET /api/signup/{id}/status` | Check signup progress |
 | `POST /api/signup/{id}/cancel` | Cancel before activation |
 
-Four endpoints. The sales channel handles GSRN disambiguation (multiple meters per address) on their side before calling the API.
+Four endpoints. Back office handles GSRN disambiguation (multiple meters per address) before calling the API.
 
 **Request/response:**
 
@@ -344,7 +346,7 @@ This is where the real complexity lives. A key design decision shapes the entire
 ```
 1. Look up GSRN from DAR ID via address lookup service
    - If no GSRN found: return 400 with error
-   - If multiple GSRNs: return 400 — sales channel handles disambiguation on their side
+   - If multiple GSRNs: return 400 — back office handles disambiguation
 2. Validate GSRN format (18 digits, starts with "57")
 3. Check no active signup already exists for this GSRN
 4. Validate product exists and is active
@@ -430,7 +432,7 @@ POST /api/signup/{id}/cancel:
 
 The API accepts a **DAR ID** (Danish Address Register identifier), not a raw GSRN. The `AddressLookupService` resolves DAR ID → GSRN(s) internally.
 
-**Edge case: multiple GSRNs per address.** An apartment building may have multiple metering points at the same DAR ID. For this phase, we return 400 if the lookup returns multiple GSRNs. The sales channel handles disambiguation on their side (e.g., letting the customer pick in the signup form) and re-submits with the correct address.
+**Edge case: multiple GSRNs per address.** An apartment building may have multiple metering points at the same DAR ID. The API returns 400 if the lookup returns multiple GSRNs. Back office handles disambiguation (identifying the correct metering point) and re-submits with the right address.
 
 **Stub implementation:** The existing `StubAddressLookupClient` generates deterministic GSRNs from DAR IDs. Real Energinet API integration is a future task — the interface is already abstracted via `IAddressLookupClient`.
 
