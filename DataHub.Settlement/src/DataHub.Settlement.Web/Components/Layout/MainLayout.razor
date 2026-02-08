@@ -1,14 +1,33 @@
 @inherits LayoutComponentBase
 
-<div class="layout">
-    <nav class="sidebar">
-        <div class="sidebar-header">
-            <h2>Settlement</h2>
-            <span class="subtitle">DataHub MVP 1</span>
+<div class="flex h-screen overflow-hidden">
+    <!-- Sidebar -->
+    <nav class="w-60 flex-shrink-0 flex flex-col bg-gradient-to-b from-slate-900 to-slate-950 border-r border-white/[0.06]">
+        <!-- Logo -->
+        <div class="p-5 border-b border-white/[0.06]">
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-bold text-sm shadow-lg shadow-blue-500/25 shrink-0">
+                    S
+                </div>
+                <div>
+                    <h2 class="text-sm font-bold text-white tracking-tight leading-tight">Settlement</h2>
+                    <span class="text-[0.65rem] text-slate-500 font-medium">DataHub Platform</span>
+                </div>
+            </div>
         </div>
+
+        <!-- Nav -->
         <NavMenu />
+
+        <!-- Footer -->
+        <div class="mt-auto px-5 py-3 border-t border-white/[0.06] flex items-center justify-between">
+            <span class="text-[0.6rem] font-semibold uppercase tracking-[0.12em] text-slate-600">Development</span>
+            <span class="text-[0.6rem] font-mono text-slate-600">v3.0</span>
+        </div>
     </nav>
-    <main class="content">
+
+    <!-- Content -->
+    <main class="flex-1 overflow-y-auto bg-slate-950 px-10 py-8">
         @Body
     </main>
 </div>

@@ -2,33 +2,36 @@
 @using DataHub.Settlement.Infrastructure.Dashboard
 @inject SimulationService Simulator
 
-<h1>Simulation</h1>
-<p style="color: var(--text-muted); margin-bottom: 1.5rem;">
-    Walk through settlement scenarios: onboarding, rejection, aconto billing, cancellation, move-in, move-out.
-</p>
-
-<div style="margin-bottom: 1rem;">
-    <div class="scenario-selector">
-        @foreach (var scenario in _scenarios)
-        {
-            var css = scenario.Key == _selectedScenario ? "scenario-btn active" : "scenario-btn";
-            <button class="@css" disabled="@_running" @onclick="() => SelectScenario(scenario.Key)">
-                @scenario.Value.Label
-            </button>
-        }
-    </div>
+<div class="mb-8">
+    <h1 class="text-2xl font-extrabold text-white tracking-tight">Simulation</h1>
+    <p class="text-sm text-slate-400 mt-1">Walk through settlement scenarios: onboarding, rejection, aconto billing, cancellation, move-in, move-out.</p>
 </div>
 
-<div style="margin-bottom: 1.5rem; display: flex; gap: 0.75rem; align-items: center;">
+<!-- Scenario Selector -->
+<div class="flex flex-wrap items-center gap-2 mb-6">
+    @foreach (var scenario in _scenarios)
+    {
+        var isActive = scenario.Key == _selectedScenario;
+        var btnCss = isActive
+            ? "px-4 py-2 text-sm font-semibold rounded-lg bg-blue-500/20 text-blue-400 border border-blue-500/30 shadow-sm shadow-blue-500/10"
+            : "px-4 py-2 text-sm font-semibold rounded-lg bg-white/[0.03] text-slate-400 border border-white/[0.06] hover:bg-white/[0.06] hover:text-slate-200 transition-all duration-150";
+        <button class="@btnCss" disabled="@_running" @onclick="() => SelectScenario(scenario.Key)">
+            @scenario.Value.Label
+        </button>
+    }
+</div>
+
+<!-- Action Bar -->
+<div class="flex items-center gap-3 mb-8">
     @if (_completed && !_running)
     {
-        <button class="btn" @onclick="ResetAndRunAsync">
+        <button class="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white text-sm font-semibold rounded-lg shadow-lg shadow-blue-500/20 hover:shadow-blue-500/30 transition-all duration-200" @onclick="ResetAndRunAsync">
             Reset &amp; Run Again
         </button>
     }
     else
     {
-        <button class="btn" @onclick="StartAsync" disabled="@_running">
+        <button class="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white text-sm font-semibold rounded-lg shadow-lg shadow-blue-500/20 hover:shadow-blue-500/30 transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:shadow-blue-500/20" @onclick="StartAsync" disabled="@_running">
             @if (_running)
             {
                 <span>Running...</span>
@@ -41,72 +44,89 @@
     }
     @if (_errorMessage is not null)
     {
-        <span style="color: var(--red);">@_errorMessage</span>
+        <span class="text-sm text-rose-400">@_errorMessage</span>
     }
 </div>
 
-<div class="step-list">
+<!-- Step List -->
+<div class="relative flex flex-col gap-0 mb-8">
+    <!-- Vertical connecting line -->
+    <div class="absolute left-[1.15rem] top-4 bottom-4 w-px bg-white/[0.06]"></div>
+
     @foreach (var step in _steps)
     {
-        var css = step.Status switch
+        var (ringCss, dotCss) = step.Status switch
         {
-            StepStatus.Running => "step step-running",
-            StepStatus.Completed => "step step-completed",
-            StepStatus.Failed => "step step-failed",
-            _ => "step step-pending",
+            StepStatus.Running => ("ring-2 ring-amber-400/50", "bg-amber-400"),
+            StepStatus.Completed => ("ring-2 ring-emerald-400/30", "bg-emerald-400"),
+            StepStatus.Failed => ("ring-2 ring-rose-400/30", "bg-rose-400"),
+            _ => ("ring-1 ring-white/10", "bg-slate-600"),
         };
-        <div class="@css">
-            <div class="step-number">@step.Number</div>
-            <div style="flex: 1;">
-                <div style="font-weight: 600; font-size: 0.95rem;">@step.Name</div>
+        var textCss = step.Status switch
+        {
+            StepStatus.Completed => "text-slate-200",
+            StepStatus.Failed => "text-rose-300",
+            StepStatus.Running => "text-white",
+            _ => "text-slate-500",
+        };
+        var badgeCss = step.Status switch
+        {
+            StepStatus.Running => "bg-amber-500/15 text-amber-400",
+            StepStatus.Completed => "bg-emerald-500/15 text-emerald-400",
+            StepStatus.Failed => "bg-rose-500/15 text-rose-400",
+            _ => "bg-slate-500/15 text-slate-500",
+        };
+        var badgeText = step.Status switch
+        {
+            StepStatus.Running => "running",
+            StepStatus.Completed => "done",
+            StepStatus.Failed => "failed",
+            _ => "pending",
+        };
+        <div class="relative flex items-center gap-4 py-2.5 px-3">
+            <!-- Number dot -->
+            <div class="relative z-10 flex items-center justify-center w-[2.3rem] h-[2.3rem] rounded-full bg-slate-900 @ringCss flex-shrink-0">
+                <div class="w-2.5 h-2.5 rounded-full @dotCss"></div>
+            </div>
+            <!-- Content -->
+            <div class="flex-1 min-w-0">
+                <div class="text-sm font-semibold @textCss">@step.Name</div>
                 @if (step.Details is not null)
                 {
-                    <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.25rem;">@step.Details</div>
+                    <div class="text-xs text-slate-500 mt-0.5 truncate">@step.Details</div>
                 }
             </div>
-            <div>
-                @switch (step.Status)
-                {
-                    case StepStatus.Running:
-                        <span class="badge badge-sent">running</span>
-                        break;
-                    case StepStatus.Completed:
-                        <span class="badge badge-completed">done</span>
-                        break;
-                    case StepStatus.Failed:
-                        <span class="badge badge-dead-letter">failed</span>
-                        break;
-                    default:
-                        <span class="badge badge-pending" style="background: rgba(156,163,175,0.15); color: var(--text-muted);">pending</span>
-                        break;
-                }
-            </div>
+            <!-- Badge -->
+            <span class="inline-block px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide rounded-md @badgeCss flex-shrink-0">@badgeText</span>
         </div>
     }
 </div>
 
+<!-- Activity Log -->
 @if (_log.Count > 0)
 {
-    <h2 style="margin-top: 2rem; font-size: 1.1rem; font-weight: 600;">Activity Log</h2>
-    <table style="margin-top: 0.75rem;">
-        <thead>
-            <tr>
-                <th style="width: 6rem;">Time</th>
-                <th style="width: 12rem;">Step</th>
-                <th>Details</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var entry in _log)
-            {
-                <tr>
-                    <td>@entry.Timestamp.ToString("HH:mm:ss.f")</td>
-                    <td>@entry.StepName</td>
-                    <td>@entry.Details</td>
+    <h2 class="text-lg font-semibold text-white mb-4">Activity Log</h2>
+    <div class="bg-white/[0.03] backdrop-blur-sm border border-white/[0.06] rounded-xl overflow-hidden">
+        <table class="w-full">
+            <thead>
+                <tr class="bg-white/[0.04]">
+                    <th class="px-5 py-3 text-left text-[0.65rem] font-semibold uppercase tracking-wider text-slate-500 w-24">Time</th>
+                    <th class="px-5 py-3 text-left text-[0.65rem] font-semibold uppercase tracking-wider text-slate-500 w-48">Step</th>
+                    <th class="px-5 py-3 text-left text-[0.65rem] font-semibold uppercase tracking-wider text-slate-500">Details</th>
                 </tr>
-            }
-        </tbody>
-    </table>
+            </thead>
+            <tbody class="divide-y divide-white/[0.04]">
+                @foreach (var entry in _log)
+                {
+                    <tr class="hover:bg-white/[0.02] transition-colors duration-150">
+                        <td class="px-5 py-2.5 text-sm font-mono text-slate-300 tabular-nums">@entry.Timestamp.ToString("HH:mm:ss.f")</td>
+                        <td class="px-5 py-2.5 text-sm text-slate-300">@entry.StepName</td>
+                        <td class="px-5 py-2.5 text-sm text-slate-400">@entry.Details</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
 }
 
 @code {

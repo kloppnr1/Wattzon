@@ -2,37 +2,60 @@
 @using DataHub.Settlement.Infrastructure.Dashboard
 @inject DashboardQueryService Queries
 
-<h1>Process Tracker</h1>
+<div class="mb-8">
+    <h1 class="text-2xl font-extrabold text-white tracking-tight">Process Tracker</h1>
+    <p class="text-sm text-slate-400 mt-1">All change-of-supplier and move processes.</p>
+</div>
+
+@{
+    string BadgeCss(string status) => status.ToLowerInvariant() switch
+    {
+        "pending" => "bg-amber-500/15 text-amber-400",
+        "sent" => "bg-orange-500/15 text-orange-400",
+        "acknowledged" => "bg-sky-500/15 text-sky-400",
+        "completed" => "bg-emerald-500/15 text-emerald-400",
+        "processed" => "bg-emerald-500/15 text-emerald-400",
+        "effectuated" => "bg-blue-500/15 text-blue-400",
+        "final_settled" => "bg-purple-500/15 text-purple-400",
+        _ => "bg-slate-500/15 text-slate-400",
+    };
+}
 
 @if (_processes.Count == 0)
 {
-    <div class="empty-state">No processes yet. Submit a BRS-001 to start tracking.</div>
+    <div class="text-center py-16 text-slate-500 text-sm bg-white/[0.02] backdrop-blur-sm rounded-xl border border-white/[0.04]">
+        No processes yet. Submit a BRS-001 to start tracking.
+    </div>
 }
 else
 {
-    <table>
-        <thead>
-            <tr>
-                <th>GSRN</th>
-                <th>Type</th>
-                <th>Status</th>
-                <th>Effective Date</th>
-                <th>Last Updated</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var process in _processes)
-            {
-                <tr>
-                    <td><code>@process.Gsrn</code></td>
-                    <td>@process.ProcessType</td>
-                    <td><span class="badge badge-@process.Status.ToLowerInvariant()">@process.Status</span></td>
-                    <td>@process.EffectiveDate.ToString("yyyy-MM-dd")</td>
-                    <td>@process.LastUpdated.ToString("yyyy-MM-dd HH:mm:ss")</td>
+    <div class="bg-white/[0.03] backdrop-blur-sm border border-white/[0.06] rounded-xl overflow-hidden">
+        <table class="w-full">
+            <thead>
+                <tr class="bg-white/[0.04]">
+                    <th class="px-5 py-3 text-left text-[0.65rem] font-semibold uppercase tracking-wider text-slate-500">GSRN</th>
+                    <th class="px-5 py-3 text-left text-[0.65rem] font-semibold uppercase tracking-wider text-slate-500">Type</th>
+                    <th class="px-5 py-3 text-left text-[0.65rem] font-semibold uppercase tracking-wider text-slate-500">Status</th>
+                    <th class="px-5 py-3 text-left text-[0.65rem] font-semibold uppercase tracking-wider text-slate-500">Effective Date</th>
+                    <th class="px-5 py-3 text-left text-[0.65rem] font-semibold uppercase tracking-wider text-slate-500">Last Updated</th>
                 </tr>
-            }
-        </tbody>
-    </table>
+            </thead>
+            <tbody class="divide-y divide-white/[0.04]">
+                @foreach (var process in _processes)
+                {
+                    <tr class="hover:bg-white/[0.02] transition-colors duration-150">
+                        <td class="px-5 py-2.5 text-sm font-mono font-semibold text-slate-200 tabular-nums">@process.Gsrn</td>
+                        <td class="px-5 py-2.5 text-sm text-slate-300">@process.ProcessType</td>
+                        <td class="px-5 py-2.5">
+                            <span class="inline-block px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide rounded-md @BadgeCss(process.Status)">@process.Status</span>
+                        </td>
+                        <td class="px-5 py-2.5 text-sm font-mono text-slate-400 tabular-nums">@process.EffectiveDate.ToString("yyyy-MM-dd")</td>
+                        <td class="px-5 py-2.5 text-sm font-mono text-slate-500 tabular-nums">@process.LastUpdated.ToString("yyyy-MM-dd HH:mm:ss")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
 }
 
 @code {

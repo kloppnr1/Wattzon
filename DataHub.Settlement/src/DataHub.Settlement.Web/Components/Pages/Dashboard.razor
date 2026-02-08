@@ -3,29 +3,36 @@
 @inject DashboardQueryService Queries
 @inject DemoDataSeeder Seeder
 
-<h1>Dashboard</h1>
+<div class="mb-8">
+    <h1 class="text-2xl font-extrabold text-white tracking-tight">Dashboard</h1>
+    <p class="text-sm text-slate-400 mt-1">Settlement platform overview and quick actions.</p>
+</div>
 
-<div class="cards">
-    <div class="card">
-        <div class="label">Customers</div>
-        <div class="value">@_customerCount</div>
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+    <div class="group relative bg-white/[0.03] backdrop-blur-sm border border-white/[0.06] rounded-xl p-5 transition-all duration-300 hover:bg-white/[0.05] hover:-translate-y-0.5 hover:shadow-lg hover:shadow-blue-500/5">
+        <div class="absolute inset-y-0 left-0 w-[2px] rounded-l-xl bg-gradient-to-b from-blue-400 to-blue-600"></div>
+        <div class="text-[0.65rem] font-semibold uppercase tracking-wider text-slate-500 mb-1.5">Customers</div>
+        <div class="text-3xl font-extrabold text-white font-mono tabular-nums">@_customerCount</div>
     </div>
-    <div class="card">
-        <div class="label">Messages Processed</div>
-        <div class="value">@_messagesProcessed</div>
+    <div class="group relative bg-white/[0.03] backdrop-blur-sm border border-white/[0.06] rounded-xl p-5 transition-all duration-300 hover:bg-white/[0.05] hover:-translate-y-0.5 hover:shadow-lg hover:shadow-emerald-500/5">
+        <div class="absolute inset-y-0 left-0 w-[2px] rounded-l-xl bg-gradient-to-b from-emerald-400 to-emerald-600"></div>
+        <div class="text-[0.65rem] font-semibold uppercase tracking-wider text-slate-500 mb-1.5">Messages Processed</div>
+        <div class="text-3xl font-extrabold text-white font-mono tabular-nums">@_messagesProcessed</div>
     </div>
-    <div class="card">
-        <div class="label">Active Processes</div>
-        <div class="value">@_activeProcesses</div>
+    <div class="group relative bg-white/[0.03] backdrop-blur-sm border border-white/[0.06] rounded-xl p-5 transition-all duration-300 hover:bg-white/[0.05] hover:-translate-y-0.5 hover:shadow-lg hover:shadow-amber-500/5">
+        <div class="absolute inset-y-0 left-0 w-[2px] rounded-l-xl bg-gradient-to-b from-amber-400 to-amber-600"></div>
+        <div class="text-[0.65rem] font-semibold uppercase tracking-wider text-slate-500 mb-1.5">Active Processes</div>
+        <div class="text-3xl font-extrabold text-white font-mono tabular-nums">@_activeProcesses</div>
     </div>
-    <div class="card">
-        <div class="label">Settlement Runs</div>
-        <div class="value">@_settlementRuns</div>
+    <div class="group relative bg-white/[0.03] backdrop-blur-sm border border-white/[0.06] rounded-xl p-5 transition-all duration-300 hover:bg-white/[0.05] hover:-translate-y-0.5 hover:shadow-lg hover:shadow-purple-500/5">
+        <div class="absolute inset-y-0 left-0 w-[2px] rounded-l-xl bg-gradient-to-b from-purple-400 to-purple-600"></div>
+        <div class="text-[0.65rem] font-semibold uppercase tracking-wider text-slate-500 mb-1.5">Settlement Runs</div>
+        <div class="text-3xl font-extrabold text-white font-mono tabular-nums">@_settlementRuns</div>
     </div>
 </div>
 
-<div style="margin: 1rem 0;">
-    <button class="btn" @onclick="SeedDemoDataAsync" disabled="@_seeding">
+<div class="flex items-center gap-3 mb-8">
+    <button class="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white text-sm font-semibold rounded-lg shadow-lg shadow-blue-500/20 hover:shadow-blue-500/30 transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:shadow-blue-500/20" @onclick="SeedDemoDataAsync" disabled="@_seeding">
         @if (_seeding)
         {
             <span>Seeding...</span>
@@ -37,37 +44,41 @@
     </button>
     @if (_seedMessage is not null)
     {
-        <span style="margin-left: 1rem; color: var(--text-muted);">@_seedMessage</span>
+        <span class="text-sm text-slate-400">@_seedMessage</span>
     }
 </div>
 
-<h1>Recent Activity</h1>
+<h2 class="text-lg font-semibold text-white mb-4">Recent Activity</h2>
 
 @if (_recentActivity.Count == 0)
 {
-    <div class="empty-state">No activity yet. Run the sunshine scenario to see data here.</div>
+    <div class="text-center py-16 text-slate-500 text-sm bg-white/[0.02] backdrop-blur-sm rounded-xl border border-white/[0.04]">
+        No activity yet. Run the sunshine scenario to see data here.
+    </div>
 }
 else
 {
-    <table>
-        <thead>
-            <tr>
-                <th>Time</th>
-                <th>Event</th>
-                <th>Details</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var activity in _recentActivity)
-            {
-                <tr>
-                    <td>@activity.Timestamp.ToString("HH:mm:ss")</td>
-                    <td>@activity.Event</td>
-                    <td>@activity.Details</td>
+    <div class="bg-white/[0.03] backdrop-blur-sm border border-white/[0.06] rounded-xl overflow-hidden">
+        <table class="w-full">
+            <thead>
+                <tr class="bg-white/[0.04]">
+                    <th class="px-5 py-3 text-left text-[0.65rem] font-semibold uppercase tracking-wider text-slate-500">Time</th>
+                    <th class="px-5 py-3 text-left text-[0.65rem] font-semibold uppercase tracking-wider text-slate-500">Event</th>
+                    <th class="px-5 py-3 text-left text-[0.65rem] font-semibold uppercase tracking-wider text-slate-500">Details</th>
                 </tr>
-            }
-        </tbody>
-    </table>
+            </thead>
+            <tbody class="divide-y divide-white/[0.04]">
+                @foreach (var activity in _recentActivity)
+                {
+                    <tr class="hover:bg-white/[0.02] transition-colors duration-150">
+                        <td class="px-5 py-2.5 text-sm font-mono text-slate-300 tabular-nums">@activity.Timestamp.ToString("HH:mm:ss")</td>
+                        <td class="px-5 py-2.5 text-sm text-slate-200">@activity.Event</td>
+                        <td class="px-5 py-2.5 text-sm text-slate-400">@activity.Details</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
 }
 
 @code {

@@ -2,42 +2,55 @@
 @using DataHub.Settlement.Infrastructure.Dashboard
 @inject DashboardQueryService Queries
 
-<h1>Settlement Results</h1>
+<div class="mb-8">
+    <h1 class="text-2xl font-extrabold text-white tracking-tight">Settlement Results</h1>
+    <p class="text-sm text-slate-400 mt-1">Completed settlement runs with charge breakdowns.</p>
+</div>
 
 @if (_runs.Count == 0)
 {
-    <div class="empty-state">No settlement runs yet. Complete the sunshine scenario to see results.</div>
+    <div class="text-center py-16 text-slate-500 text-sm bg-white/[0.02] backdrop-blur-sm rounded-xl border border-white/[0.04]">
+        No settlement runs yet. Complete the sunshine scenario to see results.
+    </div>
 }
 else
 {
     @foreach (var run in _runs)
     {
-        <div class="card" style="margin-bottom: 1.5rem;">
-            <div class="label">Settlement Run — @run.Period</div>
-            <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">
-                GSRN: <code>@run.Gsrn</code> &middot; @run.CustomerName &middot; @run.ExecutedAt.ToString("yyyy-MM-dd HH:mm")
+        <div class="relative bg-white/[0.03] backdrop-blur-sm border border-white/[0.06] rounded-xl p-5 mb-4">
+            <div class="absolute inset-y-0 left-0 w-[2px] rounded-l-xl bg-gradient-to-b from-blue-400 to-blue-600"></div>
+            <div class="text-[0.65rem] font-semibold uppercase tracking-wider text-slate-500 mb-1">Settlement Run — @run.Period</div>
+            <div class="text-sm text-slate-400">
+                GSRN: <code class="font-mono font-semibold text-slate-300">@run.Gsrn</code>
+                <span class="mx-2 text-slate-600">&middot;</span>
+                @run.CustomerName
+                <span class="mx-2 text-slate-600">&middot;</span>
+                <span class="font-mono tabular-nums">@run.ExecutedAt.ToString("yyyy-MM-dd HH:mm")</span>
             </div>
         </div>
 
-        <table style="margin-bottom: 2rem;">
-            <thead>
-                <tr>
-                    <th>Charge Type</th>
-                    <th class="amount">Quantity (kWh)</th>
-                    <th class="amount">Amount (DKK)</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var line in run.Lines)
-                {
-                    <tr class="@(line.IsSubtotal ? "subtotal-row" : "") @(line.IsTotal ? "total-row" : "")">
-                        <td>@line.ChargeType</td>
-                        <td class="amount">@(line.Quantity > 0 ? line.Quantity.ToString("N3") : "")</td>
-                        <td class="amount">@line.Amount.ToString("N2")</td>
+        <div class="bg-white/[0.03] backdrop-blur-sm border border-white/[0.06] rounded-xl overflow-hidden mb-8">
+            <table class="w-full">
+                <thead>
+                    <tr class="bg-white/[0.04]">
+                        <th class="px-5 py-3 text-left text-[0.65rem] font-semibold uppercase tracking-wider text-slate-500">Charge Type</th>
+                        <th class="px-5 py-3 text-right text-[0.65rem] font-semibold uppercase tracking-wider text-slate-500">Quantity (kWh)</th>
+                        <th class="px-5 py-3 text-right text-[0.65rem] font-semibold uppercase tracking-wider text-slate-500">Amount (DKK)</th>
                     </tr>
-                }
-            </tbody>
-        </table>
+                </thead>
+                <tbody class="divide-y divide-white/[0.04]">
+                    @foreach (var line in run.Lines)
+                    {
+                        var rowClass = line.IsTotal ? "font-bold text-white bg-white/[0.02]" : line.IsSubtotal ? "font-semibold border-t-2 border-white/[0.08]" : "";
+                        <tr class="@rowClass hover:bg-white/[0.015] transition-colors duration-150">
+                            <td class="px-5 py-2.5 text-sm text-slate-300">@line.ChargeType</td>
+                            <td class="px-5 py-2.5 text-sm text-right font-mono tabular-nums text-slate-400">@(line.Quantity > 0 ? line.Quantity.ToString("N3") : "")</td>
+                            <td class="px-5 py-2.5 text-sm text-right font-mono tabular-nums text-slate-200">@line.Amount.ToString("N2")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
     }
 }
 

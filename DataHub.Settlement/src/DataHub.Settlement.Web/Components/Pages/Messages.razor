@@ -2,52 +2,77 @@
 @using DataHub.Settlement.Infrastructure.Dashboard
 @inject DashboardQueryService Queries
 
-<h1>Messages</h1>
+<div class="mb-8">
+    <h1 class="text-2xl font-extrabold text-white tracking-tight">Messages</h1>
+    <p class="text-sm text-slate-400 mt-1">Queue message processing and dead-letter tracking.</p>
+</div>
 
-<div class="cards">
-    <div class="card">
-        <div class="label">Total Received</div>
-        <div class="value">@_totalReceived</div>
+@{
+    string BadgeCss(string status) => status.ToLowerInvariant() switch
+    {
+        "pending" => "bg-amber-500/15 text-amber-400",
+        "sent" => "bg-orange-500/15 text-orange-400",
+        "acknowledged" => "bg-sky-500/15 text-sky-400",
+        "completed" => "bg-emerald-500/15 text-emerald-400",
+        "processed" => "bg-emerald-500/15 text-emerald-400",
+        "dead-letter" or "dead_letter" => "bg-rose-500/15 text-rose-400",
+        _ => "bg-slate-500/15 text-slate-400",
+    };
+}
+
+<div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+    <div class="relative bg-white/[0.03] backdrop-blur-sm border border-white/[0.06] rounded-xl p-5 transition-all duration-300 hover:bg-white/[0.05] hover:-translate-y-0.5">
+        <div class="absolute inset-y-0 left-0 w-[2px] rounded-l-xl bg-gradient-to-b from-blue-400 to-blue-600"></div>
+        <div class="text-[0.65rem] font-semibold uppercase tracking-wider text-slate-500 mb-1.5">Total Received</div>
+        <div class="text-3xl font-extrabold text-white font-mono tabular-nums">@_totalReceived</div>
     </div>
-    <div class="card">
-        <div class="label">Processed</div>
-        <div class="value">@_processed</div>
+    <div class="relative bg-white/[0.03] backdrop-blur-sm border border-white/[0.06] rounded-xl p-5 transition-all duration-300 hover:bg-white/[0.05] hover:-translate-y-0.5">
+        <div class="absolute inset-y-0 left-0 w-[2px] rounded-l-xl bg-gradient-to-b from-emerald-400 to-emerald-600"></div>
+        <div class="text-[0.65rem] font-semibold uppercase tracking-wider text-slate-500 mb-1.5">Processed</div>
+        <div class="text-3xl font-extrabold text-white font-mono tabular-nums">@_processed</div>
     </div>
-    <div class="card">
-        <div class="label">Dead Letters</div>
-        <div class="value">@_deadLetters</div>
+    <div class="relative bg-white/[0.03] backdrop-blur-sm border border-white/[0.06] rounded-xl p-5 transition-all duration-300 hover:bg-white/[0.05] hover:-translate-y-0.5">
+        <div class="absolute inset-y-0 left-0 w-[2px] rounded-l-xl bg-gradient-to-b from-rose-400 to-rose-600"></div>
+        <div class="text-[0.65rem] font-semibold uppercase tracking-wider text-slate-500 mb-1.5">Dead Letters</div>
+        <div class="text-3xl font-extrabold text-white font-mono tabular-nums">@_deadLetters</div>
     </div>
 </div>
 
 @if (_messages.Count == 0)
 {
-    <div class="empty-state">No messages yet. Start the worker to poll DataHub queues.</div>
+    <div class="text-center py-16 text-slate-500 text-sm bg-white/[0.02] backdrop-blur-sm rounded-xl border border-white/[0.04]">
+        No messages yet. Start the worker to poll DataHub queues.
+    </div>
 }
 else
 {
-    <table>
-        <thead>
-            <tr>
-                <th>Message ID</th>
-                <th>Type</th>
-                <th>Queue</th>
-                <th>Status</th>
-                <th>Received At</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var msg in _messages)
-            {
-                <tr>
-                    <td><code>@(msg.MessageId.Length > 12 ? msg.MessageId[..12] + "..." : msg.MessageId)</code></td>
-                    <td>@msg.MessageType</td>
-                    <td>@msg.Queue</td>
-                    <td><span class="badge badge-@msg.Status.ToLowerInvariant()">@msg.Status</span></td>
-                    <td>@msg.ReceivedAt.ToString("yyyy-MM-dd HH:mm:ss")</td>
+    <div class="bg-white/[0.03] backdrop-blur-sm border border-white/[0.06] rounded-xl overflow-hidden">
+        <table class="w-full">
+            <thead>
+                <tr class="bg-white/[0.04]">
+                    <th class="px-5 py-3 text-left text-[0.65rem] font-semibold uppercase tracking-wider text-slate-500">Message ID</th>
+                    <th class="px-5 py-3 text-left text-[0.65rem] font-semibold uppercase tracking-wider text-slate-500">Type</th>
+                    <th class="px-5 py-3 text-left text-[0.65rem] font-semibold uppercase tracking-wider text-slate-500">Queue</th>
+                    <th class="px-5 py-3 text-left text-[0.65rem] font-semibold uppercase tracking-wider text-slate-500">Status</th>
+                    <th class="px-5 py-3 text-left text-[0.65rem] font-semibold uppercase tracking-wider text-slate-500">Received At</th>
                 </tr>
-            }
-        </tbody>
-    </table>
+            </thead>
+            <tbody class="divide-y divide-white/[0.04]">
+                @foreach (var msg in _messages)
+                {
+                    <tr class="hover:bg-white/[0.02] transition-colors duration-150">
+                        <td class="px-5 py-2.5 text-sm font-mono text-slate-300 tabular-nums">@(msg.MessageId.Length > 12 ? msg.MessageId[..12] + "..." : msg.MessageId)</td>
+                        <td class="px-5 py-2.5 text-sm text-slate-300">@msg.MessageType</td>
+                        <td class="px-5 py-2.5 text-sm text-slate-400">@msg.Queue</td>
+                        <td class="px-5 py-2.5">
+                            <span class="inline-block px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide rounded-md @BadgeCss(msg.Status)">@msg.Status</span>
+                        </td>
+                        <td class="px-5 py-2.5 text-sm font-mono text-slate-500 tabular-nums">@msg.ReceivedAt.ToString("yyyy-MM-dd HH:mm:ss")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
 }
 
 @code {
