@@ -11,7 +11,8 @@ public record Signup(
     string Type,
     DateOnly EffectiveDate,
     string Status,
-    string? RejectionReason);
+    string? RejectionReason,
+    Guid? CorrectedFromId);
 
 public record SignupStatusResponse(
     string SignupId,
@@ -29,7 +30,8 @@ public record SignupRequest(
     string Phone,
     Guid ProductId,
     string Type,
-    DateOnly EffectiveDate);
+    DateOnly EffectiveDate,
+    Guid? CorrectedFromId = null);
 
 public record SignupResponse(
     string SignupId,
@@ -65,4 +67,12 @@ public record SignupDetail(
     string ProductName,
     Guid? ProcessRequestId,
     DateTime CreatedAt,
-    DateTime UpdatedAt);
+    DateTime UpdatedAt,
+    Guid? CorrectedFromId,
+    string? CorrectedFromSignupNumber);
+
+public record SignupCorrectionLink(
+    Guid Id,
+    string SignupNumber,
+    string Status,
+    DateTime CreatedAt);

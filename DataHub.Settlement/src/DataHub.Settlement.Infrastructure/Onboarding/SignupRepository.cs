@@ -33,15 +33,16 @@ public sealed class SignupRepository : ISignupRepository
     }
 
     public async Task<Signup> CreateAsync(string signupNumber, string darId, string gsrn, Guid customerId,
-        Guid productId, Guid processRequestId, string type, DateOnly effectiveDate, CancellationToken ct)
+        Guid productId, Guid processRequestId, string type, DateOnly effectiveDate,
+        Guid? correctedFromId, CancellationToken ct)
     {
         const string sql = """
             INSERT INTO portfolio.signup
-                (signup_number, dar_id, gsrn, customer_id, product_id, process_request_id, type, effective_date)
+                (signup_number, dar_id, gsrn, customer_id, product_id, process_request_id, type, effective_date, corrected_from_id)
             VALUES
-                (@SignupNumber, @DarId, @Gsrn, @CustomerId, @ProductId, @ProcessRequestId, @Type, @EffectiveDate)
+                (@SignupNumber, @DarId, @Gsrn, @CustomerId, @ProductId, @ProcessRequestId, @Type, @EffectiveDate, @CorrectedFromId)
             RETURNING id, signup_number, dar_id, gsrn, customer_id, product_id, process_request_id,
-                      type, effective_date, status, rejection_reason
+                      type, effective_date, status, rejection_reason, corrected_from_id
             """;
 
         await using var conn = new NpgsqlConnection(_connectionString);
@@ -50,7 +51,8 @@ public sealed class SignupRepository : ISignupRepository
             new CommandDefinition(sql, new
             {
                 SignupNumber = signupNumber, DarId = darId, Gsrn = gsrn, CustomerId = customerId,
-                ProductId = productId, ProcessRequestId = processRequestId, Type = type, EffectiveDate = effectiveDate
+                ProductId = productId, ProcessRequestId = processRequestId, Type = type,
+                EffectiveDate = effectiveDate, CorrectedFromId = correctedFromId
             }, cancellationToken: ct));
     }
 
@@ -58,7 +60,7 @@ public sealed class SignupRepository : ISignupRepository
     {
         const string sql = """
             SELECT id, signup_number, dar_id, gsrn, customer_id, product_id, process_request_id,
-                   type, effective_date, status, rejection_reason
+                   type, effective_date, status, rejection_reason, corrected_from_id
             FROM portfolio.signup
             WHERE signup_number = @SignupNumber
             """;
@@ -69,11 +71,26 @@ public sealed class SignupRepository : ISignupRepository
             new CommandDefinition(sql, new { SignupNumber = signupNumber }, cancellationToken: ct));
     }
 
+    public async Task<Signup?> GetByIdAsync(Guid id, CancellationToken ct)
+    {
+        const string sql = """
+            SELECT id, signup_number, dar_id, gsrn, customer_id, product_id, process_request_id,
+                   type, effective_date, status, rejection_reason, corrected_from_id
+            FROM portfolio.signup
+            WHERE id = @Id
+            """;
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+        await conn.OpenAsync(ct);
+        return await conn.QuerySingleOrDefaultAsync<Signup>(
+            new CommandDefinition(sql, new { Id = id }, cancellationToken: ct));
+    }
+
     public async Task<Signup?> GetByProcessRequestIdAsync(Guid processRequestId, CancellationToken ct)
     {
         const string sql = """
             SELECT id, signup_number, dar_id, gsrn, customer_id, product_id, process_request_id,
-                   type, effective_date, status, rejection_reason
+                   type, effective_date, status, rejection_reason, corrected_from_id
             FROM portfolio.signup
             WHERE process_request_id = @ProcessRequestId
             """;
@@ -88,7 +105,7 @@ public sealed class SignupRepository : ISignupRepository
     {
         const string sql = """
             SELECT id, signup_number, dar_id, gsrn, customer_id, product_id, process_request_id,
-                   type, effective_date, status, rejection_reason
+                   type, effective_date, status, rejection_reason, corrected_from_id
             FROM portfolio.signup
             WHERE gsrn = @Gsrn AND status NOT IN ('active', 'rejected', 'cancelled')
             ORDER BY created_at DESC
@@ -226,10 +243,12 @@ public sealed class SignupRepository : ISignupRepository
             SELECT s.id, s.signup_number, s.dar_id, s.gsrn, s.type, s.effective_date, s.status,
                    s.rejection_reason, s.customer_id, c.name AS customer_name, c.cpr_cvr,
                    c.contact_type, s.product_id, p.name AS product_name,
-                   s.process_request_id, s.created_at, s.updated_at
+                   s.process_request_id, s.created_at, s.updated_at,
+                   s.corrected_from_id, orig.signup_number AS corrected_from_signup_number
             FROM portfolio.signup s
             JOIN portfolio.customer c ON c.id = s.customer_id
             JOIN portfolio.product p ON p.id = s.product_id
+            LEFT JOIN portfolio.signup orig ON orig.id = s.corrected_from_id
             WHERE s.id = @Id
             """;
 
@@ -237,5 +256,40 @@ public sealed class SignupRepository : ISignupRepository
         await conn.OpenAsync(ct);
         return await conn.QuerySingleOrDefaultAsync<SignupDetail>(
             new CommandDefinition(sql, new { Id = id }, cancellationToken: ct));
+    }
+
+    public async Task<IReadOnlyList<SignupCorrectionLink>> GetCorrectionChainAsync(Guid signupId, CancellationToken ct)
+    {
+        // Walk the chain in both directions: find the root, then all corrections
+        const string sql = """
+            WITH RECURSIVE chain AS (
+                -- Start from the given signup
+                SELECT id, signup_number, status, created_at, corrected_from_id
+                FROM portfolio.signup WHERE id = @SignupId
+                UNION ALL
+                -- Walk backwards to root
+                SELECT s.id, s.signup_number, s.status, s.created_at, s.corrected_from_id
+                FROM portfolio.signup s
+                JOIN chain c ON s.id = c.corrected_from_id
+            ),
+            forward AS (
+                -- Also walk forward from the given signup to find corrections of it
+                SELECT id, signup_number, status, created_at, corrected_from_id
+                FROM portfolio.signup WHERE id = @SignupId
+                UNION ALL
+                SELECT s.id, s.signup_number, s.status, s.created_at, s.corrected_from_id
+                FROM portfolio.signup s
+                JOIN forward f ON s.corrected_from_id = f.id
+            )
+            SELECT DISTINCT id, signup_number, status, created_at
+            FROM (SELECT * FROM chain UNION SELECT * FROM forward) combined
+            ORDER BY created_at ASC
+            """;
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+        await conn.OpenAsync(ct);
+        var result = await conn.QueryAsync<SignupCorrectionLink>(
+            new CommandDefinition(sql, new { SignupId = signupId }, cancellationToken: ct));
+        return result.ToList();
     }
 }

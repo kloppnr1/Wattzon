@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { api } from '../api';
 import { useDawaSearch } from '../hooks/useDawaSearch';
 
@@ -12,10 +12,15 @@ const STEPS = [
 
 export default function SignupNew() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [step, setStep] = useState(0);
   const [products, setProducts] = useState([]);
   const [error, setError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+
+  // Correction context from URL params (when creating from a rejected signup)
+  const correctedFromId = searchParams.get('correctedFromId');
+  const correctedFromNumber = searchParams.get('correctedFromNumber');
 
   // Step 0: Address
   const [addressMode, setAddressMode] = useState('search');
@@ -31,6 +36,33 @@ export default function SignupNew() {
   const { results: addressSuggestions, loading: searchingAddress } = useDawaSearch(addressQuery, {
     enabled: addressMode === 'search' && !selectedAddress,
   });
+
+  // Pre-fill from correction params
+  const prefilled = useRef(false);
+  useEffect(() => {
+    if (prefilled.current) return;
+    prefilled.current = true;
+
+    const pfDarId = searchParams.get('darId');
+    const pfGsrn = searchParams.get('gsrn');
+    const pfProductId = searchParams.get('productId');
+    const pfCustomerName = searchParams.get('customerName');
+    const pfCprCvr = searchParams.get('cprCvr');
+    const pfContactType = searchParams.get('contactType');
+    const pfType = searchParams.get('type');
+
+    if (pfDarId && pfGsrn) {
+      setAddressMode('dar');
+      setDarId(pfDarId);
+      setSelectedGsrn(pfGsrn);
+      setMeteringPoints([{ gsrn: pfGsrn, type: 'E17', grid_area_code: '—' }]);
+    }
+    if (pfProductId) setSelectedProduct(pfProductId);
+    if (pfCustomerName) setCustomerName(pfCustomerName);
+    if (pfCprCvr) setCprCvr(pfCprCvr);
+    if (pfContactType) setContactType(pfContactType);
+    if (pfType) setType(pfType);
+  }, [searchParams]);
 
   useEffect(() => {
     function handleClick(e) {
@@ -96,7 +128,7 @@ export default function SignupNew() {
     setSubmitting(true);
     setError(null);
     try {
-      await api.createSignup({
+      const payload = {
         darId,
         customerName,
         cprCvr,
@@ -106,7 +138,11 @@ export default function SignupNew() {
         productId: selectedProduct,
         type,
         effectiveDate,
-      });
+      };
+      if (correctedFromId) {
+        payload.correctedFromId = correctedFromId;
+      }
+      await api.createSignup(payload);
       navigate('/signups');
     } catch (e) {
       setError(e.message);
@@ -127,7 +163,21 @@ export default function SignupNew() {
       </Link>
 
       {/* Page header */}
-      <h1 className="text-3xl font-bold text-slate-900 tracking-tight mb-6 animate-fade-in-up">New Signup</h1>
+      <h1 className="text-3xl font-bold text-slate-900 tracking-tight mb-2 animate-fade-in-up">
+        {correctedFromId ? 'Corrected Signup' : 'New Signup'}
+      </h1>
+
+      {/* Correction banner */}
+      {correctedFromId && correctedFromNumber && (
+        <div className="mb-6 bg-teal-50 border border-teal-200 rounded-xl px-4 py-3 flex items-center gap-2.5 animate-fade-in-up">
+          <svg className="w-4 h-4 text-teal-500 shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 12c0-1.232-.046-2.453-.138-3.662a4.006 4.006 0 0 0-3.7-3.7 48.678 48.678 0 0 0-7.324 0 4.006 4.006 0 0 0-3.7 3.7c-.017.22-.032.441-.046.662M19.5 12l3-3m-3 3-3-3m-12 3c0 1.232.046 2.453.138 3.662a4.006 4.006 0 0 0 3.7 3.7 48.656 48.656 0 0 0 7.324 0 4.006 4.006 0 0 0 3.7-3.7c.017-.22.032-.441.046-.662M4.5 12l3 3m-3-3-3 3" />
+          </svg>
+          <p className="text-sm text-teal-700 font-medium">
+            Correcting rejected signup <span className="font-bold">{correctedFromNumber}</span> — review and adjust the data below.
+          </p>
+        </div>
+      )}
 
       {/* Step indicator */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 mb-6 animate-fade-in-up" style={{ animationDelay: '60ms' }}>
@@ -488,6 +538,13 @@ export default function SignupNew() {
                 </div>
               </div>
               <div className="divide-y divide-slate-200">
+                {correctedFromNumber && (
+                  <SummaryRow label="Corrects" value={
+                    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-xs font-semibold bg-rose-50 text-rose-600 border border-rose-200">
+                      {correctedFromNumber}
+                    </span>
+                  } />
+                )}
                 {selectedAddress && <SummaryRow label="Address" value={selectedAddress.text} />}
                 <SummaryRow label="GSRN" value={<span className="font-mono bg-slate-200/50 px-2 py-0.5 rounded-md text-xs">{selectedGsrn}</span>} />
                 <SummaryRow label="Product" value={selectedProductObj?.name} />
@@ -510,6 +567,8 @@ export default function SignupNew() {
                     <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                     Creating...
                   </span>
+                ) : correctedFromId ? (
+                  'Create Corrected Signup'
                 ) : (
                   'Create Signup'
                 )}

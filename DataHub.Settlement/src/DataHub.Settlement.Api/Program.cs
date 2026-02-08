@@ -138,11 +138,39 @@ app.MapGet("/api/signups", async (string? status, int? page, int? pageSize, ISig
     return Results.Ok(signups);
 });
 
-// GET /api/signups/{id} — full signup detail
+// GET /api/signups/{id} — full signup detail with correction chain
 app.MapGet("/api/signups/{id:guid}", async (Guid id, ISignupRepository repo, CancellationToken ct) =>
 {
     var detail = await repo.GetDetailByIdAsync(id, ct);
-    return detail is not null ? Results.Ok(detail) : Results.NotFound();
+    if (detail is null) return Results.NotFound();
+
+    var correctionChain = await repo.GetCorrectionChainAsync(id, ct);
+    // Only include chain if there are linked corrections (more than just this signup)
+    var chain = correctionChain.Count > 1 ? correctionChain : null;
+
+    return Results.Ok(new
+    {
+        detail.Id,
+        detail.SignupNumber,
+        detail.DarId,
+        detail.Gsrn,
+        detail.Type,
+        detail.EffectiveDate,
+        detail.Status,
+        detail.RejectionReason,
+        detail.CustomerId,
+        detail.CustomerName,
+        detail.CprCvr,
+        detail.ContactType,
+        detail.ProductId,
+        detail.ProductName,
+        detail.ProcessRequestId,
+        detail.CreatedAt,
+        detail.UpdatedAt,
+        detail.CorrectedFromId,
+        detail.CorrectedFromSignupNumber,
+        CorrectionChain = chain,
+    });
 });
 
 // GET /api/signups/{id}/events — process event timeline
