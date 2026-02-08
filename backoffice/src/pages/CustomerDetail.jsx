@@ -73,21 +73,21 @@ export default function CustomerDetail() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-slate-50 bg-slate-50/50">
-                <th className="text-left text-[11px] font-semibold text-slate-400 uppercase tracking-wider px-5 py-3">GSRN</th>
-                <th className="text-left text-[11px] font-semibold text-slate-400 uppercase tracking-wider px-5 py-3">Billing</th>
-                <th className="text-left text-[11px] font-semibold text-slate-400 uppercase tracking-wider px-5 py-3">Payment</th>
-                <th className="text-left text-[11px] font-semibold text-slate-400 uppercase tracking-wider px-5 py-3">Start</th>
+                <th className="text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-4 py-2">GSRN</th>
+                <th className="text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-4 py-2">Billing</th>
+                <th className="text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-4 py-2">Payment</th>
+                <th className="text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-4 py-2">Start</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
               {customer.contracts.map((c, i) => (
-                <tr key={c.id} className="hover:bg-teal-50/40 transition-colors duration-150 animate-slide-in opacity-0" style={{ animationDelay: `${i * 40}ms` }}>
-                  <td className="px-5 py-3.5">
-                    <span className="text-xs font-mono text-slate-500 bg-slate-100 px-2 py-1 rounded-md">{c.gsrn}</span>
+                <tr key={c.id} className={`transition-colors duration-150 animate-slide-in opacity-0 ${i % 2 === 0 ? 'bg-white hover:bg-teal-50/30' : 'bg-slate-50 hover:bg-teal-50/50'}`} style={{ animationDelay: `${i * 40}ms` }}>
+                  <td className="px-4 py-1.5">
+                    <span className="text-[11px] font-mono text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">{c.gsrn}</span>
                   </td>
-                  <td className="px-5 py-3.5 text-sm text-slate-600 capitalize font-medium">{c.billingFrequency}</td>
-                  <td className="px-5 py-3.5 text-sm text-slate-600 capitalize font-medium">{c.paymentModel}</td>
-                  <td className="px-5 py-3.5 text-sm text-slate-500">{c.startDate}</td>
+                  <td className="px-4 py-1.5 text-xs text-slate-600 capitalize font-medium">{c.billingFrequency}</td>
+                  <td className="px-4 py-1.5 text-xs text-slate-600 capitalize font-medium">{c.paymentModel}</td>
+                  <td className="px-4 py-1.5 text-xs text-slate-500">{c.startDate}</td>
                 </tr>
               ))}
             </tbody>
@@ -111,32 +111,32 @@ export default function CustomerDetail() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-slate-50 bg-slate-50/50">
-                <th className="text-left text-[11px] font-semibold text-slate-400 uppercase tracking-wider px-5 py-3">GSRN</th>
-                <th className="text-left text-[11px] font-semibold text-slate-400 uppercase tracking-wider px-5 py-3">Type</th>
-                <th className="text-left text-[11px] font-semibold text-slate-400 uppercase tracking-wider px-5 py-3">Settlement</th>
-                <th className="text-left text-[11px] font-semibold text-slate-400 uppercase tracking-wider px-5 py-3">Grid Area</th>
-                <th className="text-left text-[11px] font-semibold text-slate-400 uppercase tracking-wider px-5 py-3">Status</th>
-                <th className="text-left text-[11px] font-semibold text-slate-400 uppercase tracking-wider px-5 py-3">Supply Period</th>
+                <th className="text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-4 py-2">GSRN</th>
+                <th className="text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-4 py-2">Type</th>
+                <th className="text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-4 py-2">Settlement</th>
+                <th className="text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-4 py-2">Grid Area</th>
+                <th className="text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-4 py-2">Status</th>
+                <th className="text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-4 py-2">Supply Period</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
               {customer.meteringPoints.map((mp, i) => (
-                <tr key={mp.gsrn} className="hover:bg-teal-50/40 transition-colors duration-150 animate-slide-in opacity-0" style={{ animationDelay: `${i * 40}ms` }}>
-                  <td className="px-5 py-3.5">
-                    <span className="text-xs font-mono text-slate-500 bg-slate-100 px-2 py-1 rounded-md">{mp.gsrn}</span>
+                <tr key={mp.gsrn} className={`transition-colors duration-150 animate-slide-in opacity-0 ${i % 2 === 0 ? 'bg-white hover:bg-teal-50/30' : 'bg-slate-50 hover:bg-teal-50/50'}`} style={{ animationDelay: `${i * 40}ms` }}>
+                  <td className="px-4 py-1.5">
+                    <span className="text-[11px] font-mono text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">{mp.gsrn}</span>
                   </td>
-                  <td className="px-5 py-3.5 text-sm text-slate-600 font-medium">{mp.type}</td>
-                  <td className="px-5 py-3.5 text-sm text-slate-600 font-medium">{mp.settlementMethod}</td>
-                  <td className="px-5 py-3.5 text-sm text-slate-600">{mp.gridAreaCode} <span className="text-slate-400">({mp.priceArea})</span></td>
-                  <td className="px-5 py-3.5">
-                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${
+                  <td className="px-4 py-1.5 text-xs text-slate-600 font-medium">{mp.type}</td>
+                  <td className="px-4 py-1.5 text-xs text-slate-600 font-medium">{mp.settlementMethod}</td>
+                  <td className="px-4 py-1.5 text-xs text-slate-600">{mp.gridAreaCode} <span className="text-slate-400">({mp.priceArea})</span></td>
+                  <td className="px-4 py-1.5">
+                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium ${
                       mp.connectionStatus === 'connected' ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'
                     }`}>
                       <span className={`w-1.5 h-1.5 rounded-full ${mp.connectionStatus === 'connected' ? 'bg-emerald-400' : 'bg-slate-400'}`} />
                       {mp.connectionStatus}
                     </span>
                   </td>
-                  <td className="px-5 py-3.5 text-sm text-slate-500">
+                  <td className="px-4 py-1.5 text-xs text-slate-500">
                     {mp.supplyStart
                       ? `${mp.supplyStart}${mp.supplyEnd ? ` – ${mp.supplyEnd}` : ' – ongoing'}`
                       : <span className="text-slate-300">—</span>}

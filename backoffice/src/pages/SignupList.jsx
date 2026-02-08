@@ -15,7 +15,7 @@ const statusStyles = {
 function StatusBadge({ status }) {
   const cfg = statusStyles[status] || statusStyles.registered;
   return (
-    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${cfg.badge}`}>
+    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium ${cfg.badge}`}>
       <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
       {status}
     </span>
@@ -105,41 +105,41 @@ export default function SignupList() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-slate-50 bg-slate-50/50">
-                <th className="text-left text-[11px] font-semibold text-slate-400 uppercase tracking-wider px-6 py-3">Signup</th>
-                <th className="text-left text-[11px] font-semibold text-slate-400 uppercase tracking-wider px-6 py-3">Customer</th>
-                <th className="text-left text-[11px] font-semibold text-slate-400 uppercase tracking-wider px-6 py-3">GSRN</th>
-                <th className="text-left text-[11px] font-semibold text-slate-400 uppercase tracking-wider px-6 py-3">Type</th>
-                <th className="text-left text-[11px] font-semibold text-slate-400 uppercase tracking-wider px-6 py-3">Effective</th>
-                <th className="text-left text-[11px] font-semibold text-slate-400 uppercase tracking-wider px-6 py-3">Status</th>
-                <th className="text-left text-[11px] font-semibold text-slate-400 uppercase tracking-wider px-6 py-3">Created</th>
-                <th className="px-6 py-3"><span className="sr-only">View</span></th>
+                <th className="text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-4 py-2">Signup</th>
+                <th className="text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-4 py-2">Customer</th>
+                <th className="text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-4 py-2">GSRN</th>
+                <th className="text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-4 py-2">Type</th>
+                <th className="text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-4 py-2">Effective</th>
+                <th className="text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-4 py-2">Status</th>
+                <th className="text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-4 py-2">Created</th>
+                <th className="px-4 py-2"><span className="sr-only">View</span></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
               {signups.map((s, i) => (
-                <tr key={s.id} className="hover:bg-teal-50/40 transition-colors duration-150 animate-slide-in opacity-0" style={{ animationDelay: `${i * 40}ms` }}>
-                  <td className="px-6 py-3.5">
-                    <Link to={`/signups/${s.id}`} className="text-sm font-semibold text-teal-600 hover:text-teal-800 transition-colors">
+                <tr key={s.id} className={`transition-colors duration-150 animate-slide-in opacity-0 ${i % 2 === 0 ? 'bg-white hover:bg-teal-50/30' : 'bg-slate-50 hover:bg-teal-50/50'}`} style={{ animationDelay: `${i * 40}ms` }}>
+                  <td className="px-4 py-1.5">
+                    <Link to={`/signups/${s.id}`} className="text-xs font-semibold text-teal-600 hover:text-teal-800 transition-colors">
                       {s.signupNumber}
                     </Link>
                   </td>
-                  <td className="px-6 py-3.5 text-sm text-slate-700 font-medium">{s.customerName}</td>
-                  <td className="px-6 py-3.5">
-                    <span className="text-xs font-mono text-slate-500 bg-slate-100 px-2 py-1 rounded-md">
+                  <td className="px-4 py-1.5 text-xs text-slate-700 font-medium">{s.customerName}</td>
+                  <td className="px-4 py-1.5">
+                    <span className="text-[11px] font-mono text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">
                       {s.gsrn}
                     </span>
                   </td>
-                  <td className="px-6 py-3.5 text-sm text-slate-500">
+                  <td className="px-4 py-1.5 text-xs text-slate-500">
                     {s.type === 'move_in' ? 'Move-in' : 'Switch'}
                   </td>
-                  <td className="px-6 py-3.5 text-sm text-slate-500">{s.effectiveDate}</td>
-                  <td className="px-6 py-3.5"><StatusBadge status={s.status} /></td>
-                  <td className="px-6 py-3.5 text-sm text-slate-400">
+                  <td className="px-4 py-1.5 text-xs text-slate-500">{s.effectiveDate}</td>
+                  <td className="px-4 py-1.5"><StatusBadge status={s.status} /></td>
+                  <td className="px-4 py-1.5 text-xs text-slate-400">
                     {new Date(s.createdAt).toLocaleDateString('da-DK')}
                   </td>
-                  <td className="px-6 py-3.5 text-right">
+                  <td className="px-4 py-1.5 text-right">
                     <Link to={`/signups/${s.id}`} className="text-slate-300 hover:text-teal-500 transition-colors">
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
                       </svg>
                     </Link>
