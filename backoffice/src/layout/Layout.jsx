@@ -75,51 +75,13 @@ export default function Layout() {
 
         {/* Brand */}
         <div className="px-5 pt-7 pb-6 relative z-10">
-          <div className="flex items-center gap-3">
-            <div className="volt-brand w-12 h-12 rounded-2xl bg-teal-950/40 ring-1 ring-white/20 backdrop-blur-sm flex items-center justify-center glow-pulse relative">
-              {/* Orbiting dot */}
-              <div className="volt-orbit">
-                <span className="volt-orbit-dot" />
-              </div>
-              {/* Ring burst on hover */}
-              <span className="volt-ring-burst absolute inset-0 rounded-2xl ring-2 ring-white/30 opacity-0 pointer-events-none" />
-              {/* Spark particles */}
-              <div className="volt-sparks">
-                <span className="volt-spark" />
-                <span className="volt-spark" />
-                <span className="volt-spark volt-spark-bright" />
-                <span className="volt-spark" />
-                <span className="volt-spark volt-spark-bright" />
-                <span className="volt-spark" />
-                <span className="volt-spark" />
-                <span className="volt-spark volt-spark-bright" />
-              </div>
-              {/* Bolt icon */}
-              <svg className="volt-bolt w-7 h-7 relative z-10" viewBox="0 0 32 32" fill="none">
-                {/* Outer glow shape */}
-                <path d="M18.5 2L6 17.5h8l-2.5 12.5L25 14.5h-8l2.5-12.5z" fill="url(#bolt-glow)" fillOpacity="0.15" stroke="none" transform="scale(1.08) translate(-1.2, -1)" />
-                {/* Main bolt */}
-                <path d="M18.5 2L6 17.5h8l-2.5 12.5L25 14.5h-8l2.5-12.5z" fill="url(#bolt-fill)" />
-                {/* Inner highlight */}
-                <path d="M17 5l-8.5 11h6l-1.5 8L22 14h-6l1-9z" fill="white" fillOpacity="0.3" />
-                {/* Bright flash overlay */}
-                <circle className="volt-flash" cx="14" cy="16" r="10" fill="white" opacity="0" />
-                <defs>
-                  <linearGradient id="bolt-fill" x1="10" y1="2" x2="20" y2="30">
-                    <stop stopColor="white" />
-                    <stop offset="0.5" stopColor="#e4e9ee" />
-                    <stop offset="1" stopColor="#c9d4de" />
-                  </linearGradient>
-                  <radialGradient id="bolt-glow" cx="50%" cy="50%" r="50%">
-                    <stop stopColor="#c9d4de" />
-                    <stop offset="1" stopColor="#c9d4de" stopOpacity="0" />
-                  </radialGradient>
-                </defs>
-              </svg>
+          <div className="flex items-center gap-3.5">
+            <div className="w-10 h-10 rounded-xl bg-white/12 flex items-center justify-center">
+              <span className="text-[20px] font-black text-white/90 leading-none tracking-tighter">V</span>
             </div>
             <div>
-              <span className="text-[18px] font-bold text-white tracking-tight">V</span>
-              <p className="text-[10px] text-teal-100/60 font-medium">Energy Platform</p>
+              <span className="text-[17px] font-semibold text-white/90 tracking-tight">Volt</span>
+              <p className="text-[10px] text-teal-200/40 font-medium tracking-wide">Energy Platform</p>
             </div>
           </div>
         </div>
