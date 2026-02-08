@@ -1,12 +1,14 @@
 using DataHub.Settlement.Application.DataHub;
 using DataHub.Settlement.Application.Lifecycle;
 using DataHub.Settlement.Application.Metering;
+using DataHub.Settlement.Application.Onboarding;
 using DataHub.Settlement.Application.Portfolio;
 using DataHub.Settlement.Application.Settlement;
 using DataHub.Settlement.Application.Tariff;
 using DataHub.Settlement.Infrastructure.Lifecycle;
 using DataHub.Settlement.Infrastructure.Metering;
 using DataHub.Settlement.Infrastructure.Messaging;
+using DataHub.Settlement.Infrastructure.Onboarding;
 using DataHub.Settlement.Infrastructure.Parsing;
 using DataHub.Settlement.Infrastructure.Portfolio;
 using DataHub.Settlement.Infrastructure.Settlement;
@@ -105,7 +107,9 @@ public class SunshineScenarioTests
         var rsm012Json = File.ReadAllText(Path.Combine("..", "..", "..", "..", "..", "fixtures", "rsm012-multi-day.json"));
         fakeClient.Enqueue(QueueName.Timeseries, new DataHubMessage("msg-rsm012", "RSM-012", null, rsm012Json));
 
-        var poller = new QueuePollerService(fakeClient, parser, _meteringRepo, _portfolio, _messageLog,
+        var poller = new QueuePollerService(
+            fakeClient, parser, _meteringRepo, _portfolio, _processRepo, new SignupRepository(TestDatabase.ConnectionString),
+            NullOnboardingService.Instance, new TestClock(), _messageLog,
             NullLogger<QueuePollerService>.Instance);
         await poller.PollQueueAsync(QueueName.Timeseries, ct);
 

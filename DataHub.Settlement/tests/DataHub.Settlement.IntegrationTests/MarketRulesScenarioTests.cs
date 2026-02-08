@@ -2,6 +2,7 @@ using Dapper;
 using DataHub.Settlement.Application.DataHub;
 using DataHub.Settlement.Application.Lifecycle;
 using DataHub.Settlement.Application.Metering;
+using DataHub.Settlement.Application.Onboarding;
 using DataHub.Settlement.Application.Portfolio;
 using DataHub.Settlement.Application.Settlement;
 using DataHub.Settlement.Application.Tariff;
@@ -12,6 +13,7 @@ using DataHub.Settlement.Infrastructure.DataHub;
 using DataHub.Settlement.Infrastructure.Lifecycle;
 using DataHub.Settlement.Infrastructure.Metering;
 using DataHub.Settlement.Infrastructure.Messaging;
+using DataHub.Settlement.Infrastructure.Onboarding;
 using DataHub.Settlement.Infrastructure.Parsing;
 using DataHub.Settlement.Infrastructure.Portfolio;
 using DataHub.Settlement.Infrastructure.Settlement;
@@ -319,7 +321,11 @@ public sealed class MarketRulesScenarioTests : IClassFixture<WebApplicationFacto
         // Process RSM-012 through the poller into DB
         var messageLog = new MessageLog(Conn);
         var meteringRepo = new MeteringDataRepository(Conn);
-        var poller = new QueuePollerService(_datahub, parser, meteringRepo, _portfolio, messageLog,
+        var processRepo = new ProcessRepository(Conn);
+        var signupRepo = new SignupRepository(Conn);
+        var poller = new QueuePollerService(
+            _datahub, parser, meteringRepo, _portfolio, processRepo, signupRepo,
+            NullOnboardingService.Instance, new TestClock(), messageLog,
             NullLogger<QueuePollerService>.Instance);
         await poller.PollQueueAsync(QueueName.Timeseries, ct);
 

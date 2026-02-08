@@ -1,4 +1,7 @@
+using DataHub.Settlement.Application.DataHub;
 using DataHub.Settlement.Application.Lifecycle;
+using DataHub.Settlement.Application.Onboarding;
+using DataHub.Settlement.Infrastructure.DataHub;
 using DataHub.Settlement.Infrastructure.Lifecycle;
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -10,9 +13,18 @@ public class ProcessSchedulerTests
 {
     private readonly ProcessStateMachineTests.InMemoryProcessRepository _processRepo = new();
     private readonly TestClock _clock = new();
+    private readonly StubSignupRepository _signupRepo = new();
+    private readonly StubDataHubClient _dataHubClient = new();
+    private readonly StubBrsRequestBuilder _brsBuilder = new();
+    private readonly StubOnboardingService _onboardingService = new();
 
     private ProcessSchedulerService CreateSut() => new(
-        _processRepo, _clock,
+        _processRepo,
+        _signupRepo,
+        _dataHubClient,
+        _brsBuilder,
+        _onboardingService,
+        _clock,
         NullLogger<ProcessSchedulerService>.Instance);
 
     [Fact]
@@ -53,5 +65,74 @@ public class ProcessSchedulerTests
 
         var after = await _processRepo.GetAsync(request.Id, CancellationToken.None);
         after!.Status.Should().Be("effectuation_pending");
+    }
+
+    // ── Test stubs ──
+
+    private sealed class StubSignupRepository : ISignupRepository
+    {
+        public Task<Signup> CreateAsync(string signupNumber, string darId, string gsrn, Guid customerId,
+            Guid productId, Guid processRequestId, string type, DateOnly effectiveDate, CancellationToken ct)
+            => throw new NotImplementedException();
+        public Task<string> NextSignupNumberAsync(CancellationToken ct)
+            => throw new NotImplementedException();
+        public Task<Signup?> GetBySignupNumberAsync(string signupNumber, CancellationToken ct)
+            => throw new NotImplementedException();
+        public Task<Signup?> GetByProcessRequestIdAsync(Guid processRequestId, CancellationToken ct)
+            => Task.FromResult<Signup?>(null);
+        public Task<Signup?> GetActiveByGsrnAsync(string gsrn, CancellationToken ct)
+            => throw new NotImplementedException();
+        public Task UpdateStatusAsync(Guid id, string status, string? rejectionReason, CancellationToken ct)
+            => Task.CompletedTask;
+        public Task SetProcessRequestIdAsync(Guid id, Guid processRequestId, CancellationToken ct)
+            => throw new NotImplementedException();
+        public Task<string?> GetCustomerCprCvrAsync(Guid signupId, CancellationToken ct)
+            => throw new NotImplementedException();
+        public Task<IReadOnlyList<SignupListItem>> GetAllAsync(string? statusFilter, CancellationToken ct)
+            => throw new NotImplementedException();
+        public Task<SignupDetail?> GetDetailByIdAsync(Guid id, CancellationToken ct)
+            => throw new NotImplementedException();
+    }
+
+    private sealed class StubDataHubClient : IDataHubClient
+    {
+        public Task<DataHubMessage?> PeekAsync(QueueName queue, CancellationToken ct)
+            => throw new NotImplementedException();
+        public Task DequeueAsync(string messageId, CancellationToken ct)
+            => throw new NotImplementedException();
+        public Task<DataHubResponse> SendRequestAsync(string processType, string cimPayload, CancellationToken ct)
+            => Task.FromResult(new DataHubResponse("corr-stub", true, null));
+    }
+
+    private sealed class StubBrsRequestBuilder : IBrsRequestBuilder
+    {
+        public string BuildBrs001(string gsrn, string cprCvr, DateOnly effectiveDate)
+            => "{}";
+        public string BuildBrs002(string gsrn, DateOnly effectiveDate)
+            => throw new NotImplementedException();
+        public string BuildBrs003(string gsrn, string originalCorrelationId)
+            => throw new NotImplementedException();
+        public string BuildBrs009(string gsrn, string cprCvr, DateOnly effectiveDate)
+            => "{}";
+        public string BuildBrs010(string gsrn, DateOnly effectiveDate)
+            => throw new NotImplementedException();
+        public string BuildBrs043(string gsrn, string cprCvr, DateOnly effectiveDate)
+            => throw new NotImplementedException();
+        public string BuildBrs044(string gsrn, string originalCorrelationId)
+            => throw new NotImplementedException();
+        public string BuildBrs042(string gsrn, DateOnly effectiveDate)
+            => throw new NotImplementedException();
+    }
+
+    private sealed class StubOnboardingService : IOnboardingService
+    {
+        public Task<SignupResponse> CreateSignupAsync(SignupRequest request, CancellationToken ct)
+            => throw new NotImplementedException();
+        public Task<SignupStatusResponse?> GetStatusAsync(string signupNumber, CancellationToken ct)
+            => throw new NotImplementedException();
+        public Task CancelAsync(string signupNumber, CancellationToken ct)
+            => throw new NotImplementedException();
+        public Task SyncFromProcessAsync(Guid processRequestId, string processStatus, string? reason, CancellationToken ct)
+            => Task.CompletedTask;
     }
 }

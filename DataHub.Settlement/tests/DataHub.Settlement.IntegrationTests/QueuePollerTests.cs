@@ -1,13 +1,16 @@
+using DataHub.Settlement.Application.DataHub;
 using DataHub.Settlement.Application.Metering;
+using DataHub.Settlement.Application.Onboarding;
+using DataHub.Settlement.Infrastructure.Lifecycle;
 using DataHub.Settlement.Infrastructure.Metering;
 using DataHub.Settlement.Infrastructure.Messaging;
+using DataHub.Settlement.Infrastructure.Onboarding;
 using DataHub.Settlement.Infrastructure.Parsing;
 using DataHub.Settlement.Infrastructure.Portfolio;
 using DataHub.Settlement.UnitTests;
 using Microsoft.Extensions.Logging.Abstractions;
 using FluentAssertions;
 using Xunit;
-using DataHub.Settlement.Application.DataHub;
 
 namespace DataHub.Settlement.IntegrationTests;
 
@@ -33,7 +36,11 @@ public class QueuePollerTests
     {
         var client = new FakeDataHubClient();
         var parser = new CimJsonParser();
-        var poller = new QueuePollerService(client, parser, _meteringRepo, _portfolioRepo, _messageLog,
+        var processRepo = new ProcessRepository(TestDatabase.ConnectionString);
+        var signupRepo = new SignupRepository(TestDatabase.ConnectionString);
+        var poller = new QueuePollerService(
+            client, parser, _meteringRepo, _portfolioRepo, processRepo, signupRepo,
+            NullOnboardingService.Instance, new TestClock(), _messageLog,
             NullLogger<QueuePollerService>.Instance);
 
         client.Enqueue(QueueName.Timeseries, new DataHubMessage("msg-001", "RSM-012", null, LoadSingleDayFixture()));
@@ -59,7 +66,11 @@ public class QueuePollerTests
     {
         var client = new FakeDataHubClient();
         var parser = new CimJsonParser();
-        var poller = new QueuePollerService(client, parser, _meteringRepo, _portfolioRepo, _messageLog,
+        var processRepo = new ProcessRepository(TestDatabase.ConnectionString);
+        var signupRepo = new SignupRepository(TestDatabase.ConnectionString);
+        var poller = new QueuePollerService(
+            client, parser, _meteringRepo, _portfolioRepo, processRepo, signupRepo,
+            NullOnboardingService.Instance, new TestClock(), _messageLog,
             NullLogger<QueuePollerService>.Instance);
 
         client.Enqueue(QueueName.Timeseries, new DataHubMessage("msg-dup", "RSM-012", null, LoadSingleDayFixture()));
@@ -84,7 +95,11 @@ public class QueuePollerTests
     {
         var client = new FakeDataHubClient();
         var parser = new CimJsonParser();
-        var poller = new QueuePollerService(client, parser, _meteringRepo, _portfolioRepo, _messageLog,
+        var processRepo = new ProcessRepository(TestDatabase.ConnectionString);
+        var signupRepo = new SignupRepository(TestDatabase.ConnectionString);
+        var poller = new QueuePollerService(
+            client, parser, _meteringRepo, _portfolioRepo, processRepo, signupRepo,
+            NullOnboardingService.Instance, new TestClock(), _messageLog,
             NullLogger<QueuePollerService>.Instance);
 
         client.Enqueue(QueueName.Timeseries, new DataHubMessage("msg-bad", "RSM-012", null, "{ invalid json payload }"));

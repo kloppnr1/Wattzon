@@ -2652,4 +2652,37 @@ public sealed class SimulationService
 
         return executed;
     }
+
+    /// <summary>
+    /// Gets all message audit entries for the CIM viewer.
+    /// NOTE: This is a stub implementation. Message audit functionality is planned for V021 migration.
+    /// </summary>
+    public Task<IEnumerable<MessageAuditEntry>> GetMessageAuditListAsync(string? gsrn, string? direction, CancellationToken ct)
+    {
+        // TODO: Implement message audit storage and retrieval when V021__message_audit migration is created
+        return Task.FromResult(Enumerable.Empty<MessageAuditEntry>());
+    }
+
+    /// <summary>
+    /// Gets a specific message by GSRN and step name, returning the JSON payload.
+    /// NOTE: This is a stub implementation. Message audit functionality is planned for V021 migration.
+    /// </summary>
+    public Task<string?> GetMessageAuditAsync(string gsrn, string stepName, CancellationToken ct)
+    {
+        // TODO: Implement message audit storage and retrieval when V021__message_audit migration is created
+        return Task.FromResult<string?>(null);
+    }
 }
+
+/// <summary>
+/// Represents a CIM message audit entry.
+/// NOTE: This is a stub type. Full implementation planned for V021 migration.
+/// </summary>
+public record MessageAuditEntry(
+    Guid Id,
+    DateTime CreatedAt,
+    string Direction,
+    string MessageType,
+    string StepName,
+    string? Gsrn,
+    string RawPayload);
