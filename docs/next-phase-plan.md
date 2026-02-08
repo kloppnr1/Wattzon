@@ -369,7 +369,7 @@ When a DAR ID resolves to multiple metering points (e.g., apartment building), t
 POST /api/signup → 201 { status: "awaiting_gsrn_selection", gsrn_options: ["5713131..01", "5713131..02"] }
 ```
 
-The consumer (website, customer service) must contact the customer and resolve which GSRN is correct. Then:
+The consumer shows the options to the customer inline — it's just another step in the signup form. The customer picks one, and the consumer calls:
 
 ```
 POST /api/signup/{id}/select-gsrn
@@ -378,7 +378,7 @@ POST /api/signup/{id}/select-gsrn
 → 200 { status: "registered" }
 ```
 
-This triggers GSRN validation, creates the process request, and the normal flow continues. Customer service handles this naturally (ask the customer on the phone). Self-service channels can show a selection UI.
+This triggers GSRN validation, creates the process request, and the normal flow continues. For self-service (website/app), this is a selection dropdown in the signup form. For customer service, the agent asks the customer on the phone.
 
 **Consumer-facing statuses** updated:
 
