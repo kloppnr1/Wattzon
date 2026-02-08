@@ -253,7 +253,7 @@ The Danish energy market has structural complexity that the API must hide from t
 | **BRS-001 vs BRS-009** — supplier switch or move-in? Different processes, different notice periods | Orchestration maps `type` to correct BRS process | `type`: `switch` or `move_in` |
 | **Effective date and notice periods** — BRS-001 requires 15 business days, BRS-009 can be immediate | Orchestration validates the date against process-specific rules | Desired effective date |
 | **Grid area unknown at signup** — tariffs only arrive via RSM-007 after activation | Irrelevant for signup — grid tariffs are pass-through, same regardless of supplier | Nothing — products show margin + subscription only |
-| **Rejection handling** — CPR/CVR mismatch, conflicting process (E16), invalid GSRN | Orchestration handles internally. Retryable errors are retried. Fatal errors surface to status | Nothing — status shows `rejected` with reason |
+| **Rejection handling** — CPR/CVR mismatch, conflicting process (E16), invalid GSRN | Status shows `rejected` with reason. Back office reviews and handles correction manually | Nothing — status shows `rejected` with reason |
 | **RSM-007 activation** — master data arrives on effective date, reveals grid area, settlement method, meter type | Orchestration processes RSM-007, assigns tariffs, activates metering point | Nothing — status changes to `active` |
 
 **The sales channel's mental model:** "I submitted a signup. It's either processing, active, rejected, or cancelled."
@@ -399,7 +399,7 @@ On RSM-007 from MasterData queue:
 
   NEW — create portfolio from signup:
   - Look up signup by GSRN
-  - Create contract (customer_id from signup, product_id from signup, GSRN, effective_date)
+  - Create contract (customer_id from signup, product_id from signup, GSRN, effective_date, billing_frequency=quarterly, payment_model=aconto)
   - Create supply period (GSRN, effective_date)
   - Activate metering point
   - Transition process: effectuation_pending → completed
@@ -436,14 +436,15 @@ The API accepts a **DAR ID** (Danish Address Register identifier), not a raw GSR
 
 ---
 
-#### Open business decisions
+#### Business decisions (resolved)
 
-| Decision | Options | Recommendation |
-|----------|---------|---------------|
-| **Default billing model** | Aconto (pre-payment) or arrears (post-payment) | Start with arrears only — industry trend, simpler, no estimation needed. Add aconto as product option later |
-| **Rejection retry** | Auto-retry or surface to customer service | Auto-retry for transient errors (E16 conflict). Surface CPR mismatch to customer service for manual correction |
-| **Multiple GSRNs per DAR ID** | Sales channel handles disambiguation before calling the API | API returns 400 if lookup yields multiple GSRNs |
-| **Multiple signups per customer** | Allow or block | Allow — one customer can have multiple metering points (e.g., house + garage) |
+| Decision | Resolution |
+|----------|-----------|
+| **Default billing model** | **Aconto.** Quarterly pre-payment is the standard. Settlement still calculates actual consumption per hour — the difference between actual and aconto paid is reconciled each quarter. |
+| **Rejection handling** | **Back office handles all rejections.** The system surfaces the rejection reason via the status endpoint. No auto-retry logic. Back office staff (customer service) review the rejection, correct the data, and re-submit manually. |
+| **Multiple GSRNs per DAR ID** | **Back office handles disambiguation.** If the address lookup returns multiple metering points, back office resolves which one is correct before creating the signup. The API does not need a disambiguation flow. |
+| **Switch vs. move-in determination** | **Back office decides.** The sales channel / back office provides the `type` field. The system does not attempt to figure out whether there's a current supplier — that's a back-office concern. |
+| **Multiple signups per customer** | **Allowed.** One customer can have multiple metering points (e.g., house + garage). |
 
 ---
 
