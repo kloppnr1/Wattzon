@@ -217,7 +217,7 @@ Track A has no dependencies on Track B. They can be developed in parallel.
 **Design principles:**
 - **API-first.** All sales channels call the same endpoints. One API, multiple callers.
 - **Simple API, smart backend.** The sales channel just submits a signup and tracks status. All DataHub complexity (which BRS process, notice periods, rejections, retries) is handled internally by the orchestration layer.
-- **Margin is the product.** Customers choose a supplier based on margin + subscription — grid tariffs, system tariffs, and taxes are pass-through costs identical across all suppliers. The API only needs to present DDQ's own pricing, not a full invoice estimate.
+- **Margin is the product.** Customers choose a supplier based on margin + subscription — grid tariffs, system tariffs, and taxes are pass-through costs identical across all suppliers. The API only needs to present our own pricing, not a full invoice estimate.
 
 ```
 ┌──────────────┐  ┌──────────────┐  ┌──────────────┐
@@ -451,7 +451,7 @@ The API accepts a **DAR ID** (Danish Address Register identifier), not a raw GSR
 
 | Layer | Task |
 |-------|------|
-| **Migration V021** | `portfolio.signup` table (dar_id, gsrn, customer_id, product_id, process_request_id, type, effective_date, status). Product table enhancements (description, pricing_type, green_energy, display_order) |
+| **Migration V021** | `portfolio.signup` table (dar_id, gsrn, customer_id, product_id, process_request_id, type, effective_date, status). Product table fixes: drop `binding_period_months` (binding periods not allowed in DK electricity market), add `description`, `green_energy`, `display_order` |
 | **Application** | `OnboardingService` (DAR ID → GSRN lookup, validate, create signup, cancel, sync from process), `GsrnValidator`, `BusinessDayCalculator`, `ISignupRepository`, models |
 | **Infrastructure** | `SignupRepository` (Dapper), `BusinessDayCalculator` (Danish holidays), product listing query |
 | **API** | 4 endpoints in `DataHub.Settlement.Api`, DI wiring, OpenAPI/Swagger |
@@ -700,7 +700,7 @@ These items are **not** in this phase:
 
 | Migration | Track | Purpose |
 |-----------|-------|---------|
-| V021 | B1 | `portfolio.product` enhancements (description, pricing_type, green_energy, display_order) + `portfolio.signup` table (dar_id, gsrn, type, effective_date, status) |
+| V021 | B1 | `portfolio.product` fixes: drop `binding_period_months`, add `description`, `green_energy`, `display_order`. New `portfolio.signup` table (dar_id, gsrn, customer_id, product_id, process_request_id, type, effective_date, status) |
 | V022 | A1 | `datahub.aggregation_data` + `datahub.reconciliation_result` tables |
 | V023 | B3 | `billing.invoice` + `billing.credit_note` tables |
 
