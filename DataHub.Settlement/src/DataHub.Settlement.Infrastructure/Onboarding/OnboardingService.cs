@@ -36,6 +36,16 @@ public sealed class OnboardingService : IOnboardingService
 
     public async Task<SignupResponse> CreateSignupAsync(SignupRequest request, CancellationToken ct)
     {
+        // 0. If this is a correction, validate the original signup exists and is rejected
+        if (request.CorrectedFromId.HasValue)
+        {
+            var original = await _signupRepo.GetByIdAsync(request.CorrectedFromId.Value, ct)
+                ?? throw new ValidationException($"Original signup {request.CorrectedFromId} not found.");
+
+            if (original.Status != "rejected")
+                throw new ValidationException($"Can only correct a rejected signup. Signup {original.SignupNumber} is '{original.Status}'.");
+        }
+
         // 1. Resolve GSRN from DAR ID
         var lookupResult = await _addressLookup.LookupByDarIdAsync(request.DarId, ct);
 
@@ -78,15 +88,17 @@ public sealed class OnboardingService : IOnboardingService
         var stateMachine = new ProcessStateMachine(_processRepo, _clock);
         var process = await stateMachine.CreateRequestAsync(gsrn, processType, request.EffectiveDate, ct);
 
-        // 10. Create signup
+        // 10. Create signup (with optional correction link)
         var signupNumber = await _signupRepo.NextSignupNumberAsync(ct);
         var signup = await _signupRepo.CreateAsync(
             signupNumber, request.DarId, gsrn, customer.Id,
-            request.ProductId, process.Id, request.Type, request.EffectiveDate, ct);
+            request.ProductId, process.Id, request.Type, request.EffectiveDate,
+            request.CorrectedFromId, ct);
 
         _logger.LogInformation(
-            "Signup {SignupNumber} created for GSRN {Gsrn}, type={Type}, effective={EffectiveDate}",
-            signup.SignupNumber, gsrn, request.Type, request.EffectiveDate);
+            "Signup {SignupNumber} created for GSRN {Gsrn}, type={Type}, effective={EffectiveDate}{Correction}",
+            signup.SignupNumber, gsrn, request.Type, request.EffectiveDate,
+            request.CorrectedFromId.HasValue ? $", correcting {request.CorrectedFromId}" : "");
 
         return new SignupResponse(signup.SignupNumber, signup.Status, gsrn, request.EffectiveDate);
     }
