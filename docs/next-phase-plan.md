@@ -212,10 +212,12 @@ Track A has no dependencies on Track B. They can be developed in parallel.
 
 **Problem:** The settlement system can process customers end-to-end, but there's no entry point for "a customer just signed up." Sales happen through three channels — website (self-service), mobile app (self-service), and customer service (phone). Today, customer creation is manual or demo-seeded. All three channels need the same programmatic entry point.
 
+**Terminology:** "Sales channel" = the system calling the API (website, mobile app, customer service UI). "Customer" = the person signing up for electricity.
+
 **Design principles:**
-- **API-first.** All sales channels call the same endpoints. One API, multiple consumers.
-- **Simple consumer, smart backend.** The API consumer just submits a signup and tracks status. All DataHub complexity (which BRS process, notice periods, rejections, retries) is handled internally by the orchestration layer.
-- **Margin is the product.** Customers choose a supplier based on margin + subscription — grid tariffs, system tariffs, and taxes are pass-through costs identical across all suppliers. The API only needs to present the DDQ's own pricing, not a full invoice estimate.
+- **API-first.** All sales channels call the same endpoints. One API, multiple callers.
+- **Simple API, smart backend.** The sales channel just submits a signup and tracks status. All DataHub complexity (which BRS process, notice periods, rejections, retries) is handled internally by the orchestration layer.
+- **Margin is the product.** Customers choose a supplier based on margin + subscription — grid tariffs, system tariffs, and taxes are pass-through costs identical across all suppliers. The API only needs to present DDQ's own pricing, not a full invoice estimate.
 
 ```
 ┌──────────────┐  ┌──────────────┐  ┌──────────────┐
@@ -241,20 +243,20 @@ Track A has no dependencies on Track B. They can be developed in parallel.
 
 ---
 
-#### Business context: what the API consumer does NOT need to know
+#### Business context: what the sales channel does NOT need to know
 
-The Danish energy market has structural complexity that the API must hide from the consumer:
+The Danish energy market has structural complexity that the API must hide from the sales channel:
 
-| Complexity | Who handles it | Consumer provides |
+| Complexity | Who handles it | Sales channel provides |
 |-----------|---------------|-------------------|
 | **GSRN discovery** — customer knows address, not GSRN | We look up GSRN from DAR ID via Energinet address API | DAR ID (address identifier) |
-| **BRS-001 vs BRS-009** — supplier switch or move-in? Different processes, different notice periods | Orchestration maps consumer's `type` to correct BRS process | `type`: `switch` or `move_in` |
+| **BRS-001 vs BRS-009** — supplier switch or move-in? Different processes, different notice periods | Orchestration maps `type` to correct BRS process | `type`: `switch` or `move_in` |
 | **Effective date and notice periods** — BRS-001 requires 15 business days, BRS-009 can be immediate | Orchestration validates the date against process-specific rules | Desired effective date |
 | **Grid area unknown at signup** — tariffs only arrive via RSM-007 after activation | Irrelevant for signup — grid tariffs are pass-through, same regardless of supplier | Nothing — products show margin + subscription only |
 | **Rejection handling** — CPR/CVR mismatch, conflicting process (E16), invalid GSRN | Orchestration handles internally. Retryable errors are retried. Fatal errors surface to status | Nothing — status shows `rejected` with reason |
 | **RSM-007 activation** — master data arrives on effective date, reveals grid area, settlement method, meter type | Orchestration processes RSM-007, assigns tariffs, activates metering point | Nothing — status changes to `active` |
 
-**The consumer's mental model:** "I submitted a signup. It's either processing, active, rejected, or cancelled."
+**The sales channel's mental model:** "I submitted a signup. It's either processing, active, rejected, or cancelled."
 
 ---
 
@@ -262,12 +264,12 @@ The Danish energy market has structural complexity that the API must hide from t
 
 | Endpoint | Purpose |
 |----------|---------|
-| `GET /api/products` | List products the consumer can sell (margin, subscription, spot/fixed) |
+| `GET /api/products` | List products the sales channel can offer (margin, subscription, spot/fixed) |
 | `POST /api/signup` | Submit a new customer signup |
-| `GET /api/signup/{id}/status` | Check how the signup is progressing |
+| `GET /api/signup/{id}/status` | Check signup progress |
 | `POST /api/signup/{id}/cancel` | Cancel before activation |
 
-Four endpoints. The consumer handles GSRN disambiguation (multiple meters per address) on their side before calling the API.
+Four endpoints. The sales channel handles GSRN disambiguation (multiple meters per address) on their side before calling the API.
 
 **Request/response:**
 
@@ -294,7 +296,7 @@ POST /api/signup
 }
 ```
 
-The consumer provides a **DAR ID** (Danish Address Register identifier). We resolve the GSRN internally. The `type` field is either `switch` (BRS-001 — taking over from another supplier) or `move_in` (BRS-009 — no current supplier). The `effective_date` is the customer's desired start date.
+The sales channel provides a **DAR ID** (Danish Address Register identifier). We resolve the GSRN internally. The `type` field is either `switch` (BRS-001 — taking over from another supplier) or `move_in` (BRS-009 — no current supplier). The `effective_date` is the customer's desired start date.
 
 ```
 GET /api/signup/SGN-2026-00042/status
@@ -309,9 +311,9 @@ GET /api/signup/SGN-2026-00042/status
 }
 ```
 
-**Consumer-facing statuses** (simplified from the internal DataHub state machine):
+**External statuses** (simplified from the internal DataHub state machine):
 
-| Consumer status | Internal states mapped | Meaning |
+| External status | Internal states mapped | Meaning |
 |----------------|----------------------|---------|
 | `registered` | Process created, not yet sent | We have your signup, preparing to send to DataHub |
 | `processing` | `sent_to_datahub`, `acknowledged`, `effectuation_pending` | In progress — DataHub is handling the switch |
@@ -319,7 +321,7 @@ GET /api/signup/SGN-2026-00042/status
 | `rejected` | `rejected` | DataHub rejected — reason provided |
 | `cancelled` | `cancelled` | Customer or system cancelled |
 
-The consumer never sees `sent_to_datahub` vs. `acknowledged` vs. `effectuation_pending` — that's internal. They just see "processing."
+The sales channel never sees `sent_to_datahub` vs. `acknowledged` vs. `effectuation_pending` — that's internal. They just see "processing."
 
 ---
 
@@ -342,7 +344,7 @@ This is where the real complexity lives. A key design decision shapes the entire
 ```
 1. Look up GSRN from DAR ID via address lookup service
    - If no GSRN found: return 400 with error
-   - If multiple GSRNs: return 400 — consumer handles disambiguation on their side
+   - If multiple GSRNs: return 400 — sales channel handles disambiguation on their side
 2. Validate GSRN format (18 digits, starts with "57")
 3. Check no active signup already exists for this GSRN
 4. Validate product exists and is active
@@ -428,7 +430,7 @@ POST /api/signup/{id}/cancel:
 
 The API accepts a **DAR ID** (Danish Address Register identifier), not a raw GSRN. The `AddressLookupService` resolves DAR ID → GSRN(s) internally.
 
-**Edge case: multiple GSRNs per address.** An apartment building may have multiple metering points at the same DAR ID. For this phase, we return 400 if the lookup returns multiple GSRNs. Future enhancement: return the list and let the consumer select.
+**Edge case: multiple GSRNs per address.** An apartment building may have multiple metering points at the same DAR ID. For this phase, we return 400 if the lookup returns multiple GSRNs. The sales channel handles disambiguation on their side (e.g., letting the customer pick in the signup form) and re-submits with the correct address.
 
 **Stub implementation:** The existing `StubAddressLookupClient` generates deterministic GSRNs from DAR IDs. Real Energinet API integration is a future task — the interface is already abstracted via `IAddressLookupClient`.
 
@@ -440,7 +442,7 @@ The API accepts a **DAR ID** (Danish Address Register identifier), not a raw GSR
 |----------|---------|---------------|
 | **Default billing model** | Aconto (pre-payment) or arrears (post-payment) | Start with arrears only — industry trend, simpler, no estimation needed. Add aconto as product option later |
 | **Rejection retry** | Auto-retry or surface to customer service | Auto-retry for transient errors (E16 conflict). Surface CPR mismatch to customer service for manual correction |
-| **Multiple GSRNs per DAR ID** | Consumer handles disambiguation before calling the API | API returns 400 if lookup yields multiple GSRNs |
+| **Multiple GSRNs per DAR ID** | Sales channel handles disambiguation before calling the API | API returns 400 if lookup yields multiple GSRNs |
 | **Multiple signups per customer** | Allow or block | Allow — one customer can have multiple metering points (e.g., house + garage) |
 
 ---
@@ -473,7 +475,7 @@ The API accepts a **DAR ID** (Danish Address Register identifier), not a raw GSR
 | RSM-009 accepted → process acknowledged | Integration |
 | RSM-009 rejected → signup status rejected with reason | Integration |
 | RSM-007 → creates metering point + contract + supply period from signup | Integration |
-| Status reflects simplified consumer states | Integration |
+| Status reflects simplified external states | Integration |
 | Cancel before send (registered → cancelled) | Integration |
 | Cancel after send (processing → BRS-003 → cancelled) | Integration |
 | Cancel after activation returns 409 | Integration |
@@ -481,7 +483,7 @@ The API accepts a **DAR ID** (Danish Address Register identifier), not a raw GSR
 
 **Exit criteria:**
 - All sales channels can create customers through 4 API endpoints
-- Consumer sees simple status progression (registered → processing → active)
+- Sales channel sees simple status progression (registered → processing → active)
 - Pending process requests are automatically sent to DataHub (gap filled)
 - RSM-009 receipts are processed (gap filled)
 - RSM-007 creates portfolio entities from signup data (contract, supply period)
@@ -721,7 +723,7 @@ These items are **not** in this phase:
 
 | Risk | Impact | Mitigation |
 |------|--------|------------|
-| DAR ID → GSRN lookup returns multiple GSRNs | Signup fails with 400 | Consumer handles disambiguation on their side before calling the API |
+| DAR ID → GSRN lookup returns multiple GSRNs | Signup fails with 400 | Sales channel handles disambiguation on their side before calling the API |
 | DAR ID lookup service unavailable | Signup fails entirely | Retry with backoff. Future: allow direct GSRN input as fallback |
 | CPR/CVR mismatch discovered only after BRS-001 sent | Signup stuck in rejected state, customer confused | Surface rejection reason via status endpoint. Customer service can correct and re-submit |
 | 15+ business day gap causes customer dropout | Customer forgets or switches to competitor | Clear status communication. Future: email/SMS at each state change |
