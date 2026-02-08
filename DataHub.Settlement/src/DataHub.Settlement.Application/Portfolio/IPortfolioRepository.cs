@@ -19,6 +19,8 @@ public interface IPortfolioRepository
     Task<IReadOnlyList<Product>> GetActiveProductsAsync(CancellationToken ct);
     Task<Customer?> GetCustomerAsync(Guid id, CancellationToken ct);
     Task<IReadOnlyList<Customer>> GetCustomersAsync(CancellationToken ct);
+    Task<PagedResult<Customer>> GetCustomersPagedAsync(int page, int pageSize, string? search, CancellationToken ct);
+    Task<DashboardStats> GetDashboardStatsAsync(CancellationToken ct);
     Task<IReadOnlyList<Contract>> GetContractsForCustomerAsync(Guid customerId, CancellationToken ct);
     Task<IReadOnlyList<MeteringPointWithSupply>> GetMeteringPointsForCustomerAsync(Guid customerId, CancellationToken ct);
 }

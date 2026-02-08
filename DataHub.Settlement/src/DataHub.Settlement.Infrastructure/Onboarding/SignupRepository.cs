@@ -1,5 +1,6 @@
 using Dapper;
 using DataHub.Settlement.Application.Onboarding;
+using DataHub.Settlement.Application.Portfolio;
 using Npgsql;
 
 namespace DataHub.Settlement.Infrastructure.Onboarding;
@@ -161,6 +162,61 @@ public sealed class SignupRepository : ISignupRepository
         await conn.OpenAsync(ct);
         var result = await conn.QueryAsync<SignupListItem>(
             new CommandDefinition(sql, new { Status = statusFilter }, cancellationToken: ct));
+        return result.ToList();
+    }
+
+    public async Task<PagedResult<SignupListItem>> GetAllPagedAsync(string? statusFilter, int page, int pageSize, CancellationToken ct)
+    {
+        var hasFilter = !string.IsNullOrEmpty(statusFilter);
+        var whereClause = hasFilter ? "WHERE s.status = @Status" : "";
+
+        var countSql = hasFilter
+            ? "SELECT COUNT(*) FROM portfolio.signup s WHERE s.status = @Status"
+            : "SELECT COUNT(*) FROM portfolio.signup";
+
+        var dataSql = $"""
+            SELECT s.id, s.signup_number, s.gsrn, s.type, s.effective_date, s.status,
+                   s.rejection_reason, c.name AS customer_name, s.created_at
+            FROM portfolio.signup s
+            JOIN portfolio.customer c ON c.id = s.customer_id
+            {whereClause}
+            ORDER BY s.created_at DESC
+            LIMIT @PageSize OFFSET @Offset
+            """;
+
+        var parameters = new
+        {
+            Status = statusFilter,
+            PageSize = pageSize,
+            Offset = (page - 1) * pageSize
+        };
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+        await conn.OpenAsync(ct);
+
+        var totalCount = await conn.ExecuteScalarAsync<int>(
+            new CommandDefinition(countSql, parameters, cancellationToken: ct));
+        var items = await conn.QueryAsync<SignupListItem>(
+            new CommandDefinition(dataSql, parameters, cancellationToken: ct));
+
+        return new PagedResult<SignupListItem>(items.ToList(), totalCount, page, pageSize);
+    }
+
+    public async Task<IReadOnlyList<SignupListItem>> GetRecentAsync(int limit, CancellationToken ct)
+    {
+        const string sql = """
+            SELECT s.id, s.signup_number, s.gsrn, s.type, s.effective_date, s.status,
+                   s.rejection_reason, c.name AS customer_name, s.created_at
+            FROM portfolio.signup s
+            JOIN portfolio.customer c ON c.id = s.customer_id
+            ORDER BY s.created_at DESC
+            LIMIT @Limit
+            """;
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+        await conn.OpenAsync(ct);
+        var result = await conn.QueryAsync<SignupListItem>(
+            new CommandDefinition(sql, new { Limit = limit }, cancellationToken: ct));
         return result.ToList();
     }
 

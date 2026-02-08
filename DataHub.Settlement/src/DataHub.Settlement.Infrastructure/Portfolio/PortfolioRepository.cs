@@ -284,6 +284,54 @@ public sealed class PortfolioRepository : IPortfolioRepository
         return result.ToList();
     }
 
+    public async Task<PagedResult<Customer>> GetCustomersPagedAsync(int page, int pageSize, string? search, CancellationToken ct)
+    {
+        var hasSearch = !string.IsNullOrWhiteSpace(search);
+        var whereClause = hasSearch ? "WHERE name ILIKE @Search OR cpr_cvr ILIKE @Search" : "";
+
+        var countSql = $"SELECT COUNT(*) FROM portfolio.customer {whereClause}";
+        var dataSql = $"""
+            SELECT id, name, cpr_cvr, contact_type, status
+            FROM portfolio.customer
+            {whereClause}
+            ORDER BY name
+            LIMIT @PageSize OFFSET @Offset
+            """;
+
+        var parameters = new
+        {
+            Search = hasSearch ? $"%{search}%" : null,
+            PageSize = pageSize,
+            Offset = (page - 1) * pageSize
+        };
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+        await conn.OpenAsync(ct);
+
+        var totalCount = await conn.ExecuteScalarAsync<int>(
+            new CommandDefinition(countSql, parameters, cancellationToken: ct));
+        var items = await conn.QueryAsync<Customer>(
+            new CommandDefinition(dataSql, parameters, cancellationToken: ct));
+
+        return new PagedResult<Customer>(items.ToList(), totalCount, page, pageSize);
+    }
+
+    public async Task<DashboardStats> GetDashboardStatsAsync(CancellationToken ct)
+    {
+        const string sql = """
+            SELECT
+                (SELECT COUNT(*) FROM portfolio.signup WHERE status IN ('registered', 'processing')) AS pending_signups,
+                (SELECT COUNT(*) FROM portfolio.customer WHERE status = 'active') AS active_customers,
+                (SELECT COUNT(*) FROM portfolio.signup WHERE status = 'rejected') AS rejected_signups,
+                (SELECT COUNT(*) FROM portfolio.product WHERE is_active = true) AS product_count
+            """;
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+        await conn.OpenAsync(ct);
+        return await conn.QuerySingleAsync<DashboardStats>(
+            new CommandDefinition(sql, cancellationToken: ct));
+    }
+
     public async Task<IReadOnlyList<Contract>> GetContractsForCustomerAsync(Guid customerId, CancellationToken ct)
     {
         const string sql = """

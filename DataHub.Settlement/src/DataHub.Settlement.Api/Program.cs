@@ -105,12 +105,36 @@ app.MapPost("/api/signup/{id}/cancel", async (string id, IOnboardingService serv
     }
 });
 
+// --- Dashboard ---
+
+// GET /api/dashboard/stats — aggregated counts for dashboard
+app.MapGet("/api/dashboard/stats", async (IPortfolioRepository repo, CancellationToken ct) =>
+{
+    var stats = await repo.GetDashboardStatsAsync(ct);
+    return Results.Ok(stats);
+});
+
+// GET /api/dashboard/recent-signups — latest N signups
+app.MapGet("/api/dashboard/recent-signups", async (int? limit, ISignupRepository repo, CancellationToken ct) =>
+{
+    var recent = await repo.GetRecentAsync(Math.Min(limit ?? 5, 20), ct);
+    return Results.Ok(recent);
+});
+
 // --- Signups (back-office) ---
 
-// GET /api/signups — list all signups, optional status filter
-app.MapGet("/api/signups", async (string? status, ISignupRepository repo, CancellationToken ct) =>
+// GET /api/signups — paginated signups, optional status filter
+app.MapGet("/api/signups", async (string? status, int? page, int? pageSize, ISignupRepository repo, CancellationToken ct) =>
 {
-    var signups = await repo.GetAllAsync(status, ct);
+    if (page.HasValue || pageSize.HasValue)
+    {
+        var p = Math.Max(page ?? 1, 1);
+        var ps = Math.Clamp(pageSize ?? 50, 1, 200);
+        var result = await repo.GetAllPagedAsync(status, p, ps, ct);
+        return Results.Ok(result);
+    }
+    // Backward-compatible: no pagination params returns flat list (capped at 200)
+    var signups = await repo.GetAllPagedAsync(status, 1, 200, ct);
     return Results.Ok(signups);
 });
 
@@ -154,11 +178,13 @@ app.MapGet("/api/address/{darId}", async (string darId, IAddressLookupClient add
 
 // --- Customers ---
 
-// GET /api/customers — list all customers
-app.MapGet("/api/customers", async (IPortfolioRepository repo, CancellationToken ct) =>
+// GET /api/customers — paginated customers with optional search
+app.MapGet("/api/customers", async (int? page, int? pageSize, string? search, IPortfolioRepository repo, CancellationToken ct) =>
 {
-    var customers = await repo.GetCustomersAsync(ct);
-    return Results.Ok(customers);
+    var p = Math.Max(page ?? 1, 1);
+    var ps = Math.Clamp(pageSize ?? 50, 1, 200);
+    var result = await repo.GetCustomersPagedAsync(p, ps, search, ct);
+    return Results.Ok(result);
 });
 
 // GET /api/customers/{id} — customer detail with contracts and metering points

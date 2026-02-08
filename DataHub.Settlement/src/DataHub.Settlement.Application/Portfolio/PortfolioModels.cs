@@ -2,6 +2,13 @@ namespace DataHub.Settlement.Application.Portfolio;
 
 public record Customer(Guid Id, string Name, string CprCvr, string ContactType, string Status);
 
+public record PagedResult<T>(IReadOnlyList<T> Items, int TotalCount, int Page, int PageSize)
+{
+    public int TotalPages => (int)Math.Ceiling((double)TotalCount / PageSize);
+}
+
+public record DashboardStats(int PendingSignups, int ActiveCustomers, int RejectedSignups, int ProductCount);
+
 public record MeteringPoint(
     string Gsrn, string Type, string SettlementMethod,
     string GridAreaCode, string GridOperatorGln, string PriceArea, string ConnectionStatus);

@@ -1,18 +1,43 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api';
 
+const PAGE_SIZE = 50;
+
 export default function CustomerList() {
-  const [customers, setCustomers] = useState([]);
+  const [data, setData] = useState(null);
+  const [page, setPage] = useState(1);
+  const [search, setSearch] = useState('');
+  const [searchInput, setSearchInput] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    api.getCustomers()
-      .then(setCustomers)
+  const fetchPage = useCallback((p, q) => {
+    setLoading(true);
+    setError(null);
+    api.getCustomers({ page: p, pageSize: PAGE_SIZE, search: q || undefined })
+      .then(setData)
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => { fetchPage(page, search); }, [page, search, fetchPage]);
+
+  function handleSearch(e) {
+    e.preventDefault();
+    setPage(1);
+    setSearch(searchInput);
+  }
+
+  function clearSearch() {
+    setSearchInput('');
+    setPage(1);
+    setSearch('');
+  }
+
+  const customers = data?.items ?? [];
+  const totalCount = data?.totalCount ?? 0;
+  const totalPages = data?.totalPages ?? 1;
 
   return (
     <div className="p-8 max-w-6xl mx-auto">
@@ -20,6 +45,32 @@ export default function CustomerList() {
         <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Customers</h1>
         <p className="text-base text-slate-500 mt-1">Active portfolio of electricity customers.</p>
       </div>
+
+      {/* Search bar */}
+      <form onSubmit={handleSearch} className="mb-5 animate-fade-in-up" style={{ animationDelay: '40ms' }}>
+        <div className="flex gap-2">
+          <div className="relative flex-1 max-w-md">
+            <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+            </svg>
+            <input
+              type="text"
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              placeholder="Search by name or CPR/CVR..."
+              className="w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-500/10 transition-all"
+            />
+          </div>
+          <button type="submit" className="px-4 py-2.5 bg-teal-500 text-white text-sm font-semibold rounded-xl hover:bg-teal-600 transition-colors">
+            Search
+          </button>
+          {search && (
+            <button type="button" onClick={clearSearch} className="px-3 py-2.5 text-sm text-slate-500 hover:text-slate-700 transition-colors">
+              Clear
+            </button>
+          )}
+        </div>
+      </form>
 
       {error && (
         <div className="mb-5 bg-rose-50 border border-rose-200 rounded-xl px-4 py-3 text-sm text-rose-600 flex items-center gap-2">
@@ -43,8 +94,10 @@ export default function CustomerList() {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z" />
               </svg>
             </div>
-            <p className="text-sm font-semibold text-slate-500">No customers yet</p>
-            <p className="text-xs text-slate-400 mt-1">Customers appear here after signup activation.</p>
+            <p className="text-sm font-semibold text-slate-500">{search ? 'No matches' : 'No customers yet'}</p>
+            <p className="text-xs text-slate-400 mt-1">
+              {search ? 'Try a different search term.' : 'Customers appear here after signup activation.'}
+            </p>
           </div>
         ) : (
           <table className="w-full">
@@ -59,7 +112,7 @@ export default function CustomerList() {
             </thead>
             <tbody className="divide-y divide-slate-50">
               {customers.map((c, i) => (
-                <tr key={c.id} className={`transition-colors duration-150 animate-slide-in opacity-0 ${i % 2 === 0 ? 'bg-white hover:bg-teal-50/30' : 'bg-slate-50 hover:bg-teal-50/50'}`} style={{ animationDelay: `${i * 40}ms` }}>
+                <tr key={c.id} className={`transition-colors duration-150 ${i % 2 === 0 ? 'bg-white hover:bg-teal-50/30' : 'bg-slate-50 hover:bg-teal-50/50'}`}>
                   <td className="px-4 py-1.5">
                     <Link to={`/customers/${c.id}`} className="flex items-center gap-2">
                       <div className="w-6 h-6 rounded-lg bg-teal-500 flex items-center justify-center shadow-sm">
@@ -98,8 +151,40 @@ export default function CustomerList() {
         )}
       </div>
 
-      {!loading && customers.length > 0 && (
-        <p className="text-xs text-slate-400 mt-3 px-1 font-medium">{customers.length} customer{customers.length !== 1 ? 's' : ''}</p>
+      {/* Pagination */}
+      {!loading && totalPages > 1 && (
+        <div className="flex items-center justify-between mt-4 px-1">
+          <p className="text-xs text-slate-400 font-medium">
+            {totalCount.toLocaleString('da-DK')} customer{totalCount !== 1 ? 's' : ''}
+            {search && <span className="ml-1">matching "{search}"</span>}
+          </p>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page <= 1}
+              className="px-3 py-1.5 text-xs font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              Previous
+            </button>
+            <span className="px-3 py-1.5 text-xs font-semibold text-slate-700">
+              {page} / {totalPages}
+            </span>
+            <button
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page >= totalPages}
+              className="px-3 py-1.5 text-xs font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
+
+      {!loading && totalPages <= 1 && totalCount > 0 && (
+        <p className="text-xs text-slate-400 mt-3 px-1 font-medium">
+          {totalCount.toLocaleString('da-DK')} customer{totalCount !== 1 ? 's' : ''}
+          {search && <span className="ml-1">matching "{search}"</span>}
+        </p>
       )}
     </div>
   );

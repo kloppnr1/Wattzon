@@ -1,6 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api';
+
+const PAGE_SIZE = 50;
 
 const STATUS_OPTIONS = ['all', 'registered', 'processing', 'active', 'rejected', 'cancelled'];
 
@@ -23,19 +25,31 @@ function StatusBadge({ status }) {
 }
 
 export default function SignupList() {
-  const [signups, setSignups] = useState([]);
+  const [data, setData] = useState(null);
+  const [page, setPage] = useState(1);
   const [filter, setFilter] = useState('all');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
+  const fetchPage = useCallback((p, status) => {
     setLoading(true);
     setError(null);
-    api.getSignups(filter === 'all' ? null : filter)
-      .then(setSignups)
+    api.getSignups({ status: status === 'all' ? undefined : status, page: p, pageSize: PAGE_SIZE })
+      .then(setData)
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
-  }, [filter]);
+  }, []);
+
+  useEffect(() => { fetchPage(page, filter); }, [page, filter, fetchPage]);
+
+  function changeFilter(f) {
+    setFilter(f);
+    setPage(1);
+  }
+
+  const signups = data?.items ?? [];
+  const totalCount = data?.totalCount ?? 0;
+  const totalPages = data?.totalPages ?? 1;
 
   return (
     <div className="p-8 max-w-6xl mx-auto">
@@ -61,7 +75,7 @@ export default function SignupList() {
         {STATUS_OPTIONS.map((s) => (
           <button
             key={s}
-            onClick={() => setFilter(s)}
+            onClick={() => changeFilter(s)}
             className={`px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all duration-200 ${
               filter === s
                 ? 'bg-teal-500 text-white shadow-md shadow-teal-500/20'
@@ -117,7 +131,7 @@ export default function SignupList() {
             </thead>
             <tbody className="divide-y divide-slate-50">
               {signups.map((s, i) => (
-                <tr key={s.id} className={`transition-colors duration-150 animate-slide-in opacity-0 ${i % 2 === 0 ? 'bg-white hover:bg-teal-50/30' : 'bg-slate-50 hover:bg-teal-50/50'}`} style={{ animationDelay: `${i * 40}ms` }}>
+                <tr key={s.id} className={`transition-colors duration-150 ${i % 2 === 0 ? 'bg-white hover:bg-teal-50/30' : 'bg-slate-50 hover:bg-teal-50/50'}`}>
                   <td className="px-4 py-1.5">
                     <Link to={`/signups/${s.id}`} className="text-xs font-semibold text-teal-600 hover:text-teal-800 transition-colors">
                       {s.signupNumber}
@@ -151,9 +165,37 @@ export default function SignupList() {
         )}
       </div>
 
-      {!loading && signups.length > 0 && (
+      {/* Pagination */}
+      {!loading && totalPages > 1 && (
+        <div className="flex items-center justify-between mt-4 px-1">
+          <p className="text-xs text-slate-400 font-medium">
+            {totalCount.toLocaleString('da-DK')} signup{totalCount !== 1 ? 's' : ''}
+          </p>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page <= 1}
+              className="px-3 py-1.5 text-xs font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              Previous
+            </button>
+            <span className="px-3 py-1.5 text-xs font-semibold text-slate-700">
+              {page} / {totalPages}
+            </span>
+            <button
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page >= totalPages}
+              className="px-3 py-1.5 text-xs font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
+
+      {!loading && totalPages <= 1 && totalCount > 0 && (
         <p className="text-xs text-slate-400 mt-3 px-1 font-medium">
-          {signups.length} signup{signups.length !== 1 ? 's' : ''}
+          {totalCount.toLocaleString('da-DK')} signup{totalCount !== 1 ? 's' : ''}
         </p>
       )}
     </div>

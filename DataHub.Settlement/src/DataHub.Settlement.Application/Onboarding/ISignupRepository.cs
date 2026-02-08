@@ -1,3 +1,5 @@
+using DataHub.Settlement.Application.Portfolio;
+
 namespace DataHub.Settlement.Application.Onboarding;
 
 public interface ISignupRepository
@@ -12,5 +14,7 @@ public interface ISignupRepository
     Task SetProcessRequestIdAsync(Guid id, Guid processRequestId, CancellationToken ct);
     Task<string?> GetCustomerCprCvrAsync(Guid signupId, CancellationToken ct);
     Task<IReadOnlyList<SignupListItem>> GetAllAsync(string? statusFilter, CancellationToken ct);
+    Task<PagedResult<SignupListItem>> GetAllPagedAsync(string? statusFilter, int page, int pageSize, CancellationToken ct);
+    Task<IReadOnlyList<SignupListItem>> GetRecentAsync(int limit, CancellationToken ct);
     Task<SignupDetail?> GetDetailByIdAsync(Guid id, CancellationToken ct);
 }
