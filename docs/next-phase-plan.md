@@ -496,6 +496,124 @@ The API accepts a **DAR ID** (Danish Address Register identifier), not a raw GSR
 
 ---
 
+### B1b. Back-Office Web Application
+
+**Problem:** Back-office staff (customer service) need a UI to create signups, handle DataHub rejections, disambiguate GSRNs, and monitor the onboarding pipeline. The settlement system provides the API — this is the application that consumes it.
+
+**Technology:** React + Vite + Tailwind CSS. Plain HTML tables and forms. No component library. Lives in `backoffice/` at the repo root alongside `DataHub.Settlement/`. Calls the API over HTTP.
+
+**Scope boundary:** This is a separate project within the same repo. It shares no code with the .NET backend — it talks exclusively through the REST API.
+
+---
+
+#### What back-office staff do
+
+| Task | How it works today | What the app provides |
+|------|-------------------|----------------------|
+| **Create a signup** | Manual / not possible | Form: enter address → resolve GSRN → select product → submit |
+| **Handle rejected signup** | Not visible | See rejection reason, correct data, re-submit as new signup |
+| **Disambiguate address** | Not possible | Address lookup shows all GSRNs, staff picks the right one |
+| **Monitor signups** | Not visible | Table of all signups, filterable by status |
+| **Cancel signup** | Not possible | Cancel button on signup detail |
+| **View customer** | Database query | Customer detail: contracts, metering points, supply periods |
+
+---
+
+#### Pages
+
+| Page | Route | What it shows |
+|------|-------|---------------|
+| **Signup list** | `/signups` | Table of all signups with status filter (all, registered, processing, active, rejected, cancelled). Columns: signup number, customer name, GSRN, type, effective date, status, created. Click row → detail |
+| **New signup** | `/signups/new` | Step 1: Enter DAR ID → API returns GSRN(s). If multiple, show picker. Step 2: Select product. Step 3: Enter customer details (name, CPR/CVR, contact type, email, phone). Step 4: Choose type (switch/move-in), effective date. Submit. |
+| **Signup detail** | `/signups/:id` | Full signup info, current status, rejection reason if rejected, process event timeline, cancel button (if cancellable) |
+| **Customer list** | `/customers` | Table of all customers. Columns: name, CPR/CVR, contact type, status. Click → detail |
+| **Customer detail** | `/customers/:id` | Customer info, list of signups, active contracts, metering points, supply periods |
+| **Products** | `/products` | Table of products. Inline edit for description, display order, green energy flag |
+
+---
+
+#### API endpoints needed (missing from B1)
+
+The current API has 4 endpoints for the signup flow. The back-office app needs more:
+
+| Endpoint | Purpose | Status |
+|----------|---------|--------|
+| `GET /api/products` | List active products | Exists |
+| `POST /api/signup` | Create signup | Exists |
+| `GET /api/signup/{id}/status` | Signup status | Exists |
+| `POST /api/signup/{id}/cancel` | Cancel signup | Exists |
+| **`GET /api/signups`** | List all signups, filter by status | **New** |
+| **`GET /api/signups/{id}`** | Full signup detail (includes customer info) | **New** |
+| **`GET /api/signups/{id}/events`** | Process event timeline for a signup | **New** |
+| **`GET /api/address/{darId}`** | Look up address → list of GSRNs | **New** |
+| **`GET /api/customers`** | List customers | **New** |
+| **`GET /api/customers/{id}`** | Customer detail with contracts, metering points | **New** |
+
+No product CRUD yet — back-office can view products, creation/editing stays in the database for now.
+
+---
+
+#### What to build
+
+| Layer | Task |
+|-------|------|
+| **API** (extend `DataHub.Settlement.Api`) | 6 new endpoints listed above. Add CORS for local dev (React on :5173, API on :5001). |
+| **Repository** (extend) | `ISignupRepository.GetAllAsync(status?)`, `IPortfolioRepository.GetCustomerAsync(id)`, `IPortfolioRepository.GetCustomersAsync()`, `IPortfolioRepository.GetContractsForCustomerAsync(id)` |
+| **Frontend project** (`backoffice/`) | Vite + React + Tailwind. `fetch()` wrapper for API calls. Pages: signup list, new signup, signup detail, customer list, customer detail, products. |
+
+---
+
+#### Frontend structure
+
+```
+backoffice/
+├── index.html
+├── package.json
+├── vite.config.js
+├── tailwind.config.js
+├── src/
+│   ├── main.jsx
+│   ├── api.js              — fetch wrapper (base URL, error handling)
+│   ├── App.jsx             — routes
+│   ├── layout/
+│   │   └── Layout.jsx      — sidebar nav + main content area
+│   ├── pages/
+│   │   ├── SignupList.jsx
+│   │   ├── SignupNew.jsx
+│   │   ├── SignupDetail.jsx
+│   │   ├── CustomerList.jsx
+│   │   ├── CustomerDetail.jsx
+│   │   └── Products.jsx
+│   └── index.css           — Tailwind imports
+```
+
+No state management library. React state + `useEffect` for data fetching. Simple.
+
+---
+
+#### Implementation order
+
+1. **API first** — add the 6 missing endpoints + CORS. This is backend work, testable independently.
+2. **Frontend scaffold** — Vite + React + Tailwind project setup, routing, layout with sidebar nav.
+3. **Signup list page** — table with status filter, the most immediately useful page.
+4. **Address lookup + new signup** — the full creation flow with GSRN resolution.
+5. **Signup detail** — view details, event timeline, cancel.
+6. **Customer pages** — list and detail.
+7. **Products page** — read-only listing.
+
+---
+
+#### Exit criteria
+
+- Back-office staff can create signups through the UI, including GSRN disambiguation
+- Rejected signups are visible with reasons — staff can create a corrected re-submission
+- All signups are listed and filterable by status
+- Process event timeline visible on signup detail
+- Customer list and detail pages functional
+- Frontend runs on `localhost:5173`, API on `localhost:5001`
+
+---
+
 ### B2. Settlement Result Export API
 
 **Problem:** Settlement results exist only in the database and dashboard. No programmatic way for external systems (ERP, billing) to retrieve them.
