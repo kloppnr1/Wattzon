@@ -19,6 +19,7 @@ The system covers the full customer lifecycle:
 
 All communication with DataHub happens through CIM JSON messages over HTTP queues. We never call DataHub on demand — data arrives when DataHub has something for us, and we send requests when we need to initiate a market process.
 
+
 ### Quick Start
 
 ```bash
@@ -118,6 +119,7 @@ DataHub validates:
             ▼
     Status → active
 ```
+
 
 ### Why it takes 15 business days
 
