@@ -4,7 +4,7 @@
 
 DataHub.Settlement is an electricity settlement platform for the Danish energy market. It integrates with Energinet's DataHub — the central hub that coordinates all electricity suppliers, grid companies, and metering operators in Denmark — to handle customer onboarding, metering data collection, and billing.
 
-This is an exploration/prototype codebase built to validate the full customer lifecycle: a customer signs up with a supplier, DataHub confirms the switch, hourly metering data arrives daily, and the system calculates what the customer owes based on spot prices, grid tariffs, taxes, and subscriptions.
+It handles the full customer lifecycle: a customer signs up with a supplier, DataHub confirms the switch, hourly metering data arrives daily, and the system calculates what the customer owes based on spot prices, grid tariffs, taxes, and subscriptions.
 
 **Tech stack**: .NET 9, TimescaleDB (PostgreSQL 16), Dapper, DbUp, Blazor Server, xUnit
 
