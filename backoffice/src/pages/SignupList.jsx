@@ -4,18 +4,18 @@ import { api } from '../api';
 
 const STATUS_OPTIONS = ['all', 'registered', 'processing', 'active', 'rejected', 'cancelled'];
 
-const statusConfig = {
-  registered: { dot: 'bg-slate-400', text: 'text-slate-300' },
-  processing: { dot: 'bg-amber-400', text: 'text-amber-300' },
-  active:     { dot: 'bg-emerald-400', text: 'text-emerald-300' },
-  rejected:   { dot: 'bg-red-400', text: 'text-red-300' },
-  cancelled:  { dot: 'bg-slate-500', text: 'text-slate-400' },
+const statusStyles = {
+  registered: { dot: 'bg-slate-400', badge: 'bg-slate-100 text-slate-600' },
+  processing: { dot: 'bg-amber-400', badge: 'bg-amber-50 text-amber-700' },
+  active:     { dot: 'bg-emerald-400', badge: 'bg-emerald-50 text-emerald-700' },
+  rejected:   { dot: 'bg-rose-400', badge: 'bg-rose-50 text-rose-700' },
+  cancelled:  { dot: 'bg-slate-400', badge: 'bg-slate-100 text-slate-500' },
 };
 
 function StatusBadge({ status }) {
-  const cfg = statusConfig[status] || statusConfig.registered;
+  const cfg = statusStyles[status] || statusStyles.registered;
   return (
-    <span className={`inline-flex items-center gap-1.5 text-xs font-medium ${cfg.text}`}>
+    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${cfg.badge}`}>
       <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
       {status}
     </span>
@@ -40,14 +40,14 @@ export default function SignupList() {
   return (
     <div className="p-8 max-w-6xl mx-auto">
       {/* Page header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-6 animate-fade-in-up">
         <div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">Signups</h1>
-          <p className="text-sm text-slate-400 mt-1">Manage customer onboarding requests.</p>
+          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Signups</h1>
+          <p className="text-base text-slate-500 mt-1">Manage customer onboarding requests.</p>
         </div>
         <Link
           to="/signups/new"
-          className="inline-flex items-center gap-2 px-4 py-2.5 bg-amber-500 text-slate-950 text-sm font-semibold rounded-lg shadow-lg shadow-amber-500/20 hover:bg-amber-400 transition-all"
+          className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-indigo-500 to-violet-500 text-white text-sm font-semibold rounded-xl shadow-lg shadow-indigo-500/25 hover:shadow-xl hover:shadow-indigo-500/30 hover:-translate-y-0.5 transition-all duration-200"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
@@ -57,15 +57,15 @@ export default function SignupList() {
       </div>
 
       {/* Filter bar */}
-      <div className="flex items-center gap-1 mb-5 bg-slate-800/50 rounded-lg p-1 w-fit border border-slate-700/50">
+      <div className="flex items-center gap-1 mb-5 bg-white rounded-xl p-1.5 w-fit shadow-sm border border-slate-100 animate-fade-in-up" style={{ animationDelay: '60ms' }}>
         {STATUS_OPTIONS.map((s) => (
           <button
             key={s}
             onClick={() => setFilter(s)}
-            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
+            className={`px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all duration-200 ${
               filter === s
-                ? 'bg-amber-500 text-slate-950 shadow-sm'
-                : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
+                ? 'bg-gradient-to-r from-indigo-500 to-violet-500 text-white shadow-md shadow-indigo-500/20'
+                : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
             }`}
           >
             {s.charAt(0).toUpperCase() + s.slice(1)}
@@ -74,66 +74,71 @@ export default function SignupList() {
       </div>
 
       {error && (
-        <div className="mb-5 bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-3 text-sm text-red-400">
+        <div className="mb-5 bg-rose-50 border border-rose-200 rounded-xl px-4 py-3 text-sm text-rose-600 flex items-center gap-2">
+          <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
+          </svg>
           {error}
         </div>
       )}
 
       {/* Table */}
-      <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden animate-fade-in-up" style={{ animationDelay: '120ms' }}>
         {loading ? (
-          <div className="p-12 text-center">
-            <div className="inline-block w-6 h-6 border-2 border-slate-700 border-t-amber-400 rounded-full animate-spin" />
-            <p className="text-sm text-slate-500 mt-3">Loading signups...</p>
+          <div className="p-14 text-center">
+            <div className="inline-block w-8 h-8 border-[3px] border-indigo-100 border-t-indigo-500 rounded-full animate-spin" />
+            <p className="text-sm text-slate-400 mt-3 font-medium">Loading signups...</p>
           </div>
         ) : signups.length === 0 ? (
-          <div className="p-12 text-center">
-            <svg className="w-10 h-10 text-slate-600 mx-auto mb-3" fill="none" viewBox="0 0 24 24" strokeWidth={1} stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
-            </svg>
-            <p className="text-sm font-medium text-slate-400">No signups found</p>
-            <p className="text-xs text-slate-500 mt-1">
+          <div className="p-14 text-center">
+            <div className="w-14 h-14 rounded-2xl bg-slate-50 flex items-center justify-center mx-auto mb-3">
+              <svg className="w-7 h-7 text-slate-300" fill="none" viewBox="0 0 24 24" strokeWidth={1} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+              </svg>
+            </div>
+            <p className="text-sm font-semibold text-slate-500">No signups found</p>
+            <p className="text-xs text-slate-400 mt-1">
               {filter !== 'all' ? 'Try a different filter.' : 'Create one to get started.'}
             </p>
           </div>
         ) : (
           <table className="w-full">
             <thead>
-              <tr className="border-b border-slate-700/40">
-                <th className="text-left text-[11px] font-medium text-slate-500 uppercase tracking-wider px-5 py-3">Signup</th>
-                <th className="text-left text-[11px] font-medium text-slate-500 uppercase tracking-wider px-5 py-3">Customer</th>
-                <th className="text-left text-[11px] font-medium text-slate-500 uppercase tracking-wider px-5 py-3">GSRN</th>
-                <th className="text-left text-[11px] font-medium text-slate-500 uppercase tracking-wider px-5 py-3">Type</th>
-                <th className="text-left text-[11px] font-medium text-slate-500 uppercase tracking-wider px-5 py-3">Effective</th>
-                <th className="text-left text-[11px] font-medium text-slate-500 uppercase tracking-wider px-5 py-3">Status</th>
-                <th className="text-left text-[11px] font-medium text-slate-500 uppercase tracking-wider px-5 py-3">Created</th>
-                <th className="px-5 py-3"><span className="sr-only">View</span></th>
+              <tr className="border-b border-slate-50 bg-slate-50/50">
+                <th className="text-left text-[11px] font-semibold text-slate-400 uppercase tracking-wider px-6 py-3">Signup</th>
+                <th className="text-left text-[11px] font-semibold text-slate-400 uppercase tracking-wider px-6 py-3">Customer</th>
+                <th className="text-left text-[11px] font-semibold text-slate-400 uppercase tracking-wider px-6 py-3">GSRN</th>
+                <th className="text-left text-[11px] font-semibold text-slate-400 uppercase tracking-wider px-6 py-3">Type</th>
+                <th className="text-left text-[11px] font-semibold text-slate-400 uppercase tracking-wider px-6 py-3">Effective</th>
+                <th className="text-left text-[11px] font-semibold text-slate-400 uppercase tracking-wider px-6 py-3">Status</th>
+                <th className="text-left text-[11px] font-semibold text-slate-400 uppercase tracking-wider px-6 py-3">Created</th>
+                <th className="px-6 py-3"><span className="sr-only">View</span></th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-700/30">
-              {signups.map((s) => (
-                <tr key={s.id} className="hover:bg-slate-700/20 transition-colors">
-                  <td className="px-5 py-3.5">
-                    <Link to={`/signups/${s.id}`} className="text-sm font-medium text-amber-400 hover:text-amber-300">
+            <tbody className="divide-y divide-slate-50">
+              {signups.map((s, i) => (
+                <tr key={s.id} className="hover:bg-indigo-50/40 transition-colors duration-150 animate-slide-in opacity-0" style={{ animationDelay: `${i * 40}ms` }}>
+                  <td className="px-6 py-3.5">
+                    <Link to={`/signups/${s.id}`} className="text-sm font-semibold text-indigo-600 hover:text-indigo-800 transition-colors">
                       {s.signupNumber}
                     </Link>
                   </td>
-                  <td className="px-5 py-3.5 text-sm text-slate-300">{s.customerName}</td>
-                  <td className="px-5 py-3.5">
-                    <span className="text-xs font-mono text-slate-400 bg-slate-800 px-2 py-0.5 rounded">
+                  <td className="px-6 py-3.5 text-sm text-slate-700 font-medium">{s.customerName}</td>
+                  <td className="px-6 py-3.5">
+                    <span className="text-xs font-mono text-slate-500 bg-slate-100 px-2 py-1 rounded-md">
                       {s.gsrn}
                     </span>
                   </td>
-                  <td className="px-5 py-3.5 text-sm text-slate-400">
+                  <td className="px-6 py-3.5 text-sm text-slate-500">
                     {s.type === 'move_in' ? 'Move-in' : 'Switch'}
                   </td>
-                  <td className="px-5 py-3.5 text-sm text-slate-400">{s.effectiveDate}</td>
-                  <td className="px-5 py-3.5"><StatusBadge status={s.status} /></td>
-                  <td className="px-5 py-3.5 text-xs text-slate-500">
+                  <td className="px-6 py-3.5 text-sm text-slate-500">{s.effectiveDate}</td>
+                  <td className="px-6 py-3.5"><StatusBadge status={s.status} /></td>
+                  <td className="px-6 py-3.5 text-sm text-slate-400">
                     {new Date(s.createdAt).toLocaleDateString('da-DK')}
                   </td>
-                  <td className="px-5 py-3.5 text-right">
-                    <Link to={`/signups/${s.id}`} className="text-slate-600 hover:text-amber-400 transition-colors">
+                  <td className="px-6 py-3.5 text-right">
+                    <Link to={`/signups/${s.id}`} className="text-slate-300 hover:text-indigo-500 transition-colors">
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
                       </svg>
@@ -147,7 +152,7 @@ export default function SignupList() {
       </div>
 
       {!loading && signups.length > 0 && (
-        <p className="text-xs text-slate-500 mt-3 px-1">
+        <p className="text-xs text-slate-400 mt-3 px-1 font-medium">
           {signups.length} signup{signups.length !== 1 ? 's' : ''}
         </p>
       )}

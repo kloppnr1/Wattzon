@@ -28,67 +28,74 @@ export default function Dashboard() {
 
   const stats = [
     {
-      label: 'Pending signups',
+      label: 'Pending Signups',
       value: pending,
       icon: (
-        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
         </svg>
       ),
-      color: 'text-amber-400',
-      bg: 'bg-amber-400/10',
+      gradient: 'from-amber-400 to-orange-500',
+      bg: 'bg-amber-50',
+      iconBg: 'bg-gradient-to-br from-amber-400 to-orange-500',
       link: '/signups?status=processing',
     },
     {
-      label: 'Active customers',
+      label: 'Active Customers',
       value: active,
       icon: (
-        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z" />
         </svg>
       ),
-      color: 'text-emerald-400',
-      bg: 'bg-emerald-400/10',
+      gradient: 'from-emerald-400 to-teal-500',
+      bg: 'bg-emerald-50',
+      iconBg: 'bg-gradient-to-br from-emerald-400 to-teal-500',
       link: '/customers',
     },
     {
       label: 'Rejected',
       value: rejected,
       icon: (
-        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
         </svg>
       ),
-      color: 'text-red-400',
-      bg: 'bg-red-400/10',
+      gradient: 'from-rose-400 to-pink-500',
+      bg: 'bg-rose-50',
+      iconBg: 'bg-gradient-to-br from-rose-400 to-pink-500',
       link: '/signups?status=rejected',
     },
     {
       label: 'Products',
       value: products.length,
       icon: (
-        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" d="m3.75 13.5 10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75Z" />
         </svg>
       ),
-      color: 'text-amber-400',
-      bg: 'bg-amber-400/10',
+      gradient: 'from-indigo-400 to-violet-500',
+      bg: 'bg-indigo-50',
+      iconBg: 'bg-gradient-to-br from-indigo-400 to-violet-500',
       link: '/products',
     },
   ];
 
-  const statusDot = {
-    registered: 'bg-slate-400',
-    processing: 'bg-amber-400',
-    active: 'bg-emerald-400',
-    rejected: 'bg-red-400',
-    cancelled: 'bg-slate-500',
+  const statusStyles = {
+    registered: { dot: 'bg-slate-400', badge: 'bg-slate-100 text-slate-600' },
+    processing: { dot: 'bg-amber-400', badge: 'bg-amber-50 text-amber-700' },
+    active:     { dot: 'bg-emerald-400', badge: 'bg-emerald-50 text-emerald-700' },
+    rejected:   { dot: 'bg-rose-400', badge: 'bg-rose-50 text-rose-700' },
+    cancelled:  { dot: 'bg-slate-400', badge: 'bg-slate-100 text-slate-500' },
   };
 
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full">
-        <div className="w-6 h-6 border-2 border-slate-700 border-t-amber-400 rounded-full animate-spin" />
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-[3px] border-indigo-100 border-t-indigo-500 rounded-full animate-spin" />
+          <p className="text-sm text-slate-400 font-medium">Loading dashboard...</p>
+        </div>
       </div>
     );
   }
@@ -96,75 +103,87 @@ export default function Dashboard() {
   return (
     <div className="p-8 max-w-6xl mx-auto">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-white tracking-tight">Dashboard</h1>
-        <p className="text-sm text-slate-400 mt-1">Overview of your electricity supplier operations.</p>
+      <div className="mb-8 animate-fade-in-up">
+        <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Dashboard</h1>
+        <p className="text-base text-slate-500 mt-1">Overview of your electricity supplier operations.</p>
       </div>
 
       {/* Stat cards */}
-      <div className="grid grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-4 gap-5 mb-8 stagger">
         {stats.map((s) => (
           <Link
             key={s.label}
             to={s.link}
-            className="group bg-slate-800/50 border border-slate-700/50 rounded-xl p-5 hover:bg-slate-800/80 hover:border-slate-600/50 transition-all"
+            className="card-lift group bg-white rounded-2xl p-5 shadow-sm border border-slate-100 hover:border-indigo-200/60 animate-fade-in-up opacity-0"
           >
-            <div className="flex items-center justify-between mb-3">
-              <div className={`w-9 h-9 rounded-lg ${s.bg} flex items-center justify-center ${s.color}`}>
+            <div className="flex items-center justify-between mb-4">
+              <div className={`w-11 h-11 rounded-xl ${s.iconBg} flex items-center justify-center text-white shadow-lg shadow-${s.gradient.split('-')[1]}-500/25`}>
                 {s.icon}
               </div>
+              <svg className="w-5 h-5 text-slate-300 group-hover:text-indigo-400 group-hover:translate-x-0.5 transition-all duration-200" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 19.5 15-15m0 0H8.25m11.25 0v11.25" />
+              </svg>
             </div>
-            <p className="text-2xl font-bold text-white">{s.value}</p>
-            <p className="text-xs text-slate-400 mt-0.5">{s.label}</p>
+            <p className="text-3xl font-bold text-slate-900">{s.value}</p>
+            <p className="text-sm text-slate-500 mt-0.5 font-medium">{s.label}</p>
           </Link>
         ))}
       </div>
 
       {/* Recent signups */}
-      <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl overflow-hidden">
-        <div className="px-5 py-4 border-b border-slate-700/50 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-white">Recent Signups</h2>
-          <Link to="/signups" className="text-xs text-amber-400 hover:text-amber-300 transition-colors">
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden animate-fade-in-up">
+        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-1 h-5 rounded-full bg-gradient-to-b from-indigo-500 to-violet-500" />
+            <h2 className="text-base font-semibold text-slate-900">Recent Signups</h2>
+          </div>
+          <Link to="/signups" className="text-sm font-medium text-indigo-500 hover:text-indigo-700 transition-colors flex items-center gap-1">
             View all
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+            </svg>
           </Link>
         </div>
         {recent.length === 0 ? (
-          <div className="p-10 text-center">
-            <svg className="w-8 h-8 text-slate-600 mx-auto mb-2" fill="none" viewBox="0 0 24 24" strokeWidth={1} stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
-            </svg>
-            <p className="text-sm text-slate-500">No signups yet</p>
+          <div className="p-14 text-center">
+            <div className="w-14 h-14 rounded-2xl bg-slate-50 flex items-center justify-center mx-auto mb-3">
+              <svg className="w-7 h-7 text-slate-300" fill="none" viewBox="0 0 24 24" strokeWidth={1} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+              </svg>
+            </div>
+            <p className="text-sm font-medium text-slate-400">No signups yet</p>
+            <p className="text-xs text-slate-400 mt-1">Create one to get started.</p>
           </div>
         ) : (
           <table className="w-full">
             <thead>
-              <tr className="border-b border-slate-700/40">
-                <th className="text-left text-[11px] font-medium text-slate-500 uppercase tracking-wider px-5 py-2.5">Signup</th>
-                <th className="text-left text-[11px] font-medium text-slate-500 uppercase tracking-wider px-5 py-2.5">Customer</th>
-                <th className="text-left text-[11px] font-medium text-slate-500 uppercase tracking-wider px-5 py-2.5">GSRN</th>
-                <th className="text-left text-[11px] font-medium text-slate-500 uppercase tracking-wider px-5 py-2.5">Status</th>
-                <th className="text-left text-[11px] font-medium text-slate-500 uppercase tracking-wider px-5 py-2.5">Created</th>
+              <tr className="border-b border-slate-50 bg-slate-50/50">
+                <th className="text-left text-[11px] font-semibold text-slate-400 uppercase tracking-wider px-6 py-3">Signup</th>
+                <th className="text-left text-[11px] font-semibold text-slate-400 uppercase tracking-wider px-6 py-3">Customer</th>
+                <th className="text-left text-[11px] font-semibold text-slate-400 uppercase tracking-wider px-6 py-3">GSRN</th>
+                <th className="text-left text-[11px] font-semibold text-slate-400 uppercase tracking-wider px-6 py-3">Status</th>
+                <th className="text-left text-[11px] font-semibold text-slate-400 uppercase tracking-wider px-6 py-3">Created</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-700/30">
-              {recent.map((s) => (
-                <tr key={s.id} className="hover:bg-slate-700/20 transition-colors">
-                  <td className="px-5 py-3">
-                    <Link to={`/signups/${s.id}`} className="text-sm font-medium text-amber-400 hover:text-amber-300">
+            <tbody className="divide-y divide-slate-50">
+              {recent.map((s, i) => (
+                <tr key={s.id} className="hover:bg-indigo-50/40 transition-colors duration-150 animate-slide-in opacity-0" style={{ animationDelay: `${i * 60}ms` }}>
+                  <td className="px-6 py-3.5">
+                    <Link to={`/signups/${s.id}`} className="text-sm font-semibold text-indigo-600 hover:text-indigo-800 transition-colors">
                       {s.signupNumber}
                     </Link>
                   </td>
-                  <td className="px-5 py-3 text-sm text-slate-300">{s.customerName}</td>
-                  <td className="px-5 py-3">
-                    <span className="text-xs font-mono text-slate-400 bg-slate-800 px-2 py-0.5 rounded">{s.gsrn}</span>
+                  <td className="px-6 py-3.5 text-sm text-slate-700">{s.customerName}</td>
+                  <td className="px-6 py-3.5">
+                    <span className="text-xs font-mono text-slate-500 bg-slate-100 px-2 py-1 rounded-md">{s.gsrn}</span>
                   </td>
-                  <td className="px-5 py-3">
-                    <span className="inline-flex items-center gap-1.5 text-xs text-slate-300">
-                      <span className={`w-1.5 h-1.5 rounded-full ${statusDot[s.status] || 'bg-slate-500'}`} />
+                  <td className="px-6 py-3.5">
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${(statusStyles[s.status] || statusStyles.registered).badge}`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${(statusStyles[s.status] || statusStyles.registered).dot}`} />
                       {s.status}
                     </span>
                   </td>
-                  <td className="px-5 py-3 text-xs text-slate-500">
+                  <td className="px-6 py-3.5 text-sm text-slate-400">
                     {new Date(s.createdAt).toLocaleDateString('da-DK')}
                   </td>
                 </tr>
