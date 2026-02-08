@@ -71,7 +71,8 @@ public sealed class PortfolioRepository : IPortfolioRepository
         const string sql = """
             INSERT INTO portfolio.product (name, energy_model, margin_ore_per_kwh, supplement_ore_per_kwh, subscription_kr_per_month)
             VALUES (@Name, @EnergyModel, @MarginOrePerKwh, @SupplementOrePerKwh, @SubscriptionKrPerMonth)
-            RETURNING id, name, energy_model, margin_ore_per_kwh, supplement_ore_per_kwh, subscription_kr_per_month
+            RETURNING id, name, energy_model, margin_ore_per_kwh, supplement_ore_per_kwh, subscription_kr_per_month,
+                      description, green_energy, display_order
             """;
 
         await using var conn = new NpgsqlConnection(_connectionString);
@@ -153,7 +154,8 @@ public sealed class PortfolioRepository : IPortfolioRepository
     public async Task<Product?> GetProductAsync(Guid productId, CancellationToken ct)
     {
         const string sql = """
-            SELECT id, name, energy_model, margin_ore_per_kwh, supplement_ore_per_kwh, subscription_kr_per_month
+            SELECT id, name, energy_model, margin_ore_per_kwh, supplement_ore_per_kwh, subscription_kr_per_month,
+                   description, green_energy, display_order
             FROM portfolio.product
             WHERE id = @ProductId
             """;
