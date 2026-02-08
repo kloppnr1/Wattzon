@@ -212,7 +212,10 @@ Track A has no dependencies on Track B. They can be developed in parallel.
 
 **Problem:** The settlement system can process customers end-to-end, but there's no entry point for "a customer just signed up." Sales happen through three channels — website (self-service), mobile app (self-service), and customer service (phone). Today, customer creation is manual or demo-seeded. All three channels need the same programmatic entry point.
 
-**Design principle:** API-first. All sales channels call the same endpoints. The website doesn't talk to the database directly. Customer service doesn't use a different code path. One API, multiple consumers.
+**Design principles:**
+- **API-first.** All sales channels call the same endpoints. One API, multiple consumers.
+- **Simple consumer, smart backend.** The API consumer just submits a signup and tracks status. All DataHub complexity (which BRS process, notice periods, rejections, retries) is handled internally by the orchestration layer.
+- **Margin is the product.** Customers choose a supplier based on margin + subscription — grid tariffs, system tariffs, and taxes are pass-through costs identical across all suppliers. The API only needs to present the DDQ's own pricing, not a full invoice estimate.
 
 ```
 ┌──────────────┐  ┌──────────────┐  ┌──────────────┐
@@ -223,129 +226,210 @@ Track A has no dependencies on Track B. They can be developed in parallel.
        └─────────────────┼─────────────────┘
                          │
                   ┌──────▼──────┐
-                  │  Onboarding │
-                  │     API     │
+                  │  Onboarding │  Simple API surface
+                  │     API     │  (4 endpoints)
                   └──────┬──────┘
                          │
               ┌──────────▼──────────┐
-              │  DataHub.Settlement │
-              │  Portfolio + BRS-001│
+              │  Orchestration      │  Owns the complexity:
+              │  Layer              │  • BRS-001 vs BRS-009
+              │                     │  • 15 business day calc
+              │                     │  • Rejection → retry
+              │                     │  • RSM-007 → activation
               └─────────────────────┘
 ```
 
-**What to build:**
+---
+
+#### Business context: what the API consumer does NOT need to know
+
+The Danish energy market has structural complexity that the API must hide from the consumer:
+
+| Complexity | Who handles it | Consumer sees |
+|-----------|---------------|---------------|
+| **BRS-001 vs BRS-009** — supplier switch or move-in? Different processes, different notice periods | Orchestration layer decides based on context | Nothing — just "processing" |
+| **15 business day notice period** — BRS-001 requires minimum notice | Orchestration calculates earliest valid effective date automatically | Nothing — just the estimated activation date |
+| **Grid area unknown at signup** — tariffs only arrive via RSM-007 after activation | Irrelevant for signup — grid tariffs are pass-through, same regardless of supplier | Products show margin + subscription only |
+| **Rejection handling** — CPR/CVR mismatch, conflicting process (E16), invalid GSRN | Orchestration handles internally. Retryable errors are retried. Fatal errors surface to status | Status shows `rejected` with a human-readable reason |
+| **RSM-007 activation** — master data arrives on effective date, reveals grid area, settlement method, meter type | Orchestration processes RSM-007, assigns tariffs, activates metering point | Status changes to `active` |
+
+**The consumer's mental model:** "I submitted a signup. It's either processing, active, rejected, or cancelled."
+
+---
+
+#### API surface
 
 | Endpoint | Purpose |
 |----------|---------|
-| `POST /api/signup/validate` | Validate GSRN format (18 digits), check not already in portfolio, address lookup via DAWA |
-| `GET /api/products` | List available energy products (margin, subscription, fixed/variable, green energy options) |
-| `GET /api/products/{id}` | Product detail with pricing breakdown |
-| `POST /api/signup` | Create customer + metering point + contract + supply period. Queue BRS-001. Return signup ID |
-| `GET /api/signup/{id}/status` | Track process state: Registered → Sent to DataHub → Acknowledged → Effectuation Pending → Active |
-| `POST /api/signup/{id}/cancel` | Cancel before activation — sends BRS-003 if still within cancellation window |
+| `GET /api/products` | List products the consumer can sell (margin, subscription, spot/fixed) |
+| `POST /api/signup` | Submit a new customer signup |
+| `GET /api/signup/{id}/status` | Check how the signup is progressing |
+| `POST /api/signup/{id}/cancel` | Cancel before activation |
 
-**Request/response models:**
+That's it. Four endpoints.
+
+**Request/response:**
 
 ```
 POST /api/signup
 {
   "gsrn": "571313180000000001",
-  "customer": {
-    "name": "Anders Jensen",
-    "cpr_or_cvr": "0101901234",
-    "email": "anders@example.dk",
-    "phone": "+4512345678"
-  },
-  "product_id": "spot-standard",
-  "requested_start_date": "2026-04-01"
+  "customer_name": "Anders Jensen",
+  "cpr_cvr": "0101901234",
+  "contact_type": "private",
+  "email": "anders@example.dk",
+  "phone": "+4512345678",
+  "product_id": "<uuid>",
+  "channel": "web"
 }
 
 → 201 Created
 {
-  "signup_id": "sgn-2026-00042",
+  "signup_id": "SGN-2026-00042",
   "status": "registered",
   "gsrn": "571313180000000001",
-  "requested_start_date": "2026-04-01",
-  "estimated_activation": "2026-04-01",
-  "process_id": "proc-xxxxx",
-  "links": {
-    "status": "/api/signup/sgn-2026-00042/status",
-    "cancel": "/api/signup/sgn-2026-00042/cancel"
-  }
+  "estimated_activation": "2026-04-01"
 }
 ```
 
-**Signup flow internals:**
+```
+GET /api/signup/SGN-2026-00042/status
 
-| Step | What happens |
-|------|-------------|
-| 1. Validate | Check GSRN format, verify not duplicate, look up address via DAWA |
-| 2. Create portfolio entities | `customer`, `metering_point`, `contract`, `supply_period` (start = requested date) |
-| 3. Create process request | `process_request` with type BRS-001, status `pending` |
-| 4. Return immediately | Signup ID + status link. The BRS-001 is sent asynchronously by `ProcessSchedulerService` |
-| 5. Background processing | Scheduler picks up pending process → sends BRS-001 → DataHub responds → state machine advances |
-| 6. Status polling | Sales channel polls `/status` to track progress and notify customer |
+→ 200 OK
+{
+  "signup_id": "SGN-2026-00042",
+  "status": "processing",
+  "gsrn": "571313180000000001",
+  "estimated_activation": "2026-04-01",
+  "rejection_reason": null
+}
+```
 
-**Product catalog management:**
+**Consumer-facing statuses** (simplified from the internal DataHub state machine):
 
-| Task | Detail |
-|------|--------|
-| `portfolio.product` table enhancement | Add: description, active flag, display_order, pricing_type (spot/fixed), green_energy flag |
-| Seed realistic products | "Spot Standard", "Spot Green", "Fixed 12 Month", etc. |
-| Admin endpoints (basic) | `POST /api/admin/products`, `PUT /api/admin/products/{id}` — for back-office product management |
-| Product validation at signup | Verify product exists and is active |
+| Consumer status | Internal states mapped | Meaning |
+|----------------|----------------------|---------|
+| `registered` | Process created, not yet sent | We have your signup, preparing to send to DataHub |
+| `processing` | `sent_to_datahub`, `acknowledged`, `effectuation_pending` | In progress — DataHub is handling the switch |
+| `active` | `completed` | Supply is live, metering data flowing |
+| `rejected` | `rejected` | DataHub rejected — reason provided |
+| `cancelled` | `cancelled` | Customer or system cancelled |
 
-**Address lookup integration:**
+The consumer never sees `sent_to_datahub` vs. `acknowledged` vs. `effectuation_pending` — that's internal. They just see "processing."
 
-| Task | Detail |
-|------|--------|
-| Wire DAWA into validation | `AddressLookupService` already partially exists — connect to `/api/signup/validate` |
-| Return formatted address | When GSRN validation succeeds, include the resolved address in the response for customer confirmation |
+---
 
-**Authentication strategy (this phase):**
+#### Orchestration layer (internal — what the API hides)
 
-| Channel | Auth method | Implementation |
-|---------|------------|----------------|
-| Website / App | API key + session token (stub) | Real MitID integration is MVP 4 proper |
-| Customer Service | API key + agent ID header | Agent identity passed through for audit |
-| API-to-API | API key | Machine-to-machine, simple header |
+This is where the real complexity lives. When `POST /api/signup` is called:
 
-The API validates the API key. The caller is responsible for authenticating the end user (MitID, agent login). The API receives the verified identity (CPR/CVR) and trusts it. This separation keeps the settlement system auth-agnostic.
+**Step 1: Validate and create**
+```
+1. Validate GSRN format (18 digits, starts with "57")
+2. Check no active signup/contract already exists for this GSRN
+3. Validate product exists and is active
+4. Create customer, metering point (placeholder — type/grid area unknown until RSM-007),
+   contract, supply period
+5. Calculate earliest valid effective date (today + 15 business days, skip weekends/holidays)
+6. Create process request (pending)
+7. Return signup ID immediately
+```
 
-**Signup lifecycle notifications:**
+**Step 2: Background processing (ProcessSchedulerService)**
+```
+1. Pick up pending process request
+2. Determine BRS type:
+   - Default: BRS-001 (supplier switch) — most common case
+   - If DataHub rejects with "no current supplier": retry as BRS-009 (move-in)
+3. Build and send BRS request to DataHub
+4. Update process state: pending → sent_to_datahub
+5. Sync signup status: registered → processing
+```
 
-| Event | How the sales channel learns about it |
-|-------|--------------------------------------|
-| BRS-001 sent | Status changes to `sent_to_datahub` — visible via polling |
-| BRS-001 accepted (RSM-009) | Status changes to `acknowledged` |
-| BRS-001 rejected (RSM-009) | Status changes to `rejected` — include rejection reason |
-| Metering point activated (RSM-007) | Status changes to `active` |
-| Cancellation confirmed | Status changes to `cancelled` |
+**Step 3: Response handling (QueuePollerService)**
+```
+On RSM-009 (receipt):
+  - Accepted: process → acknowledged → effectuation_pending
+  - Rejected: process → rejected, store reason
+    - If retryable (E16 conflict): schedule retry
+    - If fatal (GSRN doesn't exist, CPR mismatch): sync rejection to signup
 
-Polling first (`GET /status`). Webhook push is a future enhancement.
+On RSM-007 (master data, arrives on effective date):
+  - Update metering point with real data: grid area, type, settlement method
+  - Assign correct grid tariffs based on grid area
+  - Activate metering point
+  - Process → completed
+  - Sync signup status: processing → active
+```
+
+**Step 4: Cancellation**
+```
+POST /api/signup/{id}/cancel:
+  - If status is registered or processing:
+    - If BRS-001 already sent and before effective date: send BRS-003 (cancel switch)
+    - If not yet sent: just cancel internally
+  - If status is active: return 409 — too late, use offboarding (BRS-002) instead
+```
+
+---
+
+#### GSRN discovery: a separate concern
+
+Most customers don't know their 18-digit GSRN. They know their address. The typical flow:
+
+1. Website shows an address input field
+2. Address autocomplete via DAWA (Danmarks Adressers Web API)
+3. Address → GSRN lookup via Energinet's API (one address can have multiple GSRNs)
+4. Customer selects the correct GSRN (or it's unambiguous)
+5. GSRN is passed to `POST /api/signup`
+
+**For this phase:** The API accepts a GSRN directly. Address-to-GSRN lookup is the website/app's responsibility, using DAWA/Energinet APIs directly. We provide a helper endpoint later if needed, but it's not part of the core onboarding API.
+
+**Rationale:** Keeping GSRN lookup in the frontend avoids coupling the onboarding API to address service availability. The website can cache, autocomplete, and handle the UX better than a backend proxy.
+
+---
+
+#### Open business decisions
+
+| Decision | Options | Recommendation |
+|----------|---------|---------------|
+| **Default billing model** | Aconto (pre-payment) or arrears (post-payment) | Start with arrears only — industry trend, simpler, no estimation needed. Add aconto as product option later |
+| **BRS-001 rejection retry** | Auto-retry or surface to customer service | Auto-retry for transient errors (E16 conflict). Surface CPR mismatch to customer service for manual correction |
+| **Effective date** | Fixed (earliest valid) or customer-chosen | System calculates earliest valid date. Customer-chosen date is a future enhancement |
+| **Multiple signups per customer** | Allow or block | Allow — one customer can have multiple metering points (e.g., house + garage) |
+
+---
+
+#### What to build
+
+| Layer | Task |
+|-------|------|
+| **Migration V021** | `portfolio.signup` table, product table enhancements (description, pricing_type, green_energy, display_order) |
+| **Application** | `OnboardingService` (validate, create signup, cancel, sync from process), `GsrnValidator`, `ISignupRepository`, models |
+| **Infrastructure** | `SignupRepository` (Dapper), business day calculator, product query |
+| **API** | 4 endpoints in `DataHub.Settlement.Api` |
+| **Orchestration** | Wire signup status sync into existing `QueuePollerService` (on RSM-009 and RSM-007) |
+| **Simulator** | Onboarding scenario: signup → BRS-001 → RSM-009 accepted → RSM-007 → active |
 
 **Tests:**
 
 | Test | Type |
 |------|------|
-| GSRN validation: valid format accepted | Unit |
-| GSRN validation: invalid format rejected (wrong length, non-numeric) | Unit |
-| GSRN validation: duplicate GSRN rejected | Integration |
-| Signup creates all portfolio entities correctly | Integration |
-| Signup queues BRS-001 process request | Integration |
-| Status endpoint reflects process state transitions | Integration |
-| Cancel before activation sends BRS-003 | Integration |
-| Cancel after activation returns 409 Conflict | Integration |
-| Product listing returns active products only | Integration |
-| Invalid product ID at signup returns 400 | Unit |
-| Full flow: signup → BRS-001 → RSM-009 accepted → RSM-007 → status = active | Integration (simulator) |
+| GSRN validation: format, prefix, length | Unit |
+| Business day calculation: skip weekends, 15-day minimum | Unit |
+| Signup creates all portfolio entities | Integration |
+| Signup queues BRS-001 process | Integration |
+| Status reflects simplified consumer states | Integration |
+| Cancel before activation | Integration |
+| Cancel after activation returns 409 | Integration |
+| Rejection syncs reason to signup | Integration |
+| Full flow: signup → BRS-001 → RSM-009 → RSM-007 → status = active | Integration (simulator) |
 
 **Exit criteria:**
-- All three sales channels can create customers through the same API
-- Signup produces a trackable process with status polling
+- All sales channels can create customers through 4 API endpoints
+- Consumer sees simple status progression (registered → processing → active)
+- Internal orchestration handles BRS-001, rejections, and RSM-007 activation
 - Cancellation works before activation
-- Product catalog is queryable and validated at signup
-- Address lookup integrated into validation
 - Full signup → activation flow works end-to-end against the simulator
 
 ---
@@ -580,10 +664,10 @@ These items are **not** in this phase:
 
 | Risk | Impact | Mitigation |
 |------|--------|------------|
-| Onboarding API contract changes after sales channel integration | Breaking changes for website/app | Design API contract carefully up front, version from day one (`/api/v1/signup`) |
-| GSRN validation insufficient without DataHub lookup | Customer signs up with wrong GSRN | Validate format + DAWA address lookup. Real GSRN verification happens when BRS-001 is accepted/rejected |
-| 15+ business day BRS-001 notice period confuses customers | High dropout between signup and activation | Clear status communication, email/SMS notifications at each state change (future) |
-| Product catalog ownership unclear (this system vs. CRM) | Duplicate or conflicting product data | Start with products in this system, design for external sync later |
+| BRS-001 vs BRS-009 auto-detection unreliable | Wrong process sent, DataHub rejects | Default to BRS-001 (most common). On rejection indicating no current supplier, retry as BRS-009 |
+| CPR/CVR mismatch discovered only after BRS-001 sent | Signup stuck in rejected state, customer confused | Surface rejection reason via status endpoint. Customer service can correct and re-submit |
+| 15+ business day gap causes customer dropout | Customer forgets or switches to competitor | Clear status communication. Future: email/SMS at each state change |
+| Effective date calculation wrong (holidays, weekends) | BRS-001 rejected for insufficient notice | Build robust business day calculator with Danish holiday calendar |
 | RSM-015/016 CIM format unknown | Parser may need rework once real messages are seen | Build parser from documentation, plan for fixture updates |
 | BRS-011 endpoint name/format unverified | Request may be rejected by real DataHub | Research Energinet documentation, build against best understanding |
 | TimescaleDB performance at 80K scale | Settlement may be too slow | Profile early (B6), identify bottlenecks before building more features |
