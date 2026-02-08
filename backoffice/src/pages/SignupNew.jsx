@@ -130,6 +130,7 @@ export default function SignupNew() {
     try {
       const payload = {
         darId,
+        gsrn: selectedGsrn,
         customerName,
         cprCvr,
         contactType,

@@ -31,6 +31,7 @@ public record SignupRequest(
     Guid ProductId,
     string Type,
     DateOnly EffectiveDate,
+    string? Gsrn = null,
     Guid? CorrectedFromId = null);
 
 public record SignupResponse(

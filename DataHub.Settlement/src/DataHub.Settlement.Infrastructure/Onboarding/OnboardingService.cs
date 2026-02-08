@@ -52,10 +52,23 @@ public sealed class OnboardingService : IOnboardingService
         if (lookupResult.MeteringPoints.Count == 0)
             throw new ValidationException("No metering point found for the given address.");
 
-        if (lookupResult.MeteringPoints.Count > 1)
-            throw new ValidationException("Multiple metering points found for this address. Please resolve before submitting.");
-
-        var gsrn = lookupResult.MeteringPoints[0].Gsrn;
+        string gsrn;
+        if (!string.IsNullOrEmpty(request.Gsrn))
+        {
+            // Frontend selected a specific GSRN — validate it belongs to this address
+            var match = lookupResult.MeteringPoints.FirstOrDefault(mp => mp.Gsrn == request.Gsrn);
+            gsrn = match?.Gsrn
+                ?? throw new ValidationException($"GSRN {request.Gsrn} not found at address {request.DarId}.");
+        }
+        else if (lookupResult.MeteringPoints.Count == 1)
+        {
+            gsrn = lookupResult.MeteringPoints[0].Gsrn;
+        }
+        else
+        {
+            throw new ValidationException(
+                $"Multiple metering points found at this address ({lookupResult.MeteringPoints.Count}). Please select one.");
+        }
 
         // 2. Validate GSRN format
         if (!GsrnValidator.IsValid(gsrn))
