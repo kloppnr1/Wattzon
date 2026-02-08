@@ -265,9 +265,10 @@ The Danish energy market has structural complexity that the API must hide from t
 | `GET /api/products` | List products the consumer can sell (margin, subscription, spot/fixed) |
 | `POST /api/signup` | Submit a new customer signup |
 | `GET /api/signup/{id}/status` | Check how the signup is progressing |
+| `POST /api/signup/{id}/select-gsrn` | Resolve multiple-GSRN ambiguity (when address has multiple meters) |
 | `POST /api/signup/{id}/cancel` | Cancel before activation |
 
-That's it. Four endpoints.
+Five endpoints.
 
 **Request/response:**
 
@@ -340,9 +341,11 @@ This is where the real complexity lives. A key design decision shapes the entire
 
 **Step 1: Validate and create (synchronous, in API request)**
 ```
-1. Look up GSRN from DAR ID via address lookup service
+1. Look up GSRN(s) from DAR ID via address lookup service
    - If no GSRN found: return 400 with error
-   - If multiple GSRNs: return 400 — consumer must disambiguate (future: support selection)
+   - If multiple GSRNs: return 201 with status "awaiting_gsrn_selection"
+     (signup is created but paused — customer must be contacted to select)
+   - If exactly one GSRN: proceed normally
 2. Validate GSRN format (18 digits, starts with "57")
 3. Check no active signup already exists for this GSRN
 4. Validate product exists and is active
@@ -352,11 +355,47 @@ This is where the real complexity lives. A key design decision shapes the entire
 6. Map type to process type: "switch" → supplier_switch, "move_in" → move_in
 7. Create customer record (name, CPR/CVR, contact type)
 8. Create signup record (dar_id, gsrn, customer_id, product_id, type, effective_date)
-9. Create process request (pending) with the effective date
+9. Create process request (pending) — only if GSRN resolved
 10. Return signup ID + resolved GSRN immediately
 ```
 
 Portfolio entities NOT created here. No metering point, no contract, no supply period.
+
+**Multiple GSRNs per address — the "contact customer" flow:**
+
+When a DAR ID resolves to multiple metering points (e.g., apartment building), the signup is created in `awaiting_gsrn_selection` status. No process request is created yet.
+
+```
+POST /api/signup → 201 { status: "awaiting_gsrn_selection", gsrn_options: ["5713131..01", "5713131..02"] }
+```
+
+The consumer (website, customer service) must contact the customer and resolve which GSRN is correct. Then:
+
+```
+POST /api/signup/{id}/select-gsrn
+{ "gsrn": "571313100000000001" }
+
+→ 200 { status: "registered" }
+```
+
+This triggers GSRN validation, creates the process request, and the normal flow continues. Customer service handles this naturally (ask the customer on the phone). Self-service channels can show a selection UI.
+
+**Consumer-facing statuses** updated:
+
+| Consumer status | Meaning |
+|----------------|---------|
+| `awaiting_gsrn_selection` | Multiple meters found at address — customer must select |
+| `registered` | GSRN confirmed, preparing to send to DataHub |
+| `processing` | In progress — DataHub is handling the switch |
+| `active` | Supply is live |
+| `rejected` | DataHub rejected — reason provided |
+| `cancelled` | Cancelled |
+
+This adds one endpoint:
+
+| Endpoint | Purpose |
+|----------|---------|
+| `POST /api/signup/{id}/select-gsrn` | Resolve multiple-GSRN ambiguity |
 
 **Step 2: Send to DataHub (background — ProcessSchedulerService, NEW)**
 ```
@@ -440,7 +479,7 @@ The API accepts a **DAR ID** (Danish Address Register identifier), not a raw GSR
 |----------|---------|---------------|
 | **Default billing model** | Aconto (pre-payment) or arrears (post-payment) | Start with arrears only — industry trend, simpler, no estimation needed. Add aconto as product option later |
 | **Rejection retry** | Auto-retry or surface to customer service | Auto-retry for transient errors (E16 conflict). Surface CPR mismatch to customer service for manual correction |
-| **Multiple GSRNs per DAR ID** | Return error or let consumer select | Return 400 for now. Future: return list for selection |
+| **Multiple GSRNs per DAR ID** | Signup paused in `awaiting_gsrn_selection` | Consumer contacts customer, then calls `POST /select-gsrn` to continue |
 | **Multiple signups per customer** | Allow or block | Allow — one customer can have multiple metering points (e.g., house + garage) |
 
 ---
@@ -721,7 +760,7 @@ These items are **not** in this phase:
 
 | Risk | Impact | Mitigation |
 |------|--------|------------|
-| DAR ID → GSRN lookup returns multiple GSRNs | Signup fails with 400, customer stuck | Return 400 with clear message. Future: return list for consumer to disambiguate |
+| DAR ID → GSRN lookup returns multiple GSRNs | Signup paused, requires customer contact | Signup created in `awaiting_gsrn_selection` with GSRN options. Consumer resolves via `select-gsrn` endpoint |
 | DAR ID lookup service unavailable | Signup fails entirely | Retry with backoff. Future: allow direct GSRN input as fallback |
 | CPR/CVR mismatch discovered only after BRS-001 sent | Signup stuck in rejected state, customer confused | Surface rejection reason via status endpoint. Customer service can correct and re-submit |
 | 15+ business day gap causes customer dropout | Customer forgets or switches to competitor | Clear status communication. Future: email/SMS at each state change |
