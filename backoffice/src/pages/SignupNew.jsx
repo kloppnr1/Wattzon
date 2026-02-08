@@ -97,15 +97,15 @@ export default function SignupNew() {
     setError(null);
     try {
       await api.createSignup({
-        dar_id: darId,
-        customer_name: customerName,
-        cpr_cvr: cprCvr,
-        contact_type: contactType,
+        darId,
+        customerName,
+        cprCvr,
+        contactType,
         email,
         phone,
-        product_id: selectedProduct,
+        productId: selectedProduct,
         type,
-        effective_date: effectiveDate,
+        effectiveDate,
       });
       navigate('/signups');
     } catch (e) {
