@@ -80,3 +80,32 @@ public record MessageStats(
     int ProcessedCount,
     int DeadLetterCount,
     int PendingOutbound);
+
+public record ConversationSummary(
+    Guid ProcessRequestId,
+    string Gsrn,
+    string ProcessType,
+    string ProcessStatus,
+    DateOnly? EffectiveDate,
+    string CorrelationId,
+    DateTime CreatedAt,
+    string? CustomerName,
+    string? SignupNumber,
+    int OutboundCount,
+    DateTime? FirstSentAt,
+    int InboundCount,
+    DateTime? LastReceivedAt,
+    bool HasAcknowledgement,
+    bool HasActivation);
+
+public record ConversationDetail(
+    string CorrelationId,
+    IReadOnlyList<OutboundRequestSummary> Outbound,
+    IReadOnlyList<InboundMessageSummary> Inbound);
+
+public record DataDeliverySummary(
+    DateTime DeliveryDate,
+    string MessageType,
+    int MessageCount,
+    int ProcessedCount,
+    int ErrorCount);

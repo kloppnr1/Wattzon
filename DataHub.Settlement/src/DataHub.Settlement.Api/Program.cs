@@ -366,4 +366,27 @@ app.MapGet("/api/messages/stats", async (IMessageRepository repo, CancellationTo
     return Results.Ok(stats);
 });
 
+// GET /api/messages/conversations — process conversations grouped by correlation ID
+app.MapGet("/api/messages/conversations", async (int? page, int? pageSize, IMessageRepository repo, CancellationToken ct) =>
+{
+    var p = Math.Max(page ?? 1, 1);
+    var ps = Math.Clamp(pageSize ?? 50, 1, 200);
+    var result = await repo.GetConversationsAsync(p, ps, ct);
+    return Results.Ok(result);
+});
+
+// GET /api/messages/conversations/{correlationId} — timeline for one conversation
+app.MapGet("/api/messages/conversations/{correlationId}", async (string correlationId, IMessageRepository repo, CancellationToken ct) =>
+{
+    var detail = await repo.GetConversationAsync(correlationId, ct);
+    return detail is not null ? Results.Ok(detail) : Results.NotFound();
+});
+
+// GET /api/messages/deliveries — data deliveries grouped by date
+app.MapGet("/api/messages/deliveries", async (IMessageRepository repo, CancellationToken ct) =>
+{
+    var deliveries = await repo.GetDataDeliveriesAsync(ct);
+    return Results.Ok(deliveries);
+});
+
 app.Run();

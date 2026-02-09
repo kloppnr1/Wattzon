@@ -78,13 +78,16 @@ export default function SettlementRunDetail() {
         <span>/</span>
         <Link to={`/billing/periods/${run.billingPeriodId}`} className="hover:text-teal-600">Period</Link>
         <span>/</span>
-        <span className="text-slate-900 font-medium">Run {run.gridAreaCode}</span>
+        <span className="text-slate-900 font-medium">Run v{run.version}</span>
       </div>
 
       {/* Page header */}
       <div className="mb-6 animate-fade-in-up">
         <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Settlement Run</h1>
-        <p className="text-base text-slate-500 mt-1">{run.gridAreaCode} v{run.version}</p>
+        <div className="flex items-center gap-3 mt-1">
+          <p className="text-base text-slate-500">Version {run.version}</p>
+          <StatusBadge status={run.status} />
+        </div>
       </div>
 
       {/* Metrics cards */}
@@ -112,18 +115,18 @@ export default function SettlementRunDetail() {
             <dd className="text-base font-semibold text-slate-900 mt-1">{run.periodStart} to {run.periodEnd}</dd>
           </div>
           <div>
-            <dt className="text-sm font-medium text-slate-500">Grid Area</dt>
-            <dd className="text-base font-semibold text-slate-900 mt-1">{run.gridAreaCode}</dd>
+            <dt className="text-sm font-medium text-slate-500">Status</dt>
+            <dd className="mt-1">
+              <StatusBadge status={run.status} />
+            </dd>
           </div>
           <div>
             <dt className="text-sm font-medium text-slate-500">Version</dt>
             <dd className="text-base text-slate-700 mt-1">{run.version}</dd>
           </div>
           <div>
-            <dt className="text-sm font-medium text-slate-500">Status</dt>
-            <dd className="mt-1">
-              <StatusBadge status={run.status} />
-            </dd>
+            <dt className="text-sm font-medium text-slate-500">Grid Area</dt>
+            <dd className="text-base text-slate-500 mt-1">{run.gridAreaCode || '-'}</dd>
           </div>
           <div>
             <dt className="text-sm font-medium text-slate-500">Executed At</dt>

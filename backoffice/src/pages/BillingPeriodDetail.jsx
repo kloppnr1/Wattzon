@@ -105,10 +105,10 @@ export default function BillingPeriodDetail() {
           <table className="min-w-full divide-y divide-slate-200">
             <thead className="bg-slate-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Grid Area</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Version</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Run</th>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Status</th>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Metering Points</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Grid Area</th>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Executed At</th>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Completed At</th>
               </tr>
@@ -125,14 +125,14 @@ export default function BillingPeriodDetail() {
                   <tr key={run.id} className="hover:bg-slate-50 transition-colors cursor-pointer">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <Link to={`/billing/runs/${run.id}`} className="text-teal-600 font-medium hover:text-teal-700">
-                        {run.gridAreaCode}
+                        v{run.version}
                       </Link>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700">{run.version}</td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <StatusBadge status={run.status} />
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700">{run.meteringPointsCount}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">{run.gridAreaCode || '-'}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
                       {new Date(run.executedAt).toLocaleString()}
                     </td>

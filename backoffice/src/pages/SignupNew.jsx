@@ -181,13 +181,15 @@ export default function SignupNew() {
       )}
 
       {/* Step indicator */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 mb-6 animate-fade-in-up" style={{ animationDelay: '60ms' }}>
-        <div className="flex items-center">
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 px-6 py-5 mb-6 animate-fade-in-up" style={{ animationDelay: '60ms' }}>
+        <div className="flex items-start">
           {STEPS.map((s, i) => (
-            <div key={s.key} className="flex items-center flex-1 last:flex-none">
-              <div className="flex items-center gap-2.5">
+            <div key={s.key} className={`flex flex-col items-center text-center ${i < STEPS.length - 1 ? 'flex-1' : ''}`}>
+              {/* Circle row with connector */}
+              <div className="flex items-center w-full">
+                {i > 0 && <div className="flex-1" />}
                 <div
-                  className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${
+                  className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold shrink-0 transition-all duration-300 ${
                     i < step
                       ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/25'
                       : i === step
@@ -203,16 +205,15 @@ export default function SignupNew() {
                     i + 1
                   )}
                 </div>
-                <div className="hidden sm:block">
-                  <p className={`text-xs font-semibold ${i <= step ? 'text-slate-900' : 'text-slate-400'}`}>
-                    {s.label}
-                  </p>
-                  <p className="text-[11px] text-slate-400">{s.desc}</p>
-                </div>
+                {i < STEPS.length - 1 && (
+                  <div className={`flex-1 h-0.5 mx-2 rounded-full transition-colors duration-300 ${i < step ? 'bg-teal-400' : 'bg-slate-100'}`} />
+                )}
               </div>
-              {i < STEPS.length - 1 && (
-                <div className={`flex-1 h-0.5 mx-4 rounded-full transition-colors duration-300 ${i < step ? 'bg-teal-400' : 'bg-slate-100'}`} />
-              )}
+              {/* Label below circle */}
+              <p className={`text-xs font-semibold mt-2 ${i <= step ? 'text-slate-900' : 'text-slate-400'}`}>
+                {s.label}
+              </p>
+              <p className="text-[11px] text-slate-400 hidden sm:block">{s.desc}</p>
             </div>
           ))}
         </div>

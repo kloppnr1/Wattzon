@@ -260,6 +260,113 @@ public sealed class MessageRepository : IMessageRepository
             row.PendingOutbound);
     }
 
+    public async Task<PagedResult<ConversationSummary>> GetConversationsAsync(int page, int pageSize, CancellationToken ct)
+    {
+        var offset = (page - 1) * pageSize;
+
+        const string sql = """
+            SELECT pr.id AS process_request_id, pr.gsrn, pr.process_type, pr.status AS process_status,
+                   pr.effective_date, pr.datahub_correlation_id AS correlation_id,
+                   pr.created_at,
+                   s.customer_name, s.signup_number,
+                   (SELECT COUNT(*) FROM datahub.outbound_request o
+                    WHERE o.correlation_id = pr.datahub_correlation_id) AS outbound_count,
+                   (SELECT MIN(o.sent_at) FROM datahub.outbound_request o
+                    WHERE o.correlation_id = pr.datahub_correlation_id) AS first_sent_at,
+                   (SELECT COUNT(*) FROM datahub.inbound_message i
+                    WHERE i.correlation_id = pr.datahub_correlation_id) AS inbound_count,
+                   (SELECT MAX(i.received_at) FROM datahub.inbound_message i
+                    WHERE i.correlation_id = pr.datahub_correlation_id) AS last_received_at,
+                   EXISTS(SELECT 1 FROM datahub.inbound_message i
+                    WHERE i.correlation_id = pr.datahub_correlation_id AND i.message_type = 'RSM-009') AS has_acknowledgement,
+                   EXISTS(SELECT 1 FROM datahub.inbound_message i
+                    WHERE i.correlation_id = pr.datahub_correlation_id AND i.message_type = 'RSM-007') AS has_activation,
+                   COUNT(*) OVER() AS total_count
+            FROM lifecycle.process_request pr
+            LEFT JOIN portfolio.signup s ON s.process_request_id = pr.id
+            WHERE pr.datahub_correlation_id IS NOT NULL
+            ORDER BY pr.created_at DESC
+            LIMIT @PageSize OFFSET @Offset
+            """;
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+        var rows = await conn.QueryAsync<ConversationSummaryRow>(sql, new { PageSize = pageSize, Offset = offset });
+        var rowList = rows.ToList();
+
+        var totalCount = rowList.FirstOrDefault()?.TotalCount ?? 0;
+        var items = rowList.Select(r => new ConversationSummary(
+            r.ProcessRequestId,
+            r.Gsrn,
+            r.ProcessType,
+            r.ProcessStatus,
+            r.EffectiveDate,
+            r.CorrelationId,
+            r.CreatedAt,
+            r.CustomerName,
+            r.SignupNumber,
+            r.OutboundCount,
+            r.FirstSentAt,
+            r.InboundCount,
+            r.LastReceivedAt,
+            r.HasAcknowledgement,
+            r.HasActivation)).ToList();
+
+        return new PagedResult<ConversationSummary>(items, totalCount, page, pageSize);
+    }
+
+    public async Task<ConversationDetail?> GetConversationAsync(string correlationId, CancellationToken ct)
+    {
+        const string outboundSql = """
+            SELECT id, process_type, gsrn, status, correlation_id, sent_at, response_at
+            FROM datahub.outbound_request
+            WHERE correlation_id = @CorrelationId
+            ORDER BY sent_at ASC
+            """;
+
+        const string inboundSql = """
+            SELECT id, datahub_message_id, message_type, correlation_id, queue_name, status, received_at, processed_at
+            FROM datahub.inbound_message
+            WHERE correlation_id = @CorrelationId
+            ORDER BY received_at ASC
+            """;
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+        var outboundRows = await conn.QueryAsync<OutboundRequestSummaryRow>(outboundSql, new { CorrelationId = correlationId });
+        var inboundRows = await conn.QueryAsync<InboundMessageSummaryRow>(inboundSql, new { CorrelationId = correlationId });
+
+        var outbound = outboundRows.Select(r => new OutboundRequestSummary(r.Id, r.ProcessType, r.Gsrn, r.Status, r.CorrelationId, r.SentAt, r.ResponseAt)).ToList();
+        var inbound = inboundRows.Select(r => new InboundMessageSummary(r.Id, r.DatahubMessageId, r.MessageType, r.CorrelationId, r.QueueName, r.Status, r.ReceivedAt, r.ProcessedAt)).ToList();
+
+        if (outbound.Count == 0 && inbound.Count == 0)
+            return null;
+
+        return new ConversationDetail(correlationId, outbound, inbound);
+    }
+
+    public async Task<IReadOnlyList<DataDeliverySummary>> GetDataDeliveriesAsync(CancellationToken ct)
+    {
+        const string sql = """
+            SELECT DATE(received_at) AS delivery_date, message_type,
+                   COUNT(*) AS message_count,
+                   SUM(CASE WHEN status = 'processed' THEN 1 ELSE 0 END) AS processed_count,
+                   SUM(CASE WHEN status = 'dead_lettered' THEN 1 ELSE 0 END) AS error_count
+            FROM datahub.inbound_message
+            WHERE message_type IN ('RSM-012', 'RSM-014', 'RSM-004')
+            GROUP BY DATE(received_at), message_type
+            ORDER BY delivery_date DESC, message_type
+            """;
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+        var rows = await conn.QueryAsync<DataDeliverySummaryRow>(sql);
+
+        return rows.Select(r => new DataDeliverySummary(
+            r.DeliveryDate,
+            r.MessageType,
+            r.MessageCount,
+            r.ProcessedCount,
+            r.ErrorCount)).ToList();
+    }
+
 }
 
 // DTOs for Dapper mapping
@@ -344,4 +451,33 @@ internal class MessageStatsRow
     public int ProcessedCount { get; set; }
     public int DeadLetterCount { get; set; }
     public int PendingOutbound { get; set; }
+}
+
+internal class ConversationSummaryRow
+{
+    public Guid ProcessRequestId { get; set; }
+    public string Gsrn { get; set; } = null!;
+    public string ProcessType { get; set; } = null!;
+    public string ProcessStatus { get; set; } = null!;
+    public DateOnly? EffectiveDate { get; set; }
+    public string CorrelationId { get; set; } = null!;
+    public DateTime CreatedAt { get; set; }
+    public string? CustomerName { get; set; }
+    public string? SignupNumber { get; set; }
+    public int OutboundCount { get; set; }
+    public DateTime? FirstSentAt { get; set; }
+    public int InboundCount { get; set; }
+    public DateTime? LastReceivedAt { get; set; }
+    public bool HasAcknowledgement { get; set; }
+    public bool HasActivation { get; set; }
+    public int TotalCount { get; set; }
+}
+
+internal class DataDeliverySummaryRow
+{
+    public DateTime DeliveryDate { get; set; }
+    public string MessageType { get; set; } = null!;
+    public int MessageCount { get; set; }
+    public int ProcessedCount { get; set; }
+    public int ErrorCount { get; set; }
 }

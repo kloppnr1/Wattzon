@@ -4,71 +4,196 @@ import { api } from '../api';
 
 const PAGE_SIZE = 50;
 
-const statusStyles = {
-  processed: { dot: 'bg-emerald-400', badge: 'bg-emerald-50 text-emerald-700' },
-  dead_lettered: { dot: 'bg-rose-400', badge: 'bg-rose-50 text-rose-700' },
-  sent: { dot: 'bg-teal-400', badge: 'bg-teal-50 text-teal-700' },
-  acknowledged: { dot: 'bg-emerald-400', badge: 'bg-emerald-50 text-emerald-700' },
-  acknowledged_error: { dot: 'bg-rose-400', badge: 'bg-rose-50 text-rose-700' },
+const processTypeLabels = {
+  supplier_switch: 'Switch',
+  short_notice_switch: 'Quick Switch',
+  move_in: 'Move In',
+  end_of_supply: 'End Supply',
+  forced_end_of_supply: 'Forced End',
+  move_out: 'Move Out',
+  cancel_switch: 'Cancel Switch',
+  cancel_end_of_supply: 'Cancel End',
+  incorrect_switch: 'Incorrect Switch',
+  incorrect_move: 'Incorrect Move',
 };
 
-function StatusBadge({ status }) {
-  const cfg = statusStyles[status] || { dot: 'bg-slate-400', badge: 'bg-slate-100 text-slate-600' };
+const processStatusStyles = {
+  pending: { dot: 'bg-amber-400', badge: 'bg-amber-50 text-amber-700' },
+  sent_to_datahub: { dot: 'bg-orange-400', badge: 'bg-orange-50 text-orange-700' },
+  acknowledged: { dot: 'bg-sky-400', badge: 'bg-sky-50 text-sky-700' },
+  effectuation_pending: { dot: 'bg-blue-400', badge: 'bg-blue-50 text-blue-700' },
+  completed: { dot: 'bg-emerald-400', badge: 'bg-emerald-50 text-emerald-700' },
+  rejected: { dot: 'bg-rose-400', badge: 'bg-rose-50 text-rose-700' },
+  cancelled: { dot: 'bg-slate-400', badge: 'bg-slate-100 text-slate-600' },
+};
+
+function ProcessStatusBadge({ status }) {
+  const cfg = processStatusStyles[status] || { dot: 'bg-slate-400', badge: 'bg-slate-100 text-slate-600' };
   return (
     <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium ${cfg.badge}`}>
       <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
-      {status.replace('_', ' ')}
+      {status.replace(/_/g, ' ')}
     </span>
   );
 }
 
+function ProcessTypeBadge({ type }) {
+  const label = processTypeLabels[type] || type;
+  const isSwitch = type?.includes('switch');
+  const isMoveIn = type?.includes('move_in');
+  const bg = isSwitch ? 'bg-indigo-50 text-indigo-700' : isMoveIn ? 'bg-violet-50 text-violet-700' : 'bg-slate-100 text-slate-600';
+  return (
+    <span className={`inline-flex px-2 py-0.5 rounded-full text-[11px] font-medium ${bg}`}>
+      {label}
+    </span>
+  );
+}
+
+function TimelineEvent({ icon, label, time, color = 'teal' }) {
+  return (
+    <div className="flex items-center gap-3 py-2">
+      <div className={`w-7 h-7 rounded-full bg-${color}-100 text-${color}-600 flex items-center justify-center text-xs font-bold flex-shrink-0`}>
+        {icon}
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="text-sm font-medium text-slate-700">{label}</div>
+        <div className="text-xs text-slate-400">{time ? new Date(time).toLocaleString() : '-'}</div>
+      </div>
+    </div>
+  );
+}
+
+function ConversationTimeline({ correlationId }) {
+  const [detail, setDetail] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setLoading(true);
+    api.getConversation(correlationId)
+      .then(setDetail)
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [correlationId]);
+
+  if (loading) return <div className="p-4 text-sm text-slate-400">Loading timeline...</div>;
+  if (!detail) return <div className="p-4 text-sm text-slate-400">No messages found.</div>;
+
+  // Merge outbound + inbound into chronological timeline
+  const events = [
+    ...detail.outbound.map(o => ({ type: 'outbound', time: o.sentAt, data: o })),
+    ...detail.inbound.map(i => ({ type: 'inbound', time: i.receivedAt, data: i })),
+  ].sort((a, b) => new Date(a.time) - new Date(b.time));
+
+  return (
+    <div className="px-6 py-4 bg-slate-50 border-t border-slate-100">
+      <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Conversation Timeline</div>
+      <div className="space-y-1 relative">
+        <div className="absolute left-[13px] top-4 bottom-4 w-px bg-slate-200" />
+        {events.map((e, idx) => {
+          if (e.type === 'outbound') {
+            const o = e.data;
+            return (
+              <TimelineEvent
+                key={`out-${idx}`}
+                icon=">"
+                color="teal"
+                label={
+                  <span>
+                    <Link to={`/messages/outbound/${o.id}`} className="text-teal-600 hover:text-teal-700 font-medium">
+                      {o.processType}
+                    </Link>
+                    {' '}sent to DataHub
+                    {o.status === 'acknowledged_error' && <span className="text-rose-600 ml-1">(error)</span>}
+                  </span>
+                }
+                time={o.sentAt}
+              />
+            );
+          } else {
+            const i = e.data;
+            const color = i.messageType === 'RSM-007' ? 'emerald' : i.messageType === 'RSM-009' ? 'sky' : 'slate';
+            const desc = i.messageType === 'RSM-007' ? 'Activation confirmed'
+              : i.messageType === 'RSM-009' ? 'Acknowledgement received'
+              : `${i.messageType} received`;
+            return (
+              <TimelineEvent
+                key={`in-${idx}`}
+                icon="<"
+                color={color}
+                label={
+                  <span>
+                    <Link to={`/messages/inbound/${i.id}`} className="text-teal-600 hover:text-teal-700 font-medium">
+                      {i.messageType}
+                    </Link>
+                    {' '}{desc}
+                  </span>
+                }
+                time={i.receivedAt}
+              />
+            );
+          }
+        })}
+      </div>
+    </div>
+  );
+}
+
 export default function Messages() {
-  const [tab, setTab] = useState('inbound');
+  const [tab, setTab] = useState('conversations');
   const [stats, setStats] = useState(null);
-  const [data, setData] = useState(null);
-  const [page, setPage] = useState(1);
-  const [filters, setFilters] = useState({});
+
+  // Conversations
+  const [convData, setConvData] = useState(null);
+  const [convPage, setConvPage] = useState(1);
+  const [expandedCorr, setExpandedCorr] = useState(null);
+
+  // Deliveries
+  const [deliveries, setDeliveries] = useState(null);
+
+  // Dead letters
+  const [dlData, setDlData] = useState(null);
+  const [dlPage, setDlPage] = useState(1);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Fetch stats
   useEffect(() => {
-    api.getMessageStats()
-      .then(setStats)
-      .catch(() => {});
+    api.getMessageStats().then(setStats).catch(() => {});
   }, []);
 
-  // Fetch data based on tab
-  const fetchData = useCallback((currentTab, p, f) => {
+  // Fetch conversations
+  const fetchConversations = useCallback((p) => {
     setError(null);
-    const params = { page: p, pageSize: PAGE_SIZE, ...f };
+    api.getConversations({ page: p, pageSize: PAGE_SIZE })
+      .then(setConvData)
+      .catch((e) => setError(e.message))
+      .finally(() => setLoading(false));
+  }, []);
 
-    const promise = currentTab === 'inbound'
-      ? api.getInboundMessages(params)
-      : currentTab === 'outbound'
-      ? api.getOutboundRequests(params)
-      : api.getDeadLetters(params);
+  // Fetch deliveries
+  const fetchDeliveries = useCallback(() => {
+    setError(null);
+    api.getDataDeliveries()
+      .then(setDeliveries)
+      .catch((e) => setError(e.message))
+      .finally(() => setLoading(false));
+  }, []);
 
-    promise
-      .then(setData)
+  // Fetch dead letters
+  const fetchDeadLetters = useCallback((p) => {
+    setError(null);
+    api.getDeadLetters({ page: p, pageSize: PAGE_SIZE })
+      .then(setDlData)
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
   }, []);
 
   useEffect(() => {
-    setPage(1);
-    setFilters({});
-    setData(null);
-    fetchData(tab, 1, {});
-  }, [tab, fetchData]);
-
-  useEffect(() => {
-    fetchData(tab, page, filters);
-  }, [page, filters, tab, fetchData]);
-
-  const items = data?.items ?? [];
-  const totalCount = data?.totalCount ?? 0;
-  const totalPages = Math.ceil(totalCount / PAGE_SIZE);
+    setLoading(true);
+    if (tab === 'conversations') fetchConversations(convPage);
+    else if (tab === 'deliveries') fetchDeliveries();
+    else if (tab === 'dead-letters') fetchDeadLetters(dlPage);
+  }, [tab, convPage, dlPage, fetchConversations, fetchDeliveries, fetchDeadLetters]);
 
   if (loading && !stats) {
     return (
@@ -81,197 +206,306 @@ export default function Messages() {
     );
   }
 
+  const convItems = convData?.items ?? [];
+  const convTotal = convData?.totalCount ?? 0;
+  const convPages = Math.ceil(convTotal / PAGE_SIZE);
+
+  const dlItems = dlData?.items ?? [];
+  const dlTotal = dlData?.totalCount ?? 0;
+  const dlPages = Math.ceil(dlTotal / PAGE_SIZE);
+
+  // Group deliveries by date
+  const deliveryDates = deliveries ? [...new Set(deliveries.map(d => d.deliveryDate))].sort((a, b) => new Date(b) - new Date(a)) : [];
+
   return (
     <div className="p-8 max-w-6xl mx-auto">
       {/* Page header */}
-      <div className="mb-6 animate-fade-in-up">
+      <div className="mb-6">
         <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Messages</h1>
         <p className="text-base text-slate-500 mt-1">Monitor DataHub messaging and integration logs.</p>
       </div>
 
       {/* Stats cards */}
       {stats && (
-        <div className="grid grid-cols-4 gap-4 mb-6 animate-fade-in-up" style={{ animationDelay: '60ms' }}>
+        <div className="grid grid-cols-4 gap-4 mb-6">
           <div className="bg-gradient-to-br from-white to-slate-50 rounded-xl p-5 shadow-sm border border-slate-100">
-            <div className="text-sm font-medium text-slate-500 mb-1">Total Inbound</div>
-            <div className="text-3xl font-bold text-slate-900">{stats.totalInbound}</div>
+            <div className="text-sm font-medium text-slate-500 mb-1">Total Messages</div>
+            <div className="text-3xl font-bold text-slate-900">{stats.totalInbound + stats.pendingOutbound}</div>
+          </div>
+          <div className="bg-gradient-to-br from-white to-teal-50/30 rounded-xl p-5 shadow-sm border border-teal-100/50">
+            <div className="text-sm font-medium text-teal-600 mb-1">Active Conversations</div>
+            <div className="text-3xl font-bold text-teal-700">{convTotal}</div>
           </div>
           <div className="bg-gradient-to-br from-white to-emerald-50/30 rounded-xl p-5 shadow-sm border border-emerald-100/50">
             <div className="text-sm font-medium text-emerald-600 mb-1">Processed</div>
             <div className="text-3xl font-bold text-emerald-700">{stats.processedCount}</div>
           </div>
           <div className="bg-gradient-to-br from-white to-rose-50/30 rounded-xl p-5 shadow-sm border border-rose-100/50">
-            <div className="text-sm font-medium text-rose-600 mb-1">Dead Letters</div>
+            <div className="text-sm font-medium text-rose-600 mb-1">Unresolved Dead Letters</div>
             <div className="text-3xl font-bold text-rose-700">{stats.deadLetterCount}</div>
-          </div>
-          <div className="bg-gradient-to-br from-white to-teal-50/30 rounded-xl p-5 shadow-sm border border-teal-100/50">
-            <div className="text-sm font-medium text-teal-600 mb-1">Pending Outbound</div>
-            <div className="text-3xl font-bold text-teal-700">{stats.pendingOutbound}</div>
           </div>
         </div>
       )}
 
       {/* Tabs */}
-      <div className="flex items-center gap-1 mb-5 bg-white rounded-xl p-1.5 w-fit shadow-sm border border-slate-100 animate-fade-in-up" style={{ animationDelay: '120ms' }}>
-        {['inbound', 'outbound', 'dead-letters'].map((t) => (
+      <div className="flex items-center gap-1 mb-5 bg-white rounded-xl p-1.5 w-fit shadow-sm border border-slate-100">
+        {[
+          { key: 'conversations', label: 'Conversations' },
+          { key: 'deliveries', label: 'Data Deliveries' },
+          { key: 'dead-letters', label: 'Dead Letters' },
+        ].map(({ key, label }) => (
           <button
-            key={t}
-            onClick={() => setTab(t)}
+            key={key}
+            onClick={() => { setTab(key); setError(null); }}
             className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-200 ${
-              tab === t
+              tab === key
                 ? 'bg-teal-500 text-white shadow-md'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
             }`}
           >
-            {t === 'dead-letters' ? 'Dead Letters' : t.charAt(0).toUpperCase() + t.slice(1)}
+            {label}
           </button>
         ))}
       </div>
 
-      {/* Table */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden animate-fade-in-up" style={{ animationDelay: '180ms' }}>
+      {/* Content */}
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
         {error && (
           <div className="p-4 bg-rose-50 border-b border-rose-100 text-rose-700 text-sm">
             Error: {error}
           </div>
         )}
 
-        <div className="overflow-x-auto">
-          {tab === 'inbound' && (
+        {/* ── Conversations Tab ── */}
+        {tab === 'conversations' && (
+          <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-slate-200">
               <thead className="bg-slate-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Message Type</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Correlation ID</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Queue</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Received At</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-slate-100">
-                {loading && items.length === 0 ? (
-                  <tr><td colSpan="5" className="px-6 py-12 text-center text-slate-500">Loading...</td></tr>
-                ) : items.length === 0 ? (
-                  <tr><td colSpan="5" className="px-6 py-12 text-center text-slate-500">No messages found.</td></tr>
-                ) : (
-                  items.map((msg) => (
-                    <tr key={msg.id} className="hover:bg-slate-50 transition-colors">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <Link to={`/messages/inbound/${msg.id}`} className="text-teal-600 font-medium hover:text-teal-700">
-                          {msg.messageType}
-                        </Link>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-slate-500">{msg.correlationId || '-'}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700">{msg.queueName}</td>
-                      <td className="px-6 py-4 whitespace-nowrap"><StatusBadge status={msg.status} /></td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">{new Date(msg.receivedAt).toLocaleString()}</td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          )}
-
-          {tab === 'outbound' && (
-            <table className="min-w-full divide-y divide-slate-200">
-              <thead className="bg-slate-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Process Type</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Process</th>
                   <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">GSRN</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Correlation ID</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Customer</th>
                   <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Sent At</th>
+                  <th className="px-6 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Messages</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Last Activity</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-slate-100">
-                {loading && items.length === 0 ? (
-                  <tr><td colSpan="5" className="px-6 py-12 text-center text-slate-500">Loading...</td></tr>
-                ) : items.length === 0 ? (
-                  <tr><td colSpan="5" className="px-6 py-12 text-center text-slate-500">No requests found.</td></tr>
+                {loading && convItems.length === 0 ? (
+                  <tr><td colSpan="6" className="px-6 py-12 text-center text-slate-500">Loading...</td></tr>
+                ) : convItems.length === 0 ? (
+                  <tr><td colSpan="6" className="px-6 py-12 text-center text-slate-500">No conversations found.</td></tr>
                 ) : (
-                  items.map((req) => (
-                    <tr key={req.id} className="hover:bg-slate-50 transition-colors">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <Link to={`/messages/outbound/${req.id}`} className="text-teal-600 font-medium hover:text-teal-700">
-                          {req.processType}
-                        </Link>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700">{req.gsrn}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-slate-500">{req.correlationId || '-'}</td>
-                      <td className="px-6 py-4 whitespace-nowrap"><StatusBadge status={req.status} /></td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">{new Date(req.sentAt).toLocaleString()}</td>
-                    </tr>
+                  convItems.map((conv) => (
+                    <>
+                      <tr
+                        key={conv.correlationId}
+                        className="hover:bg-slate-50 transition-colors cursor-pointer"
+                        onClick={() => setExpandedCorr(expandedCorr === conv.correlationId ? null : conv.correlationId)}
+                      >
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <ProcessTypeBadge type={conv.processType} />
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-slate-700">{conv.gsrn}</td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm font-medium text-slate-900">{conv.customerName || '-'}</div>
+                          {conv.signupNumber && <div className="text-xs text-slate-400">{conv.signupNumber}</div>}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <ProcessStatusBadge status={conv.processStatus} />
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-center">
+                          <div className="flex items-center justify-center gap-2">
+                            <span className="text-xs font-medium text-slate-500">{conv.outboundCount + conv.inboundCount}</span>
+                            <div className="flex gap-0.5">
+                              {conv.hasAcknowledgement && (
+                                <span className="w-2 h-2 rounded-full bg-sky-400" title="Acknowledged (RSM-009)" />
+                              )}
+                              {conv.hasActivation && (
+                                <span className="w-2 h-2 rounded-full bg-emerald-400" title="Activated (RSM-007)" />
+                              )}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
+                          {conv.lastReceivedAt ? new Date(conv.lastReceivedAt).toLocaleString()
+                            : conv.firstSentAt ? new Date(conv.firstSentAt).toLocaleString()
+                            : '-'}
+                        </td>
+                      </tr>
+                      {expandedCorr === conv.correlationId && (
+                        <tr key={`${conv.correlationId}-detail`}>
+                          <td colSpan="6" className="p-0">
+                            <ConversationTimeline correlationId={conv.correlationId} />
+                          </td>
+                        </tr>
+                      )}
+                    </>
                   ))
                 )}
               </tbody>
             </table>
-          )}
 
-          {tab === 'dead-letters' && (
-            <table className="min-w-full divide-y divide-slate-200">
-              <thead className="bg-slate-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Queue</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Error Reason</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Resolved</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Failed At</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-slate-100">
-                {loading && items.length === 0 ? (
-                  <tr><td colSpan="4" className="px-6 py-12 text-center text-slate-500">Loading...</td></tr>
-                ) : items.length === 0 ? (
-                  <tr><td colSpan="4" className="px-6 py-12 text-center text-slate-500">No dead letters found.</td></tr>
-                ) : (
-                  items.map((dl) => (
-                    <tr key={dl.id} className="hover:bg-slate-50 transition-colors">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <Link to={`/messages/dead-letters/${dl.id}`} className="text-teal-600 font-medium hover:text-teal-700">
-                          {dl.queueName}
-                        </Link>
-                      </td>
-                      <td className="px-6 py-4 text-sm text-slate-700 max-w-md truncate">{dl.errorReason}</td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                          dl.resolved ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'
-                        }`}>
-                          {dl.resolved ? 'Yes' : 'No'}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">{new Date(dl.failedAt).toLocaleString()}</td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          )}
-        </div>
-
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
-            <div className="text-sm text-slate-600">
-              Showing <span className="font-medium">{(page - 1) * PAGE_SIZE + 1}</span> to{' '}
-              <span className="font-medium">{Math.min(page * PAGE_SIZE, totalCount)}</span> of{' '}
-              <span className="font-medium">{totalCount}</span> items
-            </div>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setPage(p => Math.max(1, p - 1))}
-                disabled={page === 1}
-                className="px-3 py-1.5 text-sm font-medium rounded-lg bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                Previous
-              </button>
-              <button
-                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                disabled={page === totalPages}
-                className="px-3 py-1.5 text-sm font-medium rounded-lg bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                Next
-              </button>
-            </div>
+            {convPages > 1 && (
+              <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+                <div className="text-sm text-slate-600">
+                  Showing <span className="font-medium">{(convPage - 1) * PAGE_SIZE + 1}</span> to{' '}
+                  <span className="font-medium">{Math.min(convPage * PAGE_SIZE, convTotal)}</span> of{' '}
+                  <span className="font-medium">{convTotal}</span> conversations
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setConvPage(p => Math.max(1, p - 1))}
+                    disabled={convPage === 1}
+                    className="px-3 py-1.5 text-sm font-medium rounded-lg bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    Previous
+                  </button>
+                  <button
+                    onClick={() => setConvPage(p => Math.min(convPages, p + 1))}
+                    disabled={convPage === convPages}
+                    className="px-3 py-1.5 text-sm font-medium rounded-lg bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
+        )}
+
+        {/* ── Data Deliveries Tab ── */}
+        {tab === 'deliveries' && (
+          <div className="divide-y divide-slate-200">
+            {loading && !deliveries ? (
+              <div className="px-6 py-12 text-center text-slate-500">Loading...</div>
+            ) : deliveryDates.length === 0 ? (
+              <div className="px-6 py-12 text-center text-slate-500">No data deliveries found.</div>
+            ) : (
+              deliveryDates.map((date) => {
+                const dateStr = new Date(date).toLocaleDateString(undefined, { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' });
+                const dayDeliveries = deliveries.filter(d => d.deliveryDate === date);
+                const totalCount = dayDeliveries.reduce((sum, d) => sum + d.messageCount, 0);
+
+                return (
+                  <div key={date} className="px-6 py-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="text-sm font-semibold text-slate-900">{dateStr}</div>
+                      <div className="text-xs text-slate-400">{totalCount} messages</div>
+                    </div>
+                    <div className="grid grid-cols-3 gap-3">
+                      {dayDeliveries.map((d) => {
+                        const typeLabel = d.messageType === 'RSM-012' ? 'Metering Data'
+                          : d.messageType === 'RSM-014' ? 'Aggregation'
+                          : d.messageType === 'RSM-004' ? 'Grid Changes'
+                          : d.messageType;
+                        const typeColor = d.messageType === 'RSM-012' ? 'teal'
+                          : d.messageType === 'RSM-014' ? 'indigo'
+                          : 'amber';
+
+                        return (
+                          <div key={d.messageType} className="bg-slate-50 rounded-lg p-3">
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className={`inline-flex px-1.5 py-0.5 rounded text-[10px] font-bold bg-${typeColor}-100 text-${typeColor}-700`}>
+                                {d.messageType}
+                              </span>
+                              <span className="text-xs text-slate-500">{typeLabel}</span>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <div>
+                                <div className="text-lg font-bold text-slate-900">{d.messageCount}</div>
+                                <div className="text-[10px] text-slate-400 uppercase">Total</div>
+                              </div>
+                              <div>
+                                <div className="text-lg font-bold text-emerald-600">{d.processedCount}</div>
+                                <div className="text-[10px] text-slate-400 uppercase">Processed</div>
+                              </div>
+                              {d.errorCount > 0 && (
+                                <div>
+                                  <div className="text-lg font-bold text-rose-600">{d.errorCount}</div>
+                                  <div className="text-[10px] text-slate-400 uppercase">Errors</div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        )}
+
+        {/* ── Dead Letters Tab ── */}
+        {tab === 'dead-letters' && (
+          <>
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-slate-200">
+                <thead className="bg-slate-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Queue</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Error Reason</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Resolved</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Failed At</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-slate-100">
+                  {loading && dlItems.length === 0 ? (
+                    <tr><td colSpan="4" className="px-6 py-12 text-center text-slate-500">Loading...</td></tr>
+                  ) : dlItems.length === 0 ? (
+                    <tr><td colSpan="4" className="px-6 py-12 text-center text-slate-500">No dead letters found.</td></tr>
+                  ) : (
+                    dlItems.map((dl) => (
+                      <tr key={dl.id} className="hover:bg-slate-50 transition-colors">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <Link to={`/messages/dead-letters/${dl.id}`} className="text-teal-600 font-medium hover:text-teal-700">
+                            {dl.queueName}
+                          </Link>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-slate-700 max-w-md truncate">{dl.errorReason}</td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                            dl.resolved ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'
+                          }`}>
+                            {dl.resolved ? 'Yes' : 'No'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">{new Date(dl.failedAt).toLocaleString()}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {dlPages > 1 && (
+              <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+                <div className="text-sm text-slate-600">
+                  Showing <span className="font-medium">{(dlPage - 1) * PAGE_SIZE + 1}</span> to{' '}
+                  <span className="font-medium">{Math.min(dlPage * PAGE_SIZE, dlTotal)}</span> of{' '}
+                  <span className="font-medium">{dlTotal}</span> items
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setDlPage(p => Math.max(1, p - 1))}
+                    disabled={dlPage === 1}
+                    className="px-3 py-1.5 text-sm font-medium rounded-lg bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    Previous
+                  </button>
+                  <button
+                    onClick={() => setDlPage(p => Math.min(dlPages, p + 1))}
+                    disabled={dlPage === dlPages}
+                    className="px-3 py-1.5 text-sm font-medium rounded-lg bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

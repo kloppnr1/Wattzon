@@ -71,4 +71,11 @@ export const api = {
     request(`/messages/dead-letters${qs({ resolved, page, pageSize })}`),
   getDeadLetter: (id) => request(`/messages/dead-letters/${id}`),
   getMessageStats: () => request(`/messages/stats`),
+
+  // Conversations & Deliveries
+  getConversations: ({ page, pageSize } = {}) =>
+    request(`/messages/conversations${qs({ page, pageSize })}`),
+  getConversation: (correlationId) =>
+    request(`/messages/conversations/${encodeURIComponent(correlationId)}`),
+  getDataDeliveries: () => request(`/messages/deliveries`),
 };
