@@ -16,10 +16,11 @@ public sealed class SpotPriceRepository : ISpotPriceRepository
     public async Task StorePricesAsync(IReadOnlyList<SpotPriceRow> prices, CancellationToken ct)
     {
         const string sql = """
-            INSERT INTO metering.spot_price (price_area, hour, price_per_kwh)
-            VALUES (@PriceArea, @Hour, @PricePerKwh)
-            ON CONFLICT (price_area, hour) DO UPDATE SET
+            INSERT INTO metering.spot_price (price_area, "timestamp", price_per_kwh, resolution)
+            VALUES (@PriceArea, @Timestamp, @PricePerKwh, @Resolution)
+            ON CONFLICT (price_area, "timestamp") DO UPDATE SET
                 price_per_kwh = EXCLUDED.price_per_kwh,
+                resolution = EXCLUDED.resolution,
                 fetched_at = now()
             """;
 
@@ -34,24 +35,24 @@ public sealed class SpotPriceRepository : ISpotPriceRepository
         const string sql = """
             SELECT price_per_kwh
             FROM metering.spot_price
-            WHERE price_area = @PriceArea AND hour = @Hour
+            WHERE price_area = @PriceArea AND "timestamp" = @Timestamp
             """;
 
         await using var conn = new NpgsqlConnection(_connectionString);
         await conn.OpenAsync(ct);
 
         return await conn.QuerySingleAsync<decimal>(
-            new CommandDefinition(sql, new { PriceArea = priceArea, Hour = hour }, cancellationToken: ct));
+            new CommandDefinition(sql, new { PriceArea = priceArea, Timestamp = hour }, cancellationToken: ct));
     }
 
     public async Task<IReadOnlyList<SpotPriceRow>> GetPricesAsync(
         string priceArea, DateTime from, DateTime to, CancellationToken ct)
     {
         const string sql = """
-            SELECT price_area, hour, price_per_kwh
+            SELECT price_area AS PriceArea, "timestamp" AS Timestamp, price_per_kwh AS PricePerKwh, resolution AS Resolution
             FROM metering.spot_price
-            WHERE price_area = @PriceArea AND hour >= @From AND hour < @To
-            ORDER BY hour
+            WHERE price_area = @PriceArea AND "timestamp" >= @From AND "timestamp" < @To
+            ORDER BY "timestamp"
             """;
 
         await using var conn = new NpgsqlConnection(_connectionString);
@@ -61,5 +62,22 @@ public sealed class SpotPriceRepository : ISpotPriceRepository
             new CommandDefinition(sql, new { PriceArea = priceArea, From = from, To = to }, cancellationToken: ct));
 
         return rows.ToList();
+    }
+
+    public async Task<DateOnly?> GetLatestPriceDateAsync(string priceArea, CancellationToken ct)
+    {
+        const string sql = """
+            SELECT MAX("timestamp")
+            FROM metering.spot_price
+            WHERE price_area = @PriceArea
+            """;
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+        await conn.OpenAsync(ct);
+
+        var result = await conn.QuerySingleOrDefaultAsync<DateTime?>(
+            new CommandDefinition(sql, new { PriceArea = priceArea }, cancellationToken: ct));
+
+        return result.HasValue ? DateOnly.FromDateTime(result.Value) : null;
     }
 }

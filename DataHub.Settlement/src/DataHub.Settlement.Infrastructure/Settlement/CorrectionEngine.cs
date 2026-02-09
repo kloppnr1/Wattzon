@@ -8,7 +8,7 @@ public sealed class CorrectionEngine
 
     public CorrectionResult Calculate(CorrectionRequest request)
     {
-        var spotPriceByHour = request.SpotPrices.ToDictionary(p => p.Hour, p => p.PricePerKwh / 100m);
+        var spotPriceByHour = request.SpotPrices.ToDictionary(p => p.Timestamp, p => p.PricePerKwh / 100m);
         var gridRateByHour = request.GridTariffRates.ToDictionary(r => r.HourNumber, r => r.PricePerKwh);
 
         decimal totalDeltaKwh = 0m;

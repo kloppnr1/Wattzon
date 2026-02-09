@@ -120,10 +120,20 @@ builder.Services.AddSingleton<IMeteringCompletenessChecker>(new MeteringComplete
 builder.Services.AddSingleton<ISettlementDataLoader, SettlementDataLoader>();
 builder.Services.AddSingleton<ISettlementResultStore>(new SettlementResultStore(connectionString));
 
+// Spot price fetching from Energi Data Service (energidataservice.dk)
+builder.Services.AddHttpClient<EnergiDataServiceClient>();
+builder.Services.AddSingleton<ISpotPriceProvider>(sp =>
+{
+    var httpClient = sp.GetRequiredService<IHttpClientFactory>().CreateClient();
+    var logger = sp.GetRequiredService<ILogger<EnergiDataServiceClient>>();
+    return new EnergiDataServiceClient(httpClient, logger);
+});
+
 // Background services
 builder.Services.AddHostedService<QueuePollerService>();
 builder.Services.AddHostedService<ProcessSchedulerService>();
 builder.Services.AddHostedService<SettlementOrchestrationService>();
+builder.Services.AddHostedService<SpotPriceFetchingService>();
 
 var host = builder.Build();
 

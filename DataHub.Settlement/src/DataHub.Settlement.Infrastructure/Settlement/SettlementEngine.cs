@@ -1,3 +1,4 @@
+using DataHub.Settlement.Application.Metering;
 using DataHub.Settlement.Application.Settlement;
 
 namespace DataHub.Settlement.Infrastructure.Settlement;
@@ -8,8 +9,9 @@ public sealed class SettlementEngine : ISettlementEngine
 
     public SettlementResult Calculate(SettlementRequest request)
     {
-        // Spot prices are stored in øre/kWh (as delivered by DDQ) — convert to DKK
-        var spotPriceByHour = request.SpotPrices.ToDictionary(p => p.Hour, p => p.PricePerKwh / 100m);
+        // Build spot price lookup: if prices are quarter-hourly but consumption is hourly,
+        // average the 4 quarter-hour prices per hour. Otherwise, use prices directly.
+        var spotPriceLookup = BuildSpotPriceLookup(request.SpotPrices, request.Consumption);
         var gridRateByHour = request.GridTariffRates.ToDictionary(r => r.HourNumber, r => r.PricePerKwh);
         var productionByHour = request.Production?.ToDictionary(p => p.Timestamp, p => p.QuantityKwh);
         var hasSolar = productionByHour is not null;
@@ -36,7 +38,7 @@ public sealed class SettlementEngine : ISettlementEngine
                 totalNetKwh += billableKwh;
 
                 // Energy: kWh × (spot + margin + supplement)
-                if (spotPriceByHour.TryGetValue(row.Timestamp, out var spotPrice))
+                if (spotPriceLookup.TryGetValue(row.Timestamp, out var spotPrice))
                 {
                     energyTotal += billableKwh * (spotPrice + request.MarginPerKwh + request.SupplementPerKwh);
                 }
@@ -51,7 +53,7 @@ public sealed class SettlementEngine : ISettlementEngine
             else if (netKwh < 0)
             {
                 // Excess production — credit at spot price only (no margin, tariffs, or tax)
-                if (spotPriceByHour.TryGetValue(row.Timestamp, out var spotPrice))
+                if (spotPriceLookup.TryGetValue(row.Timestamp, out var spotPrice))
                 {
                     productionCreditTotal += Math.Abs(netKwh) * spotPrice;
                 }
@@ -102,6 +104,33 @@ public sealed class SettlementEngine : ISettlementEngine
         return new SettlementResult(
             request.MeteringPointId, periodStart, periodEnd,
             totalKwh, lines, subtotal, vatAmount, total);
+    }
+
+    /// <summary>
+    /// Builds a timestamp → DKK/kWh lookup. If spot prices are quarter-hourly (PT15M)
+    /// but consumption is hourly (PT1H), averages the 4 quarter-hour prices per hour.
+    /// Prices are converted from øre/kWh to DKK for calculation.
+    /// </summary>
+    private static Dictionary<DateTime, decimal> BuildSpotPriceLookup(
+        IReadOnlyList<SpotPriceRow> spotPrices,
+        IReadOnlyList<MeteringDataRow> consumption)
+    {
+        var hasQuarterHourPrices = spotPrices.Any(p => p.Resolution == "PT15M");
+        var hasHourlyConsumption = consumption.Count > 0 && consumption[0].Resolution == "PT1H";
+
+        if (hasQuarterHourPrices && hasHourlyConsumption)
+        {
+            // Aggregate quarter-hour prices to hourly averages
+            return spotPrices
+                .GroupBy(p => new DateTime(p.Timestamp.Year, p.Timestamp.Month, p.Timestamp.Day,
+                    p.Timestamp.Hour, 0, 0, p.Timestamp.Kind))
+                .ToDictionary(
+                    g => g.Key,
+                    g => g.Average(p => p.PricePerKwh) / 100m); // øre → DKK
+        }
+
+        // Direct mapping (hourly prices with hourly consumption, or matching resolutions)
+        return spotPrices.ToDictionary(p => p.Timestamp, p => p.PricePerKwh / 100m);
     }
 
     private static decimal CalculateElectricityTax(SettlementRequest request, decimal tariffKwh)

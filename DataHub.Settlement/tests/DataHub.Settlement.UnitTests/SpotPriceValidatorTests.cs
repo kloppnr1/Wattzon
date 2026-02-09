@@ -24,7 +24,7 @@ public class SpotPriceValidatorTests
         var result = _sut.Validate(prices, start, end);
 
         result.IsValid.Should().BeTrue();
-        result.MissingHours.Should().BeEmpty();
+        result.MissingSlots.Should().BeEmpty();
     }
 
     [Fact]
@@ -43,9 +43,9 @@ public class SpotPriceValidatorTests
         var result = _sut.Validate(prices, start, end);
 
         result.IsValid.Should().BeFalse();
-        result.MissingHours.Should().HaveCount(2);
-        result.MissingHours.Should().Contain(start.AddHours(1));
-        result.MissingHours.Should().Contain(start.AddHours(3));
+        result.MissingSlots.Should().HaveCount(2);
+        result.MissingSlots.Should().Contain(start.AddHours(1));
+        result.MissingSlots.Should().Contain(start.AddHours(3));
     }
 
     [Fact]
@@ -58,7 +58,7 @@ public class SpotPriceValidatorTests
         var result = _sut.Validate(prices, start, end);
 
         result.IsValid.Should().BeFalse();
-        result.MissingHours.Should().HaveCount(24);
+        result.MissingSlots.Should().HaveCount(24);
     }
 
     [Fact]
@@ -71,7 +71,7 @@ public class SpotPriceValidatorTests
         var result = _sut.Validate(prices, start, end);
 
         result.IsValid.Should().BeTrue();
-        result.MissingHours.Should().BeEmpty();
+        result.MissingSlots.Should().BeEmpty();
     }
 
     [Fact]
@@ -86,6 +86,6 @@ public class SpotPriceValidatorTests
         var result = _sut.Validate(prices, start, end);
 
         result.IsValid.Should().BeTrue();
-        result.MissingHours.Should().BeEmpty();
+        result.MissingSlots.Should().BeEmpty();
     }
 }

@@ -353,37 +353,55 @@ Our system / ERP                    Debt collection
 
 ---
 
-### 7. Market Data Provider (Nord Pool Spot Prices)
+### 7. Market Data Provider (Nord Pool Spot Prices) — IMPLEMENTED
 
-Spot prices are the foundation of the energy line on every invoice. They are fetched from an external market data feed.
+Spot prices are the foundation of the energy line on every invoice. They are fetched automatically from **Energi Data Service** (`api.energidataservice.dk`), Energinet's free public API for Danish electricity market data.
+
+**Implementation:** `EnergiDataServiceClient` + `SpotPriceFetchingService` (background worker, hourly polling).
 
 **Data flow:**
 
 ```
-Nord Pool / Market data              Our system
+Energi Data Service                  Our system
+(api.energidataservice.dk)               │
     │                                    │
     │ Day-ahead prices published         │
     │ (typically 13:00 CET for next day) │
-    ├───── 24 hourly prices (DKK/MWh) ──►│ Convert to DKK/kWh
-    │      per price area (DK1/DK2)      │ Store in spot_price table
+    │                                    │
+    │ Pre-Oct 2025 (Elspotprices):       │
+    ├─ 24 hourly prices (DKK/MWh) ─────►│ Convert: DKK/MWh ÷ 10 = øre/kWh
+    │   per price area (DK1/DK2)         │ Store in spot_price table (PT1H)
+    │                                    │
+    │ Post-Oct 2025 (DayAheadPrices):    │
+    ├─ 96 quarter-hourly prices ────────►│ Convert: DKK/MWh ÷ 10 = øre/kWh
+    │   (DKK/MWh) per price area         │ Store in spot_price table (PT15M)
     │                                    │
     │                                    │ At settlement run:
+    │                                    │ If consumption=PT1H, prices=PT15M:
+    │                                    │   average 4 QH prices per hour
     │                                    │ energy = kWh × (spot + margin)
     │                                    │
 ```
 
-**API contract (we consume):**
+**API details:**
 
-| Source | Format | Frequency |
-|--------|--------|-----------|
-| Nord Pool day-ahead auction | JSON/XML API or file download | Daily (day-ahead prices for next day) |
-| Price area | DK1 (West Denmark) or DK2 (East Denmark) | Per metering point's grid area |
+| Dataset | Resolution | Endpoint | Available |
+|---------|-----------|----------|-----------|
+| `Elspotprices` | PT1H (hourly) | `GET /dataset/Elspotprices` | Up to Sep 30 2025 |
+| `DayAheadPrices` | PT15M (quarter-hourly) | `GET /dataset/DayAheadPrices` | From Oct 1 2025 |
+
+**Authentication:** None required (free, public API).
+**Rate limit:** 1 request per IP per dataset per minute.
+
+**Response fields:** `HourUTC`, `HourDK`, `PriceArea`, `SpotPriceDKK` (DKK/MWh), `SpotPriceEUR` (EUR/MWh).
 
 **Design considerations:**
 - **Price areas:** Denmark has two price areas (DK1, DK2). The metering point's grid area determines which price area applies
 - **Missing prices:** If spot prices are not available at settlement time, the settlement run must halt — see [Error handling](datahub3-proposed-architecture.md#error-handling-and-recovery)
 - **Historical prices:** Store all historical spot prices for recalculation of corrections
-- **Units:** Nord Pool publishes in EUR/MWh or DKK/MWh — convert to DKK/kWh for settlement (÷ 1000)
+- **Units:** Energi Data Service publishes in DKK/MWh — converted to øre/kWh for storage (÷ 10)
+- **Quarter-hour resolution:** From Oct 2025, prices are 15-minute intervals. When consumption is hourly, the settlement engine averages the 4 quarter-hour prices per hour
+- **Automatic fetching:** `SpotPriceFetchingService` runs hourly, fetches DK1 + DK2, backfills 7 days to cover restarts
 
 ---
 

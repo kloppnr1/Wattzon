@@ -25,8 +25,8 @@ public sealed class PeriodSplitter
         var beforeConsumption = request.Consumption.Where(r => r.Timestamp < changeTimestamp).ToList();
         var afterConsumption = request.Consumption.Where(r => r.Timestamp >= changeTimestamp).ToList();
 
-        var beforeSpotPrices = request.SpotPrices.Where(p => p.Hour < changeTimestamp).ToList();
-        var afterSpotPrices = request.SpotPrices.Where(p => p.Hour >= changeTimestamp).ToList();
+        var beforeSpotPrices = request.SpotPrices.Where(p => p.Timestamp < changeTimestamp).ToList();
+        var afterSpotPrices = request.SpotPrices.Where(p => p.Timestamp >= changeTimestamp).ToList();
 
         // Before tariff change: use original rates, but period ends at change date
         var beforeRequest = request with

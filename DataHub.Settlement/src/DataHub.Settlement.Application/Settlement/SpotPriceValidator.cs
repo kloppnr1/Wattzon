@@ -9,19 +9,22 @@ public sealed class SpotPriceValidator
         DateTime periodStart,
         DateTime periodEnd)
     {
-        var priceHours = new HashSet<DateTime>(spotPrices.Select(p => p.Hour));
-        var missingHours = new List<DateTime>();
+        var resolution = spotPrices.Count > 0 ? spotPrices[0].Resolution : "PT1H";
+        var step = resolution == "PT15M" ? TimeSpan.FromMinutes(15) : TimeSpan.FromHours(1);
 
-        var hour = periodStart;
-        while (hour < periodEnd)
+        var priceTimestamps = new HashSet<DateTime>(spotPrices.Select(p => p.Timestamp));
+        var missingSlots = new List<DateTime>();
+
+        var current = periodStart;
+        while (current < periodEnd)
         {
-            if (!priceHours.Contains(hour))
-                missingHours.Add(hour);
-            hour = hour.AddHours(1);
+            if (!priceTimestamps.Contains(current))
+                missingSlots.Add(current);
+            current = current.Add(step);
         }
 
-        return new SpotPriceValidationResult(missingHours.Count == 0, missingHours);
+        return new SpotPriceValidationResult(missingSlots.Count == 0, missingSlots);
     }
 }
 
-public record SpotPriceValidationResult(bool IsValid, IReadOnlyList<DateTime> MissingHours);
+public record SpotPriceValidationResult(bool IsValid, IReadOnlyList<DateTime> MissingSlots);
