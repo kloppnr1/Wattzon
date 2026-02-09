@@ -29,8 +29,10 @@ public class ProcessSchedulerTests
         NullLogger<ProcessSchedulerService>.Instance);
 
     [Fact]
-    public async Task Effectuates_process_on_effective_date()
+    public async Task Does_not_effectuate_processes()
     {
+        // ProcessScheduler only sends pending processes to DataHub
+        // Effectuation (marking completed) is handled exclusively by RSM-007 receipt
         _clock.Today = new DateOnly(2025, 2, 1);
         var sm = new ProcessStateMachine(_processRepo, _clock);
 
@@ -46,26 +48,10 @@ public class ProcessSchedulerTests
         var sut = CreateSut();
         await sut.RunTickAsync(CancellationToken.None);
 
+        // Process should STILL be in effectuation_pending (not completed)
         var after = await _processRepo.GetAsync(request.Id, CancellationToken.None);
-        after!.Status.Should().Be("completed");
-    }
-
-    [Fact]
-    public async Task Skips_future_dated_process()
-    {
-        _clock.Today = new DateOnly(2025, 1, 15);
-        var sm = new ProcessStateMachine(_processRepo, _clock);
-
-        var request = await sm.CreateRequestAsync("571313100000012345", "supplier_switch",
-            new DateOnly(2025, 2, 1), CancellationToken.None);
-        await sm.MarkSentAsync(request.Id, "corr-1", CancellationToken.None);
-        await sm.MarkAcknowledgedAsync(request.Id, CancellationToken.None);
-
-        var sut = CreateSut();
-        await sut.RunTickAsync(CancellationToken.None);
-
-        var after = await _processRepo.GetAsync(request.Id, CancellationToken.None);
-        after!.Status.Should().Be("effectuation_pending");
+        after!.Status.Should().Be("effectuation_pending",
+            "ProcessScheduler no longer effectuates - only RSM-007 marks processes completed");
     }
 
     // ── Test stubs ──

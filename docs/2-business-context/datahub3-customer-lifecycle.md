@@ -264,25 +264,29 @@ Cannot be cancelled after the effective date — use BRS-042 (erroneous switch) 
 
 ## Phase 2: Activation (Switch Takes Effect)
 
-**Trigger:** The effective date for the supplier switch has been reached.
+**Trigger:** RSM-007 is received from DataHub — the grid operator confirms the metering point is activated.
+
+**Important:** The effective date is our *requested* start date, but activation happens when we receive RSM-007. This is the authoritative signal that supply has actually started.
 
 ### DataHub Communication
 
 | Step | Direction | BRS/RSM | What happens |
 |------|-----------|---------|--------------|
-| 1 | DataHub -> DDQ | **RSM-007** (MasterData queue) | Complete master data snapshot for the metering point: type, settlement method, grid area, connection status, grid company |
+| 1 | DataHub -> DDQ | **RSM-007** (MasterData queue) | Complete master data snapshot for the metering point: type, settlement method, grid area, connection status, grid company. **This triggers activation.** |
 | 2 | DataHub -> DDQ | **BRS-015** response | Confirmation of customer master data. VERIFY |
 | 3 | DataHub -> DDQ | **RSM-012** (Timeseries queue) | First metering data delivery — may include historical data for the transition period |
 
-### Internal Steps
+### Internal Steps (triggered by RSM-007)
 
-1. Receive and store master data -> metering point is now `active` in the portfolio
-2. Record the supply period start date
-3. Assign product/tariff plan to the metering point
-4. Load grid tariffs for the metering point's grid area (from Charges queue data)
-5. Set up billing schedule (monthly or quarterly — per contract)
-6. For aconto billing: calculate estimated quarterly aconto amount based on expected annual consumption
-7. The customer is now visible in the customer portal
+1. **Process marked "completed"** — supply has officially started
+2. **Customer entity created** (or linked if multi-metering point scenario)
+3. Receive and store master data -> metering point is now `active` in the portfolio
+4. Record the supply period start date
+5. Assign product/tariff plan to the metering point
+6. Load grid tariffs for the metering point's grid area (from Charges queue data)
+7. Set up billing schedule (monthly or quarterly — per contract)
+8. For aconto billing: calculate estimated quarterly aconto amount based on expected annual consumption
+9. **The customer is now visible in the customer portal**
 
 ### Key Data Received at Activation
 

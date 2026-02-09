@@ -168,19 +168,35 @@ public sealed class OnboardingService : IOnboardingService
         var newStatus = MapProcessStatusToSignupStatus(processStatus);
         if (newStatus is null || newStatus == signup.Status) return;
 
-        // Create customer when signup becomes active
+        // Create or link customer when signup becomes active
         if (newStatus == "active" && !signup.CustomerId.HasValue)
         {
             var signupDetail = await _signupRepo.GetDetailByIdAsync(signup.Id, ct);
-            if (signupDetail is not null && !string.IsNullOrEmpty(signupDetail.CustomerName))
+            if (signupDetail is not null && !string.IsNullOrEmpty(signupDetail.CprCvr))
             {
-                var customer = await _portfolioRepo.CreateCustomerAsync(
-                    signupDetail.CustomerName, signupDetail.CprCvr, signupDetail.ContactType, ct);
+                // Check if customer with this CPR/CVR already exists (multi-metering point scenario)
+                var existingCustomer = await _portfolioRepo.GetCustomerByCprCvrAsync(signupDetail.CprCvr, ct);
 
-                await _signupRepo.LinkCustomerAsync(signup.Id, customer.Id, ct);
+                if (existingCustomer is not null)
+                {
+                    // Link to existing customer (e.g., home + summer residence)
+                    await _signupRepo.LinkCustomerAsync(signup.Id, existingCustomer.Id, ct);
 
-                _logger.LogInformation("Customer {CustomerId} created for signup {SignupNumber}",
-                    customer.Id, signup.SignupNumber);
+                    _logger.LogInformation(
+                        "Signup {SignupNumber} linked to existing customer {CustomerId} ({CustomerName}) — multi-metering point scenario",
+                        signup.SignupNumber, existingCustomer.Id, existingCustomer.Name);
+                }
+                else
+                {
+                    // Create new customer
+                    var customer = await _portfolioRepo.CreateCustomerAsync(
+                        signupDetail.CustomerName, signupDetail.CprCvr, signupDetail.ContactType, ct);
+
+                    await _signupRepo.LinkCustomerAsync(signup.Id, customer.Id, ct);
+
+                    _logger.LogInformation("Customer {CustomerId} created for signup {SignupNumber}",
+                        customer.Id, signup.SignupNumber);
+                }
             }
         }
 

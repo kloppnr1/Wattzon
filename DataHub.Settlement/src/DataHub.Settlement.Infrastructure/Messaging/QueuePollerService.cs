@@ -185,38 +185,44 @@ public sealed class QueuePollerService : BackgroundService
             await _portfolioRepo.ActivateMeteringPointAsync(
                 masterData.MeteringPointId, masterData.SupplyStart.UtcDateTime, ct);
 
-            // Create portfolio from signup if one exists for this GSRN
+            // RSM-007 is the authoritative activation signal from DataHub
+            // This is the ONLY place where processes are marked "completed"
             var signup = await _signupRepo.GetActiveByGsrnAsync(masterData.MeteringPointId, ct);
-            if (signup is not null && signup.CustomerId.HasValue)
+            if (signup is not null && signup.ProcessRequestId.HasValue)
             {
                 var effectiveDate = DateOnly.FromDateTime(masterData.SupplyStart.UtcDateTime);
 
-                await _portfolioRepo.CreateContractAsync(
-                    signup.CustomerId.Value, masterData.MeteringPointId, signup.ProductId,
-                    "quarterly", "aconto", effectiveDate, ct);
+                // 1. Mark process completed (supply has started per DataHub)
+                var stateMachine = new ProcessStateMachine(_processRepo, _clock);
+                await stateMachine.MarkCompletedAsync(signup.ProcessRequestId.Value, ct);
 
-                await _portfolioRepo.CreateSupplyPeriodAsync(masterData.MeteringPointId, effectiveDate, ct);
+                // 2. Sync signup status → creates or links Customer entity
+                await _onboardingService.SyncFromProcessAsync(signup.ProcessRequestId.Value, "completed", null, ct);
 
-                // Transition process to completed and sync signup
-                if (signup.ProcessRequestId.HasValue)
+                // 3. Reload signup to get the customer_id (just created or linked)
+                signup = await _signupRepo.GetActiveByGsrnAsync(masterData.MeteringPointId, ct);
+
+                if (signup?.CustomerId is not null)
                 {
-                    var stateMachine = new ProcessStateMachine(_processRepo, _clock);
-                    try
-                    {
-                        await stateMachine.MarkCompletedAsync(signup.ProcessRequestId.Value, ct);
-                    }
-                    catch (InvalidOperationException)
-                    {
-                        // Process may already be completed by the scheduler
-                    }
-                    await _onboardingService.SyncFromProcessAsync(signup.ProcessRequestId.Value, "completed", null, ct);
-                }
+                    // 4. Create Contract and SupplyPeriod
+                    await _portfolioRepo.CreateContractAsync(
+                        signup.CustomerId.Value, masterData.MeteringPointId, signup.ProductId,
+                        "quarterly", "aconto", effectiveDate, ct);
 
-                _logger.LogInformation(
-                    "RSM-007: Created portfolio from signup {SignupNumber} for GSRN {Gsrn}, supply from {Start}",
-                    signup.SignupNumber, masterData.MeteringPointId, masterData.SupplyStart);
+                    await _portfolioRepo.CreateSupplyPeriodAsync(masterData.MeteringPointId, effectiveDate, ct);
+
+                    _logger.LogInformation(
+                        "RSM-007: Activated portfolio for signup {SignupNumber}, GSRN {Gsrn}, supply from {Start}",
+                        signup.SignupNumber, masterData.MeteringPointId, masterData.SupplyStart);
+                }
+                else
+                {
+                    _logger.LogWarning(
+                        "RSM-007: Signup {SignupNumber} for GSRN {Gsrn} has no customer after activation — portfolio not created",
+                        signup?.SignupNumber ?? "unknown", masterData.MeteringPointId);
+                }
             }
-            else
+            else if (signup is null)
             {
                 // No signup — create supply period without contract (pre-onboarding metering points)
                 await _portfolioRepo.CreateSupplyPeriodAsync(
@@ -224,6 +230,12 @@ public sealed class QueuePollerService : BackgroundService
 
                 _logger.LogInformation("RSM-007: Activated metering point {Gsrn}, supply from {Start} (no signup)",
                     masterData.MeteringPointId, masterData.SupplyStart);
+            }
+            else
+            {
+                _logger.LogWarning(
+                    "RSM-007: Signup {SignupNumber} for GSRN {Gsrn} has no process request — portfolio not created",
+                    signup.SignupNumber, masterData.MeteringPointId);
             }
         }
         else if (message.MessageType is "RSM-009" or "rsm-009" or "RSM009")
