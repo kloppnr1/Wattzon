@@ -56,51 +56,44 @@ else
 }
 Console.WriteLine();
 
-// Create demo customers first
-Console.WriteLine("👥 Creating customers...");
-var customers = new[]
+// Define all signups with customer info
+// Per V022 architecture: customers are only created when RSM-007 activates a signup.
+// Registered/processing/rejected signups store customer_name/cpr_cvr but have NO customer entity.
+Console.WriteLine("📝 Creating signups...");
+var signupDefs = new[]
 {
-    (Id: Guid.NewGuid(), Name: "Demo Hansen", CprCvr: "1234567890", ContactType: "private"),
-    (Id: Guid.NewGuid(), Name: "Demo Jensen ApS", CprCvr: "12345678", ContactType: "business"),
-    (Id: Guid.NewGuid(), Name: "Demo Nielsen", CprCvr: "0987654321", ContactType: "private"),
-    (Id: Guid.NewGuid(), Name: "Demo Petersen", CprCvr: "1122334455", ContactType: "private"),
-    (Id: Guid.NewGuid(), Name: "Demo Andersen", CprCvr: "5544332211", ContactType: "private"),
-    (Id: Guid.NewGuid(), Name: "Demo Rejected Customer", CprCvr: "9999999999", ContactType: "private"),
+    (Name: "Demo Hansen", CprCvr: "1234567890", ContactType: "private", Gsrn: "571313180400000001", Status: "active", Type: "switch"),
+    (Name: "Demo Jensen ApS", CprCvr: "12345678", ContactType: "business", Gsrn: "571313180400000002", Status: "active", Type: "switch"),
+    (Name: "Demo Nielsen", CprCvr: "0987654321", ContactType: "private", Gsrn: "571313180400000003", Status: "active", Type: "move_in"),
+    (Name: "Demo Petersen", CprCvr: "1122334455", ContactType: "private", Gsrn: "571313180400000005", Status: "registered", Type: "switch"),
+    (Name: "Demo Andersen", CprCvr: "5544332211", ContactType: "private", Gsrn: "571313180400000006", Status: "processing", Type: "switch"),
+    (Name: "Demo Rejected Customer", CprCvr: "9999999999", ContactType: "private", Gsrn: "571313180400000007", Status: "rejected", Type: "switch"),
 };
 
-foreach (var c in customers)
+// Only create customer entities for "active" signups (post RSM-007 activation)
+Console.WriteLine("👥 Creating customers (only for active signups)...");
+var customerMap = new Dictionary<string, Guid>(); // CprCvr → CustomerId
+foreach (var s in signupDefs.Where(s => s.Status == "active"))
 {
+    var customerId = Guid.NewGuid();
+    customerMap[s.CprCvr] = customerId;
     await conn.ExecuteAsync(
         "INSERT INTO portfolio.customer (id, name, cpr_cvr, contact_type, status) VALUES (@Id, @Name, @CprCvr, @ContactType, 'active')",
-        new { Id = c.Id, Name = c.Name, CprCvr = c.CprCvr, ContactType = c.ContactType });
-    Console.WriteLine($"  ✓ {c.Name} ({c.ContactType})");
+        new { Id = customerId, Name = s.Name, CprCvr = s.CprCvr, ContactType = s.ContactType });
+    Console.WriteLine($"  ✓ {s.Name} ({s.ContactType})");
 }
 Console.WriteLine();
 
-// Create demo signups (after customers exist)
-Console.WriteLine("📝 Creating signups...");
-var signups = new[]
-{
-    (CustomerId: customers[0].Id, Gsrn: "571313180400000001", Status: "active", Type: "switch"),
-    (CustomerId: customers[1].Id, Gsrn: "571313180400000002", Status: "active", Type: "switch"),
-    (CustomerId: customers[2].Id, Gsrn: "571313180400000003", Status: "active", Type: "move_in"),
-    (CustomerId: customers[3].Id, Gsrn: "571313180400000005", Status: "registered", Type: "switch"),
-    (CustomerId: customers[4].Id, Gsrn: "571313180400000006", Status: "processing", Type: "switch"),
-    (CustomerId: customers[5].Id, Gsrn: "571313180400000007", Status: "rejected", Type: "switch"),
-};
-
 var signupNumber = 1;
-foreach (var s in signups)
+foreach (var s in signupDefs)
 {
     var effectiveDate = s.Status == "active" ? new DateTime(2025, 1, 1) : DateTime.UtcNow.Date.AddDays(30);
-    var customer = customers.First(c => c.Id == s.CustomerId);
 
     // Map contact_type: customer table uses 'private'/'business', signup table uses 'person'/'company'
-    var signupContactType = customer.ContactType == "business" ? "company" : "person";
+    var signupContactType = s.ContactType == "business" ? "company" : "person";
 
-    // Customer ID should only be set for "active" signups (after RSM-007 activation)
-    // For registered/processing/rejected, customer_id remains NULL
-    var actualCustomerId = s.Status == "active" ? s.CustomerId : (Guid?)null;
+    // Customer ID only set for "active" signups (after RSM-007 activation)
+    var customerId = s.Status == "active" && customerMap.TryGetValue(s.CprCvr, out var cid) ? cid : (Guid?)null;
 
     await conn.ExecuteAsync(
         "INSERT INTO portfolio.signup (id, signup_number, dar_id, gsrn, customer_id, product_id, type, effective_date, status, created_at, customer_name, customer_cpr_cvr, customer_contact_type) VALUES (@Id, @SignupNum, @DarId, @Gsrn, @CustomerId, @ProductId, @Type, @EffectiveDate, @Status, @Created, @CustomerName, @CustomerCprCvr, @CustomerContactType)",
@@ -109,30 +102,31 @@ foreach (var s in signups)
             SignupNum = $"SGN-2026-{signupNumber:D5}",
             DarId = $"0a3f5000-{signupNumber:D4}-62c3-e044-0003ba298018",
             Gsrn = s.Gsrn,
-            CustomerId = actualCustomerId,
+            CustomerId = customerId,
             ProductId = productId,
             Type = s.Type,
             EffectiveDate = effectiveDate,
             Status = s.Status,
             Created = DateTime.UtcNow.AddDays(-Random.Shared.Next(1, 30)),
-            CustomerName = customer.Name,
-            CustomerCprCvr = customer.CprCvr,
+            CustomerName = s.Name,
+            CustomerCprCvr = s.CprCvr,
             CustomerContactType = signupContactType
         });
 
-    Console.WriteLine($"  ✓ SGN-2026-{signupNumber:D5} - {customer.Name} ({s.Status})");
+    Console.WriteLine($"  ✓ SGN-2026-{signupNumber:D5} - {s.Name} ({s.Status}){(customerId.HasValue ? "" : " [no customer yet]")}");
     signupNumber++;
 }
 Console.WriteLine();
 
-// Create metering points
+// Create metering points (only for active signups — these have completed RSM-007)
 Console.WriteLine("⚡ Creating metering points...");
+var activeSignups = signupDefs.Where(s => s.Status == "active").ToArray();
 var meteringPoints = new[]
 {
-    (Gsrn: "571313180400000001", CustomerId: customers[0].Id),
-    (Gsrn: "571313180400000002", CustomerId: customers[1].Id),
-    (Gsrn: "571313180400000003", CustomerId: customers[2].Id),
-    (Gsrn: "571313180400000004", CustomerId: customers[0].Id), // 2nd meter for customer 0
+    (Gsrn: "571313180400000001", CprCvr: "1234567890"),
+    (Gsrn: "571313180400000002", CprCvr: "12345678"),
+    (Gsrn: "571313180400000003", CprCvr: "0987654321"),
+    (Gsrn: "571313180400000004", CprCvr: "1234567890"), // 2nd meter for Demo Hansen
 };
 
 foreach (var mp in meteringPoints)
@@ -140,17 +134,19 @@ foreach (var mp in meteringPoints)
     await conn.ExecuteAsync(
         "INSERT INTO portfolio.metering_point (gsrn, type, settlement_method, connection_status, grid_area_code, grid_operator_gln, price_area) VALUES (@Gsrn, 'E17', 'flex', 'connected', '543', '5790000432752', 'DK2')",
         new { mp.Gsrn });
-    Console.WriteLine($"  ✓ {mp.Gsrn} → {customers.First(c => c.Id == mp.CustomerId).Name}");
+    Console.WriteLine($"  ✓ {mp.Gsrn}");
 }
 Console.WriteLine();
 
-// Create contracts
+// Create contracts (only for active signups with customer entities)
 Console.WriteLine("📄 Creating contracts...");
 foreach (var mp in meteringPoints)
 {
+    var customerId = customerMap[mp.CprCvr];
+
     await conn.ExecuteAsync(
         "INSERT INTO portfolio.contract (id, customer_id, gsrn, product_id, billing_frequency, payment_model, start_date) VALUES (@Id, @CustomerId, @Gsrn, @ProductId, 'monthly', 'aconto', @Start)",
-        new { Id = Guid.NewGuid(), CustomerId = mp.CustomerId, Gsrn = mp.Gsrn, ProductId = productId, Start = new DateTime(2025, 1, 1) });
+        new { Id = Guid.NewGuid(), CustomerId = customerId, Gsrn = mp.Gsrn, ProductId = productId, Start = new DateTime(2025, 1, 1) });
 
     await conn.ExecuteAsync(
         "INSERT INTO portfolio.supply_period (id, gsrn, start_date) VALUES (@Id, @Gsrn, @Start)",
@@ -251,8 +247,7 @@ foreach (var mp in meteringPoints.Take(2))
         "INSERT INTO billing.aconto_payment (id, gsrn, period_start, period_end, amount, paid_at) VALUES (@Id, @Gsrn, @PeriodStart, @PeriodEnd, @Amount, @PaidAt)",
         new { Id = Guid.NewGuid(), Gsrn = mp.Gsrn, PeriodStart = new DateTime(2025, 1, 1), PeriodEnd = new DateTime(2025, 1, 31), Amount = 500.00m, PaidAt = new DateTime(2025, 1, 15) });
 
-    var customerName = customers.First(c => c.Id == mp.CustomerId).Name;
-    Console.WriteLine($"  ✓ 500 DKK for {mp.Gsrn} ({customerName})");
+    Console.WriteLine($"  ✓ 500 DKK for {mp.Gsrn}");
 }
 Console.WriteLine();
 
@@ -327,8 +322,8 @@ Console.WriteLine();
 Console.WriteLine("✅ Database seeding completed!");
 Console.WriteLine();
 Console.WriteLine("📊 Summary:");
-Console.WriteLine($"   • {signups.Length} signups (3 active, 1 registered, 1 processing, 1 rejected)");
-Console.WriteLine($"   • {customers.Length} customers");
+Console.WriteLine($"   • {signupDefs.Length} signups (3 active, 1 registered, 1 processing, 1 rejected)");
+Console.WriteLine($"   • {customerMap.Count} customers (only for active signups)");
 Console.WriteLine($"   • {meteringPoints.Length} metering points");
 Console.WriteLine($"   • {billingPeriods.Length} billing periods");
 Console.WriteLine($"   • {settlementRuns.Count} settlement runs (2 completed, 1 running)");

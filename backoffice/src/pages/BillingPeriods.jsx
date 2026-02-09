@@ -11,13 +11,12 @@ export default function BillingPeriods() {
   const [error, setError] = useState(null);
 
   const fetchPage = useCallback((p) => {
-    setLoading(data === null); // Only show full loading on initial load
     setError(null);
     api.getBillingPeriods({ page: p, pageSize: PAGE_SIZE })
       .then(setData)
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
-  }, [data]);
+  }, []);
 
   useEffect(() => { fetchPage(page); }, [page, fetchPage]);
 
@@ -29,6 +28,17 @@ export default function BillingPeriods() {
   const totalPeriods = totalCount;
   const totalRuns = periods.reduce((sum, p) => sum + p.settlementRunCount, 0);
   const avgRuns = totalPeriods > 0 ? (totalRuns / totalPeriods).toFixed(1) : 0;
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-[3px] border-teal-100 border-t-teal-500 rounded-full animate-spin" />
+          <p className="text-sm text-slate-400 font-medium">Loading billing periods...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-8 max-w-6xl mx-auto">
@@ -74,13 +84,7 @@ export default function BillingPeriods() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-slate-100">
-              {loading && periods.length === 0 ? (
-                <tr>
-                  <td colSpan="5" className="px-6 py-12 text-center text-slate-500">
-                    Loading...
-                  </td>
-                </tr>
-              ) : periods.length === 0 ? (
+              {periods.length === 0 ? (
                 <tr>
                   <td colSpan="5" className="px-6 py-12 text-center text-slate-500">
                     No billing periods found.

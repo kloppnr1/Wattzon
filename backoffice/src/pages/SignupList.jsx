@@ -32,13 +32,12 @@ export default function SignupList() {
   const [error, setError] = useState(null);
 
   const fetchPage = useCallback((p, status) => {
-    setLoading(data === null); // Only show full loading on initial load
     setError(null);
     api.getSignups({ status: status === 'all' ? undefined : status, page: p, pageSize: PAGE_SIZE })
       .then(setData)
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
-  }, [data]);
+  }, []);
 
   useEffect(() => { fetchPage(page, filter); }, [page, filter, fetchPage]);
 
@@ -50,6 +49,17 @@ export default function SignupList() {
   const signups = data?.items ?? [];
   const totalCount = data?.totalCount ?? 0;
   const totalPages = data?.totalPages ?? 1;
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-[3px] border-teal-100 border-t-teal-500 rounded-full animate-spin" />
+          <p className="text-sm text-slate-400 font-medium">Loading signups...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-8 max-w-6xl mx-auto">
@@ -98,12 +108,7 @@ export default function SignupList() {
 
       {/* Table */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden animate-fade-in-up" style={{ animationDelay: '120ms' }}>
-        {loading ? (
-          <div className="p-14 text-center">
-            <div className="inline-block w-8 h-8 border-[3px] border-teal-100 border-t-teal-500 rounded-full animate-spin" />
-            <p className="text-sm text-slate-400 mt-3 font-medium">Loading signups...</p>
-          </div>
-        ) : signups.length === 0 ? (
+        {signups.length === 0 ? (
           <div className="p-14 text-center">
             <div className="w-14 h-14 rounded-2xl bg-slate-50 flex items-center justify-center mx-auto mb-3">
               <svg className="w-7 h-7 text-slate-300" fill="none" viewBox="0 0 24 24" strokeWidth={1} stroke="currentColor">

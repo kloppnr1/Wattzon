@@ -39,14 +39,13 @@ export default function Messages() {
   }, []);
 
   // Fetch data based on tab
-  const fetchData = useCallback((p, f) => {
-    setLoading(data === null); // Only show full loading on initial load
+  const fetchData = useCallback((currentTab, p, f) => {
     setError(null);
     const params = { page: p, pageSize: PAGE_SIZE, ...f };
 
-    const promise = tab === 'inbound'
+    const promise = currentTab === 'inbound'
       ? api.getInboundMessages(params)
-      : tab === 'outbound'
+      : currentTab === 'outbound'
       ? api.getOutboundRequests(params)
       : api.getDeadLetters(params);
 
@@ -54,21 +53,33 @@ export default function Messages() {
       .then(setData)
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
-  }, [tab, data]);
+  }, []);
 
   useEffect(() => {
     setPage(1);
     setFilters({});
     setData(null);
-  }, [tab]);
+    fetchData(tab, 1, {});
+  }, [tab, fetchData]);
 
   useEffect(() => {
-    fetchData(page, filters);
-  }, [page, filters, fetchData]);
+    fetchData(tab, page, filters);
+  }, [page, filters, tab, fetchData]);
 
   const items = data?.items ?? [];
   const totalCount = data?.totalCount ?? 0;
   const totalPages = Math.ceil(totalCount / PAGE_SIZE);
+
+  if (loading && !stats) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-[3px] border-teal-100 border-t-teal-500 rounded-full animate-spin" />
+          <p className="text-sm text-slate-400 font-medium">Loading messages...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-8 max-w-6xl mx-auto">

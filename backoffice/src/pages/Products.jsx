@@ -13,6 +13,17 @@ export default function Products() {
       .finally(() => setLoading(false));
   }, []);
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-[3px] border-teal-100 border-t-teal-500 rounded-full animate-spin" />
+          <p className="text-sm text-slate-400 font-medium">Loading products...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="p-8 max-w-6xl mx-auto">
       <div className="mb-6 animate-fade-in-up">
@@ -30,12 +41,7 @@ export default function Products() {
       )}
 
       <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden animate-fade-in-up" style={{ animationDelay: '60ms' }}>
-        {loading ? (
-          <div className="p-14 text-center">
-            <div className="inline-block w-8 h-8 border-[3px] border-teal-100 border-t-teal-500 rounded-full animate-spin" />
-            <p className="text-sm text-slate-400 mt-3 font-medium">Loading products...</p>
-          </div>
-        ) : products.length === 0 ? (
+        {products.length === 0 ? (
           <div className="p-14 text-center">
             <div className="w-14 h-14 rounded-2xl bg-slate-50 flex items-center justify-center mx-auto mb-3">
               <svg className="w-7 h-7 text-slate-300" fill="none" viewBox="0 0 24 24" strokeWidth={1} stroke="currentColor">

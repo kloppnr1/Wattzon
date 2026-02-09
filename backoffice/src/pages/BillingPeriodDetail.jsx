@@ -35,8 +35,11 @@ export default function BillingPeriodDetail() {
 
   if (loading) {
     return (
-      <div className="p-8 max-w-6xl mx-auto">
-        <div className="text-center text-slate-500">Loading...</div>
+      <div className="flex items-center justify-center h-full">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-[3px] border-teal-100 border-t-teal-500 rounded-full animate-spin" />
+          <p className="text-sm text-slate-400 font-medium">Loading billing period...</p>
+        </div>
       </div>
     );
   }

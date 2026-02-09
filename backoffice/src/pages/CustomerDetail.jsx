@@ -17,10 +17,10 @@ export default function CustomerDetail() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-20">
+      <div className="flex items-center justify-center h-full">
         <div className="flex flex-col items-center gap-3">
           <div className="w-8 h-8 border-[3px] border-teal-100 border-t-teal-500 rounded-full animate-spin" />
-          <p className="text-sm text-slate-400 font-medium">Loading...</p>
+          <p className="text-sm text-slate-400 font-medium">Loading customer...</p>
         </div>
       </div>
     );
