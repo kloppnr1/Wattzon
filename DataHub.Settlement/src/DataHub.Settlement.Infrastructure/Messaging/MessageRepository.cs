@@ -317,7 +317,7 @@ internal class OutboundRequestDetailRow
 internal class DeadLetterSummaryRow
 {
     public Guid Id { get; set; }
-    public Guid? OriginalMessageId { get; set; }
+    public string? OriginalMessageId { get; set; }
     public string QueueName { get; set; } = null!;
     public string ErrorReason { get; set; } = null!;
     public DateTime FailedAt { get; set; }
@@ -328,7 +328,7 @@ internal class DeadLetterSummaryRow
 internal class DeadLetterDetailRow
 {
     public Guid Id { get; set; }
-    public Guid? OriginalMessageId { get; set; }
+    public string? OriginalMessageId { get; set; }
     public string QueueName { get; set; } = null!;
     public string ErrorReason { get; set; } = null!;
     public DateTime FailedAt { get; set; }

@@ -58,7 +58,7 @@ public record OutboundRequestDetail(
 
 public record DeadLetterSummary(
     Guid Id,
-    Guid? OriginalMessageId,
+    string? OriginalMessageId,
     string QueueName,
     string ErrorReason,
     DateTime FailedAt,
@@ -66,7 +66,7 @@ public record DeadLetterSummary(
 
 public record DeadLetterDetail(
     Guid Id,
-    Guid? OriginalMessageId,
+    string? OriginalMessageId,
     string QueueName,
     string ErrorReason,
     DateTime FailedAt,
