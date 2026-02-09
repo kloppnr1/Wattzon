@@ -177,7 +177,7 @@ public sealed class QueuePollerService : BackgroundService
             {
                 await _portfolioRepo.CreateMeteringPointAsync(mp, ct);
             }
-            catch (InvalidOperationException)
+            catch (Exception ex) when (ex is InvalidOperationException or Npgsql.PostgresException)
             {
                 _logger.LogInformation("Metering point {Gsrn} already exists, skipping create", masterData.MeteringPointId);
             }
