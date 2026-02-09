@@ -1,21 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api';
+import { useTranslation } from '../i18n/LanguageContext';
 
 const PAGE_SIZE = 50;
-
-const processTypeLabels = {
-  supplier_switch: 'Switch',
-  short_notice_switch: 'Quick Switch',
-  move_in: 'Move In',
-  end_of_supply: 'End Supply',
-  forced_end_of_supply: 'Forced End',
-  move_out: 'Move Out',
-  cancel_switch: 'Cancel Switch',
-  cancel_end_of_supply: 'Cancel End',
-  incorrect_switch: 'Incorrect Switch',
-  incorrect_move: 'Incorrect Move',
-};
 
 const processStatusStyles = {
   pending: { dot: 'bg-amber-400', badge: 'bg-amber-50 text-amber-700' },
@@ -28,17 +16,19 @@ const processStatusStyles = {
 };
 
 function ProcessStatusBadge({ status }) {
+  const { t } = useTranslation();
   const cfg = processStatusStyles[status] || { dot: 'bg-slate-400', badge: 'bg-slate-100 text-slate-600' };
   return (
     <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium ${cfg.badge}`}>
       <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
-      {status.replace(/_/g, ' ')}
+      {t('status.' + status)}
     </span>
   );
 }
 
 function ProcessTypeBadge({ type }) {
-  const label = processTypeLabels[type] || type;
+  const { t } = useTranslation();
+  const label = t('processType.' + type);
   const isSwitch = type?.includes('switch');
   const isMoveIn = type?.includes('move_in');
   const bg = isSwitch ? 'bg-indigo-50 text-indigo-700' : isMoveIn ? 'bg-violet-50 text-violet-700' : 'bg-slate-100 text-slate-600';
@@ -64,6 +54,7 @@ function TimelineEvent({ icon, label, time, color = 'teal' }) {
 }
 
 function ConversationTimeline({ correlationId }) {
+  const { t } = useTranslation();
   const [detail, setDetail] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -75,8 +66,8 @@ function ConversationTimeline({ correlationId }) {
       .finally(() => setLoading(false));
   }, [correlationId]);
 
-  if (loading) return <div className="p-4 text-sm text-slate-400">Loading timeline...</div>;
-  if (!detail) return <div className="p-4 text-sm text-slate-400">No messages found.</div>;
+  if (loading) return <div className="p-4 text-sm text-slate-400">{t('messages.loadingTimeline')}</div>;
+  if (!detail) return <div className="p-4 text-sm text-slate-400">{t('messages.noMessagesFound')}</div>;
 
   // Merge outbound + inbound into chronological timeline
   const events = [
@@ -86,7 +77,7 @@ function ConversationTimeline({ correlationId }) {
 
   return (
     <div className="px-6 py-4 bg-slate-50 border-t border-slate-100">
-      <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Conversation Timeline</div>
+      <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">{t('messages.conversationTimeline')}</div>
       <div className="space-y-1 relative">
         <div className="absolute left-[13px] top-4 bottom-4 w-px bg-slate-200" />
         {events.map((e, idx) => {
@@ -102,8 +93,8 @@ function ConversationTimeline({ correlationId }) {
                     <Link to={`/messages/outbound/${o.id}`} className="text-teal-600 hover:text-teal-700 font-medium">
                       {o.processType}
                     </Link>
-                    {' '}sent to DataHub
-                    {o.status === 'acknowledged_error' && <span className="text-rose-600 ml-1">(error)</span>}
+                    {' '}{t('messages.sentToDatahub')}
+                    {o.status === 'acknowledged_error' && <span className="text-rose-600 ml-1">{t('messages.errorSuffix')}</span>}
                   </span>
                 }
                 time={o.sentAt}
@@ -112,9 +103,9 @@ function ConversationTimeline({ correlationId }) {
           } else {
             const i = e.data;
             const color = i.messageType === 'RSM-007' ? 'emerald' : i.messageType === 'RSM-009' ? 'sky' : 'slate';
-            const desc = i.messageType === 'RSM-007' ? 'Activation confirmed'
-              : i.messageType === 'RSM-009' ? 'Acknowledgement received'
-              : `${i.messageType} received`;
+            const desc = i.messageType === 'RSM-007' ? t('messages.activationConfirmed')
+              : i.messageType === 'RSM-009' ? t('messages.acknowledgementReceived')
+              : t('messages.received', { type: i.messageType });
             return (
               <TimelineEvent
                 key={`in-${idx}`}
@@ -139,6 +130,7 @@ function ConversationTimeline({ correlationId }) {
 }
 
 export default function Messages() {
+  const { t } = useTranslation();
   const [tab, setTab] = useState('conversations');
   const [stats, setStats] = useState(null);
 
@@ -200,7 +192,7 @@ export default function Messages() {
       <div className="flex items-center justify-center h-full">
         <div className="flex flex-col items-center gap-3">
           <div className="w-8 h-8 border-[3px] border-teal-100 border-t-teal-500 rounded-full animate-spin" />
-          <p className="text-sm text-slate-400 font-medium">Loading messages...</p>
+          <p className="text-sm text-slate-400 font-medium">{t('messages.loadingMessages')}</p>
         </div>
       </div>
     );
@@ -221,27 +213,27 @@ export default function Messages() {
     <div className="p-8 max-w-6xl mx-auto">
       {/* Page header */}
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Messages</h1>
-        <p className="text-base text-slate-500 mt-1">Monitor DataHub messaging and integration logs.</p>
+        <h1 className="text-3xl font-bold text-slate-900 tracking-tight">{t('messages.title')}</h1>
+        <p className="text-base text-slate-500 mt-1">{t('messages.subtitle')}</p>
       </div>
 
       {/* Stats cards */}
       {stats && (
         <div className="grid grid-cols-4 gap-4 mb-6">
           <div className="bg-gradient-to-br from-white to-slate-50 rounded-xl p-5 shadow-sm border border-slate-100">
-            <div className="text-sm font-medium text-slate-500 mb-1">Total Messages</div>
+            <div className="text-sm font-medium text-slate-500 mb-1">{t('messages.totalMessages')}</div>
             <div className="text-3xl font-bold text-slate-900">{stats.totalInbound + stats.pendingOutbound}</div>
           </div>
           <div className="bg-gradient-to-br from-white to-teal-50/30 rounded-xl p-5 shadow-sm border border-teal-100/50">
-            <div className="text-sm font-medium text-teal-600 mb-1">Active Conversations</div>
+            <div className="text-sm font-medium text-teal-600 mb-1">{t('messages.activeConversations')}</div>
             <div className="text-3xl font-bold text-teal-700">{convTotal}</div>
           </div>
           <div className="bg-gradient-to-br from-white to-emerald-50/30 rounded-xl p-5 shadow-sm border border-emerald-100/50">
-            <div className="text-sm font-medium text-emerald-600 mb-1">Processed</div>
+            <div className="text-sm font-medium text-emerald-600 mb-1">{t('messages.processed')}</div>
             <div className="text-3xl font-bold text-emerald-700">{stats.processedCount}</div>
           </div>
           <div className="bg-gradient-to-br from-white to-rose-50/30 rounded-xl p-5 shadow-sm border border-rose-100/50">
-            <div className="text-sm font-medium text-rose-600 mb-1">Unresolved Dead Letters</div>
+            <div className="text-sm font-medium text-rose-600 mb-1">{t('messages.unresolvedDeadLetters')}</div>
             <div className="text-3xl font-bold text-rose-700">{stats.deadLetterCount}</div>
           </div>
         </div>
@@ -250,9 +242,9 @@ export default function Messages() {
       {/* Tabs */}
       <div className="flex items-center gap-1 mb-5 bg-white rounded-xl p-1.5 w-fit shadow-sm border border-slate-100">
         {[
-          { key: 'conversations', label: 'Conversations' },
-          { key: 'deliveries', label: 'Data Deliveries' },
-          { key: 'dead-letters', label: 'Dead Letters' },
+          { key: 'conversations', label: t('messages.tabConversations') },
+          { key: 'deliveries', label: t('messages.tabDeliveries') },
+          { key: 'dead-letters', label: t('messages.tabDeadLetters') },
         ].map(({ key, label }) => (
           <button
             key={key}
@@ -282,19 +274,19 @@ export default function Messages() {
             <table className="min-w-full divide-y divide-slate-200">
               <thead className="bg-slate-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Process</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">GSRN</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Customer</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Status</th>
-                  <th className="px-6 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Messages</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Last Activity</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">{t('messages.colProcess')}</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">{t('messages.colGsrn')}</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">{t('messages.colCustomer')}</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">{t('messages.colStatus')}</th>
+                  <th className="px-6 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">{t('messages.colMessages')}</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">{t('messages.colLastActivity')}</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-slate-100">
                 {loading && convItems.length === 0 ? (
-                  <tr><td colSpan="6" className="px-6 py-12 text-center text-slate-500">Loading...</td></tr>
+                  <tr><td colSpan="6" className="px-6 py-12 text-center text-slate-500">{t('common.loading')}</td></tr>
                 ) : convItems.length === 0 ? (
-                  <tr><td colSpan="6" className="px-6 py-12 text-center text-slate-500">No conversations found.</td></tr>
+                  <tr><td colSpan="6" className="px-6 py-12 text-center text-slate-500">{t('messages.noConversations')}</td></tr>
                 ) : (
                   convItems.map((conv) => (
                     <>
@@ -349,9 +341,7 @@ export default function Messages() {
             {convPages > 1 && (
               <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
                 <div className="text-sm text-slate-600">
-                  Showing <span className="font-medium">{(convPage - 1) * PAGE_SIZE + 1}</span> to{' '}
-                  <span className="font-medium">{Math.min(convPage * PAGE_SIZE, convTotal)}</span> of{' '}
-                  <span className="font-medium">{convTotal}</span> conversations
+                  {t('common.showingRange', { from: (convPage - 1) * PAGE_SIZE + 1, to: Math.min(convPage * PAGE_SIZE, convTotal), total: convTotal })} {t('messages.showingConversations')}
                 </div>
                 <div className="flex gap-2">
                   <button
@@ -359,14 +349,14 @@ export default function Messages() {
                     disabled={convPage === 1}
                     className="px-3 py-1.5 text-sm font-medium rounded-lg bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
-                    Previous
+                    {t('common.previous')}
                   </button>
                   <button
                     onClick={() => setConvPage(p => Math.min(convPages, p + 1))}
                     disabled={convPage === convPages}
                     className="px-3 py-1.5 text-sm font-medium rounded-lg bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
-                    Next
+                    {t('common.next')}
                   </button>
                 </div>
               </div>
@@ -378,9 +368,9 @@ export default function Messages() {
         {tab === 'deliveries' && (
           <div className="divide-y divide-slate-200">
             {loading && !deliveries ? (
-              <div className="px-6 py-12 text-center text-slate-500">Loading...</div>
+              <div className="px-6 py-12 text-center text-slate-500">{t('common.loading')}</div>
             ) : deliveryDates.length === 0 ? (
-              <div className="px-6 py-12 text-center text-slate-500">No data deliveries found.</div>
+              <div className="px-6 py-12 text-center text-slate-500">{t('messages.noDeliveriesFound')}</div>
             ) : (
               deliveryDates.map((date) => {
                 const dateStr = new Date(date).toLocaleDateString(undefined, { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' });
@@ -391,13 +381,13 @@ export default function Messages() {
                   <div key={date} className="px-6 py-4">
                     <div className="flex items-center justify-between mb-3">
                       <div className="text-sm font-semibold text-slate-900">{dateStr}</div>
-                      <div className="text-xs text-slate-400">{totalCount} messages</div>
+                      <div className="text-xs text-slate-400">{t('messages.deliveryMessages', { count: totalCount })}</div>
                     </div>
                     <div className="grid grid-cols-3 gap-3">
                       {dayDeliveries.map((d) => {
-                        const typeLabel = d.messageType === 'RSM-012' ? 'Metering Data'
-                          : d.messageType === 'RSM-014' ? 'Aggregation'
-                          : d.messageType === 'RSM-004' ? 'Grid Changes'
+                        const typeLabel = d.messageType === 'RSM-012' ? t('messages.meteringData')
+                          : d.messageType === 'RSM-014' ? t('messages.aggregation')
+                          : d.messageType === 'RSM-004' ? t('messages.gridChanges')
                           : d.messageType;
                         const typeColor = d.messageType === 'RSM-012' ? 'teal'
                           : d.messageType === 'RSM-014' ? 'indigo'
@@ -414,16 +404,16 @@ export default function Messages() {
                             <div className="flex items-center gap-3">
                               <div>
                                 <div className="text-lg font-bold text-slate-900">{d.messageCount}</div>
-                                <div className="text-[10px] text-slate-400 uppercase">Total</div>
+                                <div className="text-[10px] text-slate-400 uppercase">{t('messages.deliveryTotal')}</div>
                               </div>
                               <div>
                                 <div className="text-lg font-bold text-emerald-600">{d.processedCount}</div>
-                                <div className="text-[10px] text-slate-400 uppercase">Processed</div>
+                                <div className="text-[10px] text-slate-400 uppercase">{t('messages.deliveryProcessed')}</div>
                               </div>
                               {d.errorCount > 0 && (
                                 <div>
                                   <div className="text-lg font-bold text-rose-600">{d.errorCount}</div>
-                                  <div className="text-[10px] text-slate-400 uppercase">Errors</div>
+                                  <div className="text-[10px] text-slate-400 uppercase">{t('messages.deliveryErrors')}</div>
                                 </div>
                               )}
                             </div>
@@ -445,17 +435,17 @@ export default function Messages() {
               <table className="min-w-full divide-y divide-slate-200">
                 <thead className="bg-slate-50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Queue</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Error Reason</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Resolved</th>
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Failed At</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">{t('messages.colQueue')}</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">{t('messages.colErrorReason')}</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">{t('messages.colResolved')}</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">{t('messages.colFailedAt')}</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-slate-100">
                   {loading && dlItems.length === 0 ? (
-                    <tr><td colSpan="4" className="px-6 py-12 text-center text-slate-500">Loading...</td></tr>
+                    <tr><td colSpan="4" className="px-6 py-12 text-center text-slate-500">{t('common.loading')}</td></tr>
                   ) : dlItems.length === 0 ? (
-                    <tr><td colSpan="4" className="px-6 py-12 text-center text-slate-500">No dead letters found.</td></tr>
+                    <tr><td colSpan="4" className="px-6 py-12 text-center text-slate-500">{t('messages.noDeadLetters')}</td></tr>
                   ) : (
                     dlItems.map((dl) => (
                       <tr key={dl.id} className="hover:bg-slate-50 transition-colors">
@@ -469,7 +459,7 @@ export default function Messages() {
                           <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
                             dl.resolved ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'
                           }`}>
-                            {dl.resolved ? 'Yes' : 'No'}
+                            {dl.resolved ? t('common.yes') : t('common.no')}
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">{new Date(dl.failedAt).toLocaleString()}</td>
@@ -483,9 +473,7 @@ export default function Messages() {
             {dlPages > 1 && (
               <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
                 <div className="text-sm text-slate-600">
-                  Showing <span className="font-medium">{(dlPage - 1) * PAGE_SIZE + 1}</span> to{' '}
-                  <span className="font-medium">{Math.min(dlPage * PAGE_SIZE, dlTotal)}</span> of{' '}
-                  <span className="font-medium">{dlTotal}</span> items
+                  {t('common.showingRange', { from: (dlPage - 1) * PAGE_SIZE + 1, to: Math.min(dlPage * PAGE_SIZE, dlTotal), total: dlTotal })} {t('messages.showingDeadLetters')}
                 </div>
                 <div className="flex gap-2">
                   <button
@@ -493,14 +481,14 @@ export default function Messages() {
                     disabled={dlPage === 1}
                     className="px-3 py-1.5 text-sm font-medium rounded-lg bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
-                    Previous
+                    {t('common.previous')}
                   </button>
                   <button
                     onClick={() => setDlPage(p => Math.min(dlPages, p + 1))}
                     disabled={dlPage === dlPages}
                     className="px-3 py-1.5 text-sm font-medium rounded-lg bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
-                    Next
+                    {t('common.next')}
                   </button>
                 </div>
               </div>

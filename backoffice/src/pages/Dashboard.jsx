@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api';
+import { useTranslation } from '../i18n/LanguageContext';
 
 export default function Dashboard() {
+  const { t } = useTranslation();
   const [stats, setStats] = useState(null);
   const [recent, setRecent] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -21,7 +23,7 @@ export default function Dashboard() {
   const cards = stats
     ? [
         {
-          label: 'Pending Signups',
+          label: t('dashboard.pendingSignups'),
           value: stats.pendingSignups,
           icon: (
             <svg className="w-6 h-6 text-slate-500" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
@@ -32,7 +34,7 @@ export default function Dashboard() {
           link: '/signups',
         },
         {
-          label: 'Active Customers',
+          label: t('dashboard.activeCustomers'),
           value: stats.activeCustomers,
           icon: (
             <svg className="w-6 h-6 text-slate-500" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
@@ -43,7 +45,7 @@ export default function Dashboard() {
           link: '/customers',
         },
         {
-          label: 'Rejected',
+          label: t('dashboard.rejected'),
           value: stats.rejectedSignups,
           icon: (
             <svg className="w-6 h-6 text-slate-500" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
@@ -54,7 +56,7 @@ export default function Dashboard() {
           link: '/signups',
         },
         {
-          label: 'Products',
+          label: t('dashboard.products'),
           value: stats.productCount,
           icon: (
             <svg className="w-6 h-6 text-slate-500" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
@@ -80,7 +82,7 @@ export default function Dashboard() {
       <div className="flex items-center justify-center h-full">
         <div className="flex flex-col items-center gap-3">
           <div className="w-8 h-8 border-[3px] border-teal-100 border-t-teal-500 rounded-full animate-spin" />
-          <p className="text-sm text-slate-400 font-medium">Loading dashboard...</p>
+          <p className="text-sm text-slate-400 font-medium">{t('dashboard.loadingDashboard')}</p>
         </div>
       </div>
     );
@@ -90,8 +92,8 @@ export default function Dashboard() {
     <div className="p-8 max-w-6xl mx-auto">
       {/* Header */}
       <div className="mb-8 animate-fade-in-up">
-        <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Dashboard</h1>
-        <p className="text-base text-slate-500 mt-1">Overview of your electricity supplier operations.</p>
+        <h1 className="text-3xl font-bold text-slate-900 tracking-tight">{t('dashboard.title')}</h1>
+        <p className="text-base text-slate-500 mt-1">{t('dashboard.subtitle')}</p>
       </div>
 
       {/* Stat cards */}
@@ -121,10 +123,10 @@ export default function Dashboard() {
         <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-1 h-5 rounded-full bg-teal-500" />
-            <h2 className="text-base font-semibold text-slate-900">Recent Signups</h2>
+            <h2 className="text-base font-semibold text-slate-900">{t('dashboard.recentSignups')}</h2>
           </div>
           <Link to="/signups" className="text-sm font-medium text-teal-500 hover:text-teal-700 transition-colors flex items-center gap-1">
-            View all
+            {t('common.viewAll')}
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
             </svg>
@@ -137,18 +139,18 @@ export default function Dashboard() {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
               </svg>
             </div>
-            <p className="text-sm font-medium text-slate-400">No signups yet</p>
-            <p className="text-xs text-slate-400 mt-1">Create one to get started.</p>
+            <p className="text-sm font-medium text-slate-400">{t('dashboard.noSignupsYet')}</p>
+            <p className="text-xs text-slate-400 mt-1">{t('dashboard.createToStart')}</p>
           </div>
         ) : (
           <table className="w-full">
             <thead>
               <tr className="border-b border-slate-50 bg-slate-50/50">
-                <th className="text-left text-[11px] font-semibold text-slate-400 uppercase tracking-wider px-6 py-3">Signup</th>
-                <th className="text-left text-[11px] font-semibold text-slate-400 uppercase tracking-wider px-6 py-3">Customer</th>
-                <th className="text-left text-[11px] font-semibold text-slate-400 uppercase tracking-wider px-6 py-3">GSRN</th>
-                <th className="text-left text-[11px] font-semibold text-slate-400 uppercase tracking-wider px-6 py-3">Status</th>
-                <th className="text-left text-[11px] font-semibold text-slate-400 uppercase tracking-wider px-6 py-3">Created</th>
+                <th className="text-left text-[11px] font-semibold text-slate-400 uppercase tracking-wider px-6 py-3">{t('dashboard.colSignup')}</th>
+                <th className="text-left text-[11px] font-semibold text-slate-400 uppercase tracking-wider px-6 py-3">{t('dashboard.colCustomer')}</th>
+                <th className="text-left text-[11px] font-semibold text-slate-400 uppercase tracking-wider px-6 py-3">{t('dashboard.colGsrn')}</th>
+                <th className="text-left text-[11px] font-semibold text-slate-400 uppercase tracking-wider px-6 py-3">{t('dashboard.colStatus')}</th>
+                <th className="text-left text-[11px] font-semibold text-slate-400 uppercase tracking-wider px-6 py-3">{t('dashboard.colCreated')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
@@ -166,7 +168,7 @@ export default function Dashboard() {
                   <td className="px-6 py-3.5">
                     <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${(statusStyles[s.status] || statusStyles.registered).badge}`}>
                       <span className={`w-1.5 h-1.5 rounded-full ${(statusStyles[s.status] || statusStyles.registered).dot}`} />
-                      {s.status}
+                      {t('status.' + s.status)}
                     </span>
                   </td>
                   <td className="px-6 py-3.5 text-sm text-slate-400">

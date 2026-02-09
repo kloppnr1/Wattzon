@@ -4,11 +4,11 @@ namespace DataHub.Settlement.Infrastructure.AddressLookup;
 
 public sealed class StubAddressLookupClient : IAddressLookupClient
 {
-    private static int _counter;
-
     public Task<AddressLookupResult> LookupByDarIdAsync(string darId, CancellationToken ct)
     {
-        var seq = Interlocked.Increment(ref _counter);
+        // Derive a stable GSRN from the darId so repeated lookups return the same result
+        var hash = (uint)darId.GetHashCode(StringComparison.Ordinal);
+        var seq = hash % 1_000_000_000;
         var gsrn = $"57131310{seq:D10}";
         var mp = new MeteringPointInfo(gsrn, "E17", "344");
         return Task.FromResult(new AddressLookupResult([mp]));

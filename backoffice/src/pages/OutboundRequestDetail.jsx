@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { api } from '../api';
+import { useTranslation } from '../i18n/LanguageContext';
 
 const statusStyles = {
   sent: { dot: 'bg-teal-400', badge: 'bg-teal-50 text-teal-700' },
@@ -8,18 +9,19 @@ const statusStyles = {
   acknowledged_error: { dot: 'bg-rose-400', badge: 'bg-rose-50 text-rose-700' },
 };
 
-function StatusBadge({ status }) {
+function StatusBadge({ status, label }) {
   const cfg = statusStyles[status] || { dot: 'bg-slate-400', badge: 'bg-slate-100 text-slate-600' };
   return (
     <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium ${cfg.badge}`}>
       <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
-      {status.replace('_', ' ')}
+      {label || status.replace('_', ' ')}
     </span>
   );
 }
 
 export default function OutboundRequestDetail() {
   const { id } = useParams();
+  const { t } = useTranslation();
   const [request, setRequest] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -38,7 +40,7 @@ export default function OutboundRequestDetail() {
       <div className="flex items-center justify-center h-full">
         <div className="flex flex-col items-center gap-3">
           <div className="w-8 h-8 border-[3px] border-teal-100 border-t-teal-500 rounded-full animate-spin" />
-          <p className="text-sm text-slate-400 font-medium">Loading request...</p>
+          <p className="text-sm text-slate-400 font-medium">{t('outboundDetail.loadingRequest')}</p>
         </div>
       </div>
     );
@@ -56,41 +58,41 @@ export default function OutboundRequestDetail() {
     <div className="p-8 max-w-6xl mx-auto">
       {/* Breadcrumb */}
       <div className="mb-4 flex items-center gap-2 text-sm text-slate-500">
-        <Link to="/messages" className="hover:text-teal-600">Messages</Link>
+        <Link to="/messages" className="hover:text-teal-600">{t('outboundDetail.breadcrumbMessages')}</Link>
         <span>/</span>
-        <span className="text-slate-900 font-medium">Outbound Request</span>
+        <span className="text-slate-900 font-medium">{t('outboundDetail.breadcrumbOutbound')}</span>
       </div>
 
       {/* Page header */}
       <div className="mb-6 animate-fade-in-up">
-        <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Outbound Request</h1>
+        <h1 className="text-3xl font-bold text-slate-900 tracking-tight">{t('outboundDetail.title')}</h1>
         <p className="text-base text-slate-500 mt-1">{request.processType}</p>
       </div>
 
       {/* Request metadata card */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6 animate-fade-in-up" style={{ animationDelay: '60ms' }}>
-        <h2 className="text-lg font-semibold text-slate-900 mb-4">Request Metadata</h2>
+        <h2 className="text-lg font-semibold text-slate-900 mb-4">{t('outboundDetail.requestMetadata')}</h2>
         <dl className="grid grid-cols-2 gap-x-8 gap-y-4">
           <div>
-            <dt className="text-sm font-medium text-slate-500">Request ID</dt>
+            <dt className="text-sm font-medium text-slate-500">{t('outboundDetail.requestId')}</dt>
             <dd className="text-base font-mono text-slate-900 mt-1">{request.id}</dd>
           </div>
           <div>
-            <dt className="text-sm font-medium text-slate-500">Process Type</dt>
+            <dt className="text-sm font-medium text-slate-500">{t('outboundDetail.processType')}</dt>
             <dd className="text-base font-semibold text-slate-900 mt-1">{request.processType}</dd>
           </div>
           <div>
-            <dt className="text-sm font-medium text-slate-500">GSRN</dt>
+            <dt className="text-sm font-medium text-slate-500">{t('outboundDetail.gsrn')}</dt>
             <dd className="text-base font-mono text-slate-900 mt-1">{request.gsrn}</dd>
           </div>
           <div>
-            <dt className="text-sm font-medium text-slate-500">Status</dt>
+            <dt className="text-sm font-medium text-slate-500">{t('outboundDetail.status')}</dt>
             <dd className="mt-1">
-              <StatusBadge status={request.status} />
+              <StatusBadge status={request.status} label={t('status.' + request.status)} />
             </dd>
           </div>
           <div>
-            <dt className="text-sm font-medium text-slate-500">Correlation ID</dt>
+            <dt className="text-sm font-medium text-slate-500">{t('outboundDetail.correlationId')}</dt>
             <dd className="text-base font-mono text-slate-700 mt-1">{request.correlationId || '-'}</dd>
           </div>
         </dl>
@@ -98,14 +100,14 @@ export default function OutboundRequestDetail() {
 
       {/* Timestamps */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6 animate-fade-in-up" style={{ animationDelay: '120ms' }}>
-        <h2 className="text-lg font-semibold text-slate-900 mb-4">Timestamps</h2>
+        <h2 className="text-lg font-semibold text-slate-900 mb-4">{t('outboundDetail.timestamps')}</h2>
         <dl className="grid grid-cols-2 gap-x-8 gap-y-4">
           <div>
-            <dt className="text-sm font-medium text-slate-500">Sent At</dt>
+            <dt className="text-sm font-medium text-slate-500">{t('outboundDetail.sentAt')}</dt>
             <dd className="text-base text-slate-900 mt-1">{new Date(request.sentAt).toLocaleString()}</dd>
           </div>
           <div>
-            <dt className="text-sm font-medium text-slate-500">Acknowledged At</dt>
+            <dt className="text-sm font-medium text-slate-500">{t('outboundDetail.acknowledgedAt')}</dt>
             <dd className="text-base text-slate-900 mt-1">
               {request.responseAt ? new Date(request.responseAt).toLocaleString() : '-'}
             </dd>
@@ -116,7 +118,7 @@ export default function OutboundRequestDetail() {
       {/* Error details */}
       {request.errorDetails && (
         <div className="bg-white rounded-xl shadow-sm border border-rose-200 p-6 animate-fade-in-up" style={{ animationDelay: '180ms' }}>
-          <h2 className="text-lg font-semibold text-rose-900 mb-4">Error Details</h2>
+          <h2 className="text-lg font-semibold text-rose-900 mb-4">{t('outboundDetail.errorDetails')}</h2>
           <div className="p-4 bg-rose-50 border border-rose-200 rounded-lg">
             <pre className="text-sm text-rose-700 whitespace-pre-wrap font-mono">{request.errorDetails}</pre>
           </div>

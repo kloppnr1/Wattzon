@@ -1,10 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api';
+import { useTranslation } from '../i18n/LanguageContext';
 
 const PAGE_SIZE = 50;
 
 export default function BillingPeriods() {
+  const { t } = useTranslation();
   const [data, setData] = useState(null);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
@@ -34,7 +36,7 @@ export default function BillingPeriods() {
       <div className="flex items-center justify-center h-full">
         <div className="flex flex-col items-center gap-3">
           <div className="w-8 h-8 border-[3px] border-teal-100 border-t-teal-500 rounded-full animate-spin" />
-          <p className="text-sm text-slate-400 font-medium">Loading billing periods...</p>
+          <p className="text-sm text-slate-400 font-medium">{t('billing.loadingPeriods')}</p>
         </div>
       </div>
     );
@@ -44,22 +46,22 @@ export default function BillingPeriods() {
     <div className="p-8 max-w-6xl mx-auto">
       {/* Page header */}
       <div className="mb-6 animate-fade-in-up">
-        <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Billing Periods</h1>
-        <p className="text-base text-slate-500 mt-1">View settlement billing periods and runs.</p>
+        <h1 className="text-3xl font-bold text-slate-900 tracking-tight">{t('billing.title')}</h1>
+        <p className="text-base text-slate-500 mt-1">{t('billing.subtitle')}</p>
       </div>
 
       {/* Stats cards */}
       <div className="grid grid-cols-3 gap-4 mb-6 animate-fade-in-up" style={{ animationDelay: '60ms' }}>
         <div className="bg-gradient-to-br from-white to-slate-50 rounded-xl p-5 shadow-sm border border-slate-100">
-          <div className="text-sm font-medium text-slate-500 mb-1">Total Periods</div>
+          <div className="text-sm font-medium text-slate-500 mb-1">{t('billing.totalPeriods')}</div>
           <div className="text-3xl font-bold text-slate-900">{totalPeriods}</div>
         </div>
         <div className="bg-gradient-to-br from-white to-teal-50/30 rounded-xl p-5 shadow-sm border border-teal-100/50">
-          <div className="text-sm font-medium text-teal-600 mb-1">Total Runs</div>
+          <div className="text-sm font-medium text-teal-600 mb-1">{t('billing.totalRuns')}</div>
           <div className="text-3xl font-bold text-teal-700">{totalRuns}</div>
         </div>
         <div className="bg-gradient-to-br from-white to-emerald-50/30 rounded-xl p-5 shadow-sm border border-emerald-100/50">
-          <div className="text-sm font-medium text-emerald-600 mb-1">Avg Runs per Period</div>
+          <div className="text-sm font-medium text-emerald-600 mb-1">{t('billing.avgRunsPerPeriod')}</div>
           <div className="text-3xl font-bold text-emerald-700">{avgRuns}</div>
         </div>
       </div>
@@ -68,7 +70,7 @@ export default function BillingPeriods() {
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden animate-fade-in-up" style={{ animationDelay: '120ms' }}>
         {error && (
           <div className="p-4 bg-rose-50 border-b border-rose-100 text-rose-700 text-sm">
-            Error: {error}
+            {t('common.error')}: {error}
           </div>
         )}
 
@@ -76,18 +78,18 @@ export default function BillingPeriods() {
           <table className="min-w-full divide-y divide-slate-200">
             <thead className="bg-slate-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Period Start</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Period End</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Frequency</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Settlement Runs</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Created</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">{t('billing.colPeriodStart')}</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">{t('billing.colPeriodEnd')}</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">{t('billing.colFrequency')}</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">{t('billing.colSettlementRuns')}</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">{t('billing.colCreated')}</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-slate-100">
               {periods.length === 0 ? (
                 <tr>
                   <td colSpan="5" className="px-6 py-12 text-center text-slate-500">
-                    No billing periods found.
+                    {t('billing.noPeriodsFound')}
                   </td>
                 </tr>
               ) : (
@@ -123,9 +125,7 @@ export default function BillingPeriods() {
         {totalPages > 1 && (
           <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
             <div className="text-sm text-slate-600">
-              Showing <span className="font-medium">{(page - 1) * PAGE_SIZE + 1}</span> to{' '}
-              <span className="font-medium">{Math.min(page * PAGE_SIZE, totalCount)}</span> of{' '}
-              <span className="font-medium">{totalCount}</span> periods
+              {t('common.showingRange', { from: (page - 1) * PAGE_SIZE + 1, to: Math.min(page * PAGE_SIZE, totalCount), total: totalCount })} {t('billing.showingPeriods')}
             </div>
             <div className="flex gap-2">
               <button
@@ -133,14 +133,14 @@ export default function BillingPeriods() {
                 disabled={page === 1}
                 className="px-3 py-1.5 text-sm font-medium rounded-lg bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                Previous
+                {t('common.previous')}
               </button>
               <button
                 onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                 disabled={page === totalPages}
                 className="px-3 py-1.5 text-sm font-medium rounded-lg bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                Next
+                {t('common.next')}
               </button>
             </div>
           </div>

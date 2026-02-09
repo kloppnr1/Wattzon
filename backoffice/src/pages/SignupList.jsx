@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api';
+import { useTranslation } from '../i18n/LanguageContext';
 
 const PAGE_SIZE = 50;
 
@@ -14,17 +15,18 @@ const statusStyles = {
   cancelled:  { dot: 'bg-slate-400', badge: 'bg-slate-100 text-slate-500' },
 };
 
-function StatusBadge({ status }) {
+function StatusBadge({ status, label }) {
   const cfg = statusStyles[status] || statusStyles.registered;
   return (
     <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium ${cfg.badge}`}>
       <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
-      {status}
+      {label || status}
     </span>
   );
 }
 
 export default function SignupList() {
+  const { t } = useTranslation();
   const [data, setData] = useState(null);
   const [page, setPage] = useState(1);
   const [filter, setFilter] = useState('all');
@@ -55,7 +57,7 @@ export default function SignupList() {
       <div className="flex items-center justify-center h-full">
         <div className="flex flex-col items-center gap-3">
           <div className="w-8 h-8 border-[3px] border-teal-100 border-t-teal-500 rounded-full animate-spin" />
-          <p className="text-sm text-slate-400 font-medium">Loading signups...</p>
+          <p className="text-sm text-slate-400 font-medium">{t('signupList.loadingSignups')}</p>
         </div>
       </div>
     );
@@ -66,8 +68,8 @@ export default function SignupList() {
       {/* Page header */}
       <div className="flex items-center justify-between mb-6 animate-fade-in-up">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Signups</h1>
-          <p className="text-base text-slate-500 mt-1">Manage customer onboarding requests.</p>
+          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">{t('signupList.title')}</h1>
+          <p className="text-base text-slate-500 mt-1">{t('signupList.subtitle')}</p>
         </div>
         <Link
           to="/signups/new"
@@ -76,7 +78,7 @@ export default function SignupList() {
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
           </svg>
-          New Signup
+          {t('signupList.newSignup')}
         </Link>
       </div>
 
@@ -92,7 +94,7 @@ export default function SignupList() {
                 : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
             }`}
           >
-            {s.charAt(0).toUpperCase() + s.slice(1)}
+            {s === 'all' ? t('signupList.filterAll') : t('status.' + s)}
           </button>
         ))}
       </div>
@@ -115,22 +117,22 @@ export default function SignupList() {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
               </svg>
             </div>
-            <p className="text-sm font-semibold text-slate-500">No signups found</p>
+            <p className="text-sm font-semibold text-slate-500">{t('signupList.noSignupsFound')}</p>
             <p className="text-xs text-slate-400 mt-1">
-              {filter !== 'all' ? 'Try a different filter.' : 'Create one to get started.'}
+              {filter !== 'all' ? t('signupList.tryDifferentFilter') : t('signupList.createToStart')}
             </p>
           </div>
         ) : (
           <table className="w-full">
             <thead>
               <tr className="border-b border-slate-50 bg-slate-50/50">
-                <th className="text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-4 py-2">Signup</th>
-                <th className="text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-4 py-2">Customer</th>
-                <th className="text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-4 py-2">GSRN</th>
-                <th className="text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-4 py-2">Type</th>
-                <th className="text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-4 py-2">Effective</th>
-                <th className="text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-4 py-2">Status</th>
-                <th className="text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-4 py-2">Created</th>
+                <th className="text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-4 py-2">{t('signupList.colSignup')}</th>
+                <th className="text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-4 py-2">{t('signupList.colCustomer')}</th>
+                <th className="text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-4 py-2">{t('signupList.colGsrn')}</th>
+                <th className="text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-4 py-2">{t('signupList.colType')}</th>
+                <th className="text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-4 py-2">{t('signupList.colEffective')}</th>
+                <th className="text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-4 py-2">{t('signupList.colStatus')}</th>
+                <th className="text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-4 py-2">{t('signupList.colCreated')}</th>
                 <th className="px-4 py-2"><span className="sr-only">View</span></th>
               </tr>
             </thead>
@@ -149,10 +151,10 @@ export default function SignupList() {
                     </span>
                   </td>
                   <td className="px-4 py-1.5 text-xs text-slate-500">
-                    {s.type === 'move_in' ? 'Move-in' : 'Switch'}
+                    {s.type === 'move_in' ? t('signupList.typeMoveIn') : t('signupList.typeSwitch')}
                   </td>
                   <td className="px-4 py-1.5 text-xs text-slate-500">{s.effectiveDate}</td>
-                  <td className="px-4 py-1.5"><StatusBadge status={s.status} /></td>
+                  <td className="px-4 py-1.5"><StatusBadge status={s.status} label={t('status.' + s.status)} /></td>
                   <td className="px-4 py-1.5 text-xs text-slate-400">
                     {new Date(s.createdAt).toLocaleDateString('da-DK')}
                   </td>
@@ -182,7 +184,7 @@ export default function SignupList() {
               disabled={page <= 1}
               className="px-3 py-1.5 text-xs font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
-              Previous
+              {t('common.previous')}
             </button>
             <span className="px-3 py-1.5 text-xs font-semibold text-slate-700">
               {page} / {totalPages}
@@ -192,7 +194,7 @@ export default function SignupList() {
               disabled={page >= totalPages}
               className="px-3 py-1.5 text-xs font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
-              Next
+              {t('common.next')}
             </button>
           </div>
         </div>

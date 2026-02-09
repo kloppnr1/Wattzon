@@ -2,18 +2,20 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { api } from '../api';
 import { useDawaSearch } from '../hooks/useDawaSearch';
-
-const STEPS = [
-  { key: 'address', label: 'Address', desc: 'Look up metering point' },
-  { key: 'product', label: 'Product', desc: 'Choose energy product' },
-  { key: 'customer', label: 'Customer', desc: 'Customer details' },
-  { key: 'confirm', label: 'Confirm', desc: 'Review and submit' },
-];
+import { useTranslation } from '../i18n/LanguageContext';
 
 export default function SignupNew() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [step, setStep] = useState(0);
+
+  const STEPS = [
+    { key: 'address', label: t('signupNew.stepAddress'), desc: t('signupNew.stepAddressDesc') },
+    { key: 'product', label: t('signupNew.stepProduct'), desc: t('signupNew.stepProductDesc') },
+    { key: 'customer', label: t('signupNew.stepCustomer'), desc: t('signupNew.stepCustomerDesc') },
+    { key: 'confirm', label: t('signupNew.stepConfirm'), desc: t('signupNew.stepConfirmDesc') },
+  ];
   const [products, setProducts] = useState([]);
   const [error, setError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
@@ -160,12 +162,12 @@ export default function SignupNew() {
         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
         </svg>
-        Back to signups
+        {t('signupNew.backToSignups')}
       </Link>
 
       {/* Page header */}
       <h1 className="text-3xl font-bold text-slate-900 tracking-tight mb-2 animate-fade-in-up">
-        {correctedFromId ? 'Corrected Signup' : 'New Signup'}
+        {correctedFromId ? t('signupNew.titleCorrected') : t('signupNew.title')}
       </h1>
 
       {/* Correction banner */}
@@ -175,7 +177,7 @@ export default function SignupNew() {
             <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 12c0-1.232-.046-2.453-.138-3.662a4.006 4.006 0 0 0-3.7-3.7 48.678 48.678 0 0 0-7.324 0 4.006 4.006 0 0 0-3.7 3.7c-.017.22-.032.441-.046.662M19.5 12l3-3m-3 3-3-3m-12 3c0 1.232.046 2.453.138 3.662a4.006 4.006 0 0 0 3.7 3.7 48.656 48.656 0 0 0 7.324 0 4.006 4.006 0 0 0 3.7-3.7c.017-.22.032-.441.046-.662M4.5 12l3 3m-3-3-3 3" />
           </svg>
           <p className="text-sm text-teal-700 font-medium">
-            Correcting rejected signup <span className="font-bold">{correctedFromNumber}</span> — review and adjust the data below.
+            {t('signupNew.correctionBanner', { number: correctedFromNumber })}
           </p>
         </div>
       )}
@@ -235,8 +237,8 @@ export default function SignupNew() {
         {step === 0 && (
           <div className="space-y-5">
             <div>
-              <h3 className="text-lg font-semibold text-slate-900 mb-1">Address Lookup</h3>
-              <p className="text-sm text-slate-500">Search for an address or enter a DAR ID directly.</p>
+              <h3 className="text-lg font-semibold text-slate-900 mb-1">{t('signupNew.addressLookup')}</h3>
+              <p className="text-sm text-slate-500">{t('signupNew.addressLookupDesc')}</p>
             </div>
 
             <div className="inline-flex bg-slate-100 rounded-xl p-1">
@@ -246,7 +248,7 @@ export default function SignupNew() {
                   addressMode === 'search' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
                 }`}
               >
-                Search address
+                {t('signupNew.searchAddress')}
               </button>
               <button
                 onClick={() => { setAddressMode('dar'); clearAddress(); }}
@@ -254,13 +256,13 @@ export default function SignupNew() {
                   addressMode === 'dar' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
                 }`}
               >
-                DAR ID
+                {t('signupNew.darId')}
               </button>
             </div>
 
             {addressMode === 'search' && (
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5">Address</label>
+                <label className="block text-sm font-semibold text-slate-700 mb-1.5">{t('signupNew.address')}</label>
                 <div className="relative" ref={suggestionsRef}>
                   {selectedAddress ? (
                     <div className="flex items-center gap-2 rounded-xl border-2 border-emerald-200 bg-emerald-50 px-4 py-3">
@@ -286,7 +288,7 @@ export default function SignupNew() {
                           value={addressQuery}
                           onChange={(e) => { setAddressQuery(e.target.value); setShowSuggestions(true); }}
                           onFocus={() => setShowSuggestions(true)}
-                          placeholder="Start typing an address, e.g. Vestergade 10, 8000 Aarhus"
+                          placeholder={t('signupNew.addressPlaceholder')}
                           className="w-full rounded-xl border-2 border-slate-200 bg-white pl-10 pr-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-teal-400 focus:ring-4 focus:ring-teal-500/10 transition-all"
                         />
                         {searchingAddress && (
@@ -321,13 +323,13 @@ export default function SignupNew() {
 
             {addressMode === 'dar' && (
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5">DAR ID</label>
+                <label className="block text-sm font-semibold text-slate-700 mb-1.5">{t('signupNew.darId')}</label>
                 <div className="flex gap-2">
                   <input
                     type="text"
                     value={darId}
                     onChange={(e) => setDarId(e.target.value)}
-                    placeholder="0a3f50a0-75eb-32b8-e044-0003ba298018"
+                    placeholder={t('signupNew.darIdPlaceholder')}
                     className="flex-1 rounded-xl border-2 border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-teal-400 focus:ring-4 focus:ring-teal-500/10 transition-all"
                   />
                   <button
@@ -335,7 +337,7 @@ export default function SignupNew() {
                     disabled={!darId || lookingUp}
                     className="px-5 py-3 bg-slate-900 text-white text-sm font-semibold rounded-xl hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors shadow-sm"
                   >
-                    {lookingUp ? 'Searching...' : 'Look up'}
+                    {lookingUp ? t('signupNew.searching') : t('signupNew.lookUp')}
                   </button>
                 </div>
               </div>
@@ -344,13 +346,13 @@ export default function SignupNew() {
             {lookingUp && (
               <div className="flex items-center gap-2 text-sm text-slate-500">
                 <div className="w-4 h-4 border-2 border-teal-100 border-t-teal-500 rounded-full animate-spin" />
-                Looking up metering points...
+                {t('signupNew.lookingUp')}
               </div>
             )}
 
             {meteringPoints && meteringPoints.length === 0 && (
               <div className="bg-teal-50 border border-teal-200 rounded-xl px-4 py-3 text-sm text-teal-700">
-                No metering points found for this address.
+                {t('signupNew.noMeteringPoints')}
               </div>
             )}
 
@@ -358,8 +360,8 @@ export default function SignupNew() {
               <div>
                 <p className="text-sm font-semibold text-slate-700 mb-2">
                   {meteringPoints.length === 1
-                    ? 'Metering point found:'
-                    : `${meteringPoints.length} metering points — select one:`}
+                    ? t('signupNew.meteringPointFound')
+                    : t('signupNew.meteringPointsSelect', { count: meteringPoints.length })}
                 </p>
                 <div className="space-y-2">
                   {meteringPoints.map((mp) => (
@@ -380,7 +382,7 @@ export default function SignupNew() {
                       />
                       <div>
                         <span className="font-mono text-sm text-slate-900 font-medium">{mp.gsrn}</span>
-                        <span className="ml-3 text-xs text-slate-500">{mp.type} / Grid area {mp.grid_area_code}</span>
+                        <span className="ml-3 text-xs text-slate-500">{mp.type} / {t('signupNew.gridArea')} {mp.grid_area_code}</span>
                       </div>
                     </label>
                   ))}
@@ -394,7 +396,7 @@ export default function SignupNew() {
                 disabled={!selectedGsrn}
                 className="px-6 py-2.5 bg-teal-500 text-white text-sm font-semibold rounded-xl shadow-lg shadow-teal-500/25 hover:shadow-xl hover:shadow-teal-500/30 hover:-translate-y-0.5 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:transform-none disabled:hover:shadow-lg transition-all duration-200"
               >
-                Continue
+                {t('common.continue')}
               </button>
             </div>
           </div>
@@ -404,8 +406,8 @@ export default function SignupNew() {
         {step === 1 && (
           <div className="space-y-5">
             <div>
-              <h3 className="text-lg font-semibold text-slate-900 mb-1">Select Product</h3>
-              <p className="text-sm text-slate-500">Choose the energy product for this customer.</p>
+              <h3 className="text-lg font-semibold text-slate-900 mb-1">{t('signupNew.selectProduct')}</h3>
+              <p className="text-sm text-slate-500">{t('signupNew.selectProductDesc')}</p>
             </div>
             <div className="space-y-2">
               {products.map((p) => (
@@ -430,14 +432,14 @@ export default function SignupNew() {
                         <span className="text-sm font-semibold text-slate-900">{p.name}</span>
                         {p.green_energy && (
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-600 border border-emerald-200">
-                            Green
+                            {t('signupNew.green')}
                           </span>
                         )}
                       </div>
                       <div className="flex gap-4 mt-1.5 text-xs text-slate-500 font-medium">
                         <span className="px-2 py-0.5 bg-slate-100 rounded-md">{p.energyModel}</span>
-                        <span>{p.margin_ore_per_kwh} ore/kWh margin</span>
-                        <span>{p.subscription_kr_per_month} kr/mo</span>
+                        <span>{p.margin_ore_per_kwh} {t('signupNew.marginLabel')}</span>
+                        <span>{p.subscription_kr_per_month} {t('signupNew.subscriptionLabel')}</span>
                       </div>
                       {p.description && <p className="text-xs text-slate-400 mt-1.5">{p.description}</p>}
                     </div>
@@ -446,13 +448,13 @@ export default function SignupNew() {
               ))}
             </div>
             <div className="flex justify-between pt-2">
-              <button onClick={() => setStep(0)} className="px-4 py-2 text-sm font-medium text-slate-400 hover:text-slate-700 transition-colors">Back</button>
+              <button onClick={() => setStep(0)} className="px-4 py-2 text-sm font-medium text-slate-400 hover:text-slate-700 transition-colors">{t('common.back')}</button>
               <button
                 onClick={() => { setError(null); setStep(2); }}
                 disabled={!selectedProduct}
                 className="px-6 py-2.5 bg-teal-500 text-white text-sm font-semibold rounded-xl shadow-lg shadow-teal-500/25 hover:shadow-xl hover:-translate-y-0.5 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:transform-none transition-all duration-200"
               >
-                Continue
+                {t('common.continue')}
               </button>
             </div>
           </div>
@@ -462,47 +464,47 @@ export default function SignupNew() {
         {step === 2 && (
           <div className="space-y-5">
             <div>
-              <h3 className="text-lg font-semibold text-slate-900 mb-1">Customer Details</h3>
-              <p className="text-sm text-slate-500">Enter the customer information.</p>
+              <h3 className="text-lg font-semibold text-slate-900 mb-1">{t('signupNew.customerDetails')}</h3>
+              <p className="text-sm text-slate-500">{t('signupNew.customerDetailsDesc')}</p>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="col-span-2">
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5">Full name</label>
+                <label className="block text-sm font-semibold text-slate-700 mb-1.5">{t('signupNew.fullName')}</label>
                 <input type="text" value={customerName} onChange={(e) => setCustomerName(e.target.value)}
                   className="w-full rounded-xl border-2 border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-teal-400 focus:ring-4 focus:ring-teal-500/10 transition-all" />
               </div>
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5">CPR/CVR</label>
+                <label className="block text-sm font-semibold text-slate-700 mb-1.5">{t('signupNew.cprCvr')}</label>
                 <input type="text" value={cprCvr} onChange={(e) => setCprCvr(e.target.value)} placeholder="0101901234"
                   className="w-full rounded-xl border-2 border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-teal-400 focus:ring-4 focus:ring-teal-500/10 transition-all" />
               </div>
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5">Contact type</label>
+                <label className="block text-sm font-semibold text-slate-700 mb-1.5">{t('signupNew.contactType')}</label>
                 <select value={contactType} onChange={(e) => setContactType(e.target.value)}
                   className="w-full rounded-xl border-2 border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 focus:outline-none focus:border-teal-400 focus:ring-4 focus:ring-teal-500/10 transition-all">
-                  <option value="private">Private</option>
-                  <option value="business">Business</option>
+                  <option value="private">{t('signupNew.contactPrivate')}</option>
+                  <option value="business">{t('signupNew.contactBusiness')}</option>
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5">Email</label>
+                <label className="block text-sm font-semibold text-slate-700 mb-1.5">{t('signupNew.email')}</label>
                 <input type="email" value={email} onChange={(e) => setEmail(e.target.value)}
                   className="w-full rounded-xl border-2 border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-teal-400 focus:ring-4 focus:ring-teal-500/10 transition-all" />
               </div>
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5">Phone</label>
+                <label className="block text-sm font-semibold text-slate-700 mb-1.5">{t('signupNew.phone')}</label>
                 <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+4512345678"
                   className="w-full rounded-xl border-2 border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-teal-400 focus:ring-4 focus:ring-teal-500/10 transition-all" />
               </div>
             </div>
             <div className="flex justify-between pt-2">
-              <button onClick={() => setStep(1)} className="px-4 py-2 text-sm font-medium text-slate-400 hover:text-slate-700 transition-colors">Back</button>
+              <button onClick={() => setStep(1)} className="px-4 py-2 text-sm font-medium text-slate-400 hover:text-slate-700 transition-colors">{t('common.back')}</button>
               <button
                 onClick={() => { setError(null); setStep(3); }}
                 disabled={!customerName || !cprCvr || !email}
                 className="px-6 py-2.5 bg-teal-500 text-white text-sm font-semibold rounded-xl shadow-lg shadow-teal-500/25 hover:shadow-xl hover:-translate-y-0.5 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:transform-none transition-all duration-200"
               >
-                Continue
+                {t('common.continue')}
               </button>
             </div>
           </div>
@@ -512,21 +514,21 @@ export default function SignupNew() {
         {step === 3 && (
           <div className="space-y-5">
             <div>
-              <h3 className="text-lg font-semibold text-slate-900 mb-1">Review & Submit</h3>
-              <p className="text-sm text-slate-500">Choose the process type and confirm all details.</p>
+              <h3 className="text-lg font-semibold text-slate-900 mb-1">{t('signupNew.reviewSubmit')}</h3>
+              <p className="text-sm text-slate-500">{t('signupNew.reviewSubmitDesc')}</p>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5">Process type</label>
+                <label className="block text-sm font-semibold text-slate-700 mb-1.5">{t('signupNew.processType')}</label>
                 <select value={type} onChange={(e) => setType(e.target.value)}
                   className="w-full rounded-xl border-2 border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 focus:outline-none focus:border-teal-400 focus:ring-4 focus:ring-teal-500/10 transition-all">
-                  <option value="switch">Supplier switch (BRS-001)</option>
-                  <option value="move_in">Move-in (BRS-009)</option>
+                  <option value="switch">{t('signupNew.supplierSwitch')}</option>
+                  <option value="move_in">{t('signupNew.moveIn')}</option>
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5">Effective date</label>
+                <label className="block text-sm font-semibold text-slate-700 mb-1.5">{t('signupNew.effectiveDate')}</label>
                 <input type="date" value={effectiveDate} onChange={(e) => setEffectiveDate(e.target.value)}
                   className="w-full rounded-xl border-2 border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 focus:outline-none focus:border-teal-400 focus:ring-4 focus:ring-teal-500/10 transition-all" />
               </div>
@@ -536,29 +538,29 @@ export default function SignupNew() {
               <div className="px-4 py-3 border-b border-slate-200 bg-white">
                 <div className="flex items-center gap-2">
                   <div className="w-1 h-4 rounded-full bg-teal-500" />
-                  <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Summary</p>
+                  <p className="text-xs font-bold uppercase tracking-wider text-slate-500">{t('signupNew.summary')}</p>
                 </div>
               </div>
               <div className="divide-y divide-slate-200">
                 {correctedFromNumber && (
-                  <SummaryRow label="Corrects" value={
+                  <SummaryRow label={t('signupNew.summaryCorrects')} value={
                     <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-xs font-semibold bg-rose-50 text-rose-600 border border-rose-200">
                       {correctedFromNumber}
                     </span>
                   } />
                 )}
-                {selectedAddress && <SummaryRow label="Address" value={selectedAddress.text} />}
-                <SummaryRow label="GSRN" value={<span className="font-mono bg-slate-200/50 px-2 py-0.5 rounded-md text-xs">{selectedGsrn}</span>} />
-                <SummaryRow label="Product" value={selectedProductObj?.name} />
-                <SummaryRow label="Customer" value={`${customerName} (${cprCvr})`} />
-                <SummaryRow label="Contact" value={`${contactType} · ${email} · ${phone || '—'}`} />
-                <SummaryRow label="Type" value={type === 'move_in' ? 'Move-in (BRS-009)' : 'Supplier switch (BRS-001)'} />
-                <SummaryRow label="Effective" value={effectiveDate || 'Not set'} highlight={!effectiveDate} />
+                {selectedAddress && <SummaryRow label={t('signupNew.summaryAddress')} value={selectedAddress.text} />}
+                <SummaryRow label={t('signupNew.summaryGsrn')} value={<span className="font-mono bg-slate-200/50 px-2 py-0.5 rounded-md text-xs">{selectedGsrn}</span>} />
+                <SummaryRow label={t('signupNew.summaryProduct')} value={selectedProductObj?.name} />
+                <SummaryRow label={t('signupNew.summaryCustomer')} value={`${customerName} (${cprCvr})`} />
+                <SummaryRow label={t('signupNew.summaryContact')} value={`${contactType} · ${email} · ${phone || '—'}`} />
+                <SummaryRow label={t('signupNew.summaryType')} value={type === 'move_in' ? t('signupNew.moveIn') : t('signupNew.supplierSwitch')} />
+                <SummaryRow label={t('signupNew.summaryEffective')} value={effectiveDate || t('signupNew.notSet')} highlight={!effectiveDate} />
               </div>
             </div>
 
             <div className="flex justify-between pt-2">
-              <button onClick={() => setStep(2)} className="px-4 py-2 text-sm font-medium text-slate-400 hover:text-slate-700 transition-colors">Back</button>
+              <button onClick={() => setStep(2)} className="px-4 py-2 text-sm font-medium text-slate-400 hover:text-slate-700 transition-colors">{t('common.back')}</button>
               <button
                 onClick={handleSubmit}
                 disabled={!effectiveDate || submitting}
@@ -567,12 +569,12 @@ export default function SignupNew() {
                 {submitting ? (
                   <span className="flex items-center gap-2">
                     <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    Creating...
+                    {t('signupNew.creating')}
                   </span>
                 ) : correctedFromId ? (
-                  'Create Corrected Signup'
+                  t('signupNew.createCorrectedSignup')
                 ) : (
-                  'Create Signup'
+                  t('signupNew.createSignup')
                 )}
               </button>
             </div>

@@ -1,12 +1,13 @@
 import { NavLink, Outlet } from 'react-router-dom';
+import { useTranslation } from '../i18n/LanguageContext';
 
 const navSections = [
   {
-    label: 'Overview',
+    labelKey: 'nav.overview',
     items: [
       {
         to: '/',
-        label: 'Dashboard',
+        labelKey: 'nav.dashboard',
         end: true,
         icon: (
           <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
@@ -17,11 +18,11 @@ const navSections = [
     ],
   },
   {
-    label: 'Onboarding',
+    labelKey: 'nav.onboarding',
     items: [
       {
         to: '/signups',
-        label: 'Signups',
+        labelKey: 'nav.signups',
         icon: (
           <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
@@ -30,7 +31,7 @@ const navSections = [
       },
       {
         to: '/signups/new',
-        label: 'New Signup',
+        labelKey: 'nav.newSignup',
         icon: (
           <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
@@ -40,11 +41,11 @@ const navSections = [
     ],
   },
   {
-    label: 'Portfolio',
+    labelKey: 'nav.portfolio',
     items: [
       {
         to: '/customers',
-        label: 'Customers',
+        labelKey: 'nav.customers',
         icon: (
           <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z" />
@@ -53,7 +54,7 @@ const navSections = [
       },
       {
         to: '/products',
-        label: 'Products',
+        labelKey: 'nav.products',
         icon: (
           <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" d="m3.75 13.5 10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75Z" />
@@ -63,11 +64,11 @@ const navSections = [
     ],
   },
   {
-    label: 'Operations',
+    labelKey: 'nav.operations',
     items: [
       {
         to: '/billing',
-        label: 'Billing',
+        labelKey: 'nav.billing',
         icon: (
           <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25M9 16.5v.75m3-3v3M15 12v5.25m-4.5-15H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
@@ -76,7 +77,7 @@ const navSections = [
       },
       {
         to: '/messages',
-        label: 'Messages',
+        labelKey: 'nav.messages',
         icon: (
           <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" />
@@ -88,6 +89,8 @@ const navSections = [
 ];
 
 export default function Layout() {
+  const { lang, setLang, t } = useTranslation();
+
   return (
     <div className="flex h-screen bg-slate-50">
       {/* Sidebar — flat teal */}
@@ -109,12 +112,12 @@ export default function Layout() {
         {/* Navigation */}
         <nav className="flex-1 px-3 pb-4 space-y-5 overflow-y-auto relative z-10">
           {navSections.map((section) => (
-            <div key={section.label}>
+            <div key={section.labelKey}>
               <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-teal-200/50">
-                {section.label}
+                {t(section.labelKey)}
               </p>
               <div className="space-y-0.5">
-                {section.items.map(({ to, label, icon, end }) => (
+                {section.items.map(({ to, labelKey, icon, end }) => (
                   <NavLink
                     key={to}
                     to={to}
@@ -135,7 +138,7 @@ export default function Layout() {
                         <span className={`transition-transform duration-200 ${isActive ? '' : 'group-hover:scale-110'}`}>
                           {icon}
                         </span>
-                        {label}
+                        {t(labelKey)}
                       </>
                     )}
                   </NavLink>
@@ -147,9 +150,29 @@ export default function Layout() {
 
         {/* Footer */}
         <div className="px-5 py-4 border-t border-white/10 relative z-10">
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-sm shadow-emerald-400/50" />
-            <span className="text-[11px] text-teal-100/60 font-medium">Development</span>
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-sm shadow-emerald-400/50" />
+              <span className="text-[11px] text-teal-100/60 font-medium">{t('nav.development')}</span>
+            </div>
+            <div className="flex rounded-lg overflow-hidden border border-white/20">
+              <button
+                onClick={() => setLang('en')}
+                className={`px-2 py-0.5 text-[10px] font-bold transition-colors ${
+                  lang === 'en' ? 'bg-white/20 text-white' : 'text-teal-200/50 hover:text-white hover:bg-white/10'
+                }`}
+              >
+                EN
+              </button>
+              <button
+                onClick={() => setLang('da')}
+                className={`px-2 py-0.5 text-[10px] font-bold transition-colors ${
+                  lang === 'da' ? 'bg-white/20 text-white' : 'text-teal-200/50 hover:text-white hover:bg-white/10'
+                }`}
+              >
+                DA
+              </button>
+            </div>
           </div>
           <p className="text-[10px] text-teal-200/30 mt-1">Volt v0.1</p>
         </div>

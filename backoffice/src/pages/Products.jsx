@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import { api } from '../api';
+import { useTranslation } from '../i18n/LanguageContext';
 
 export default function Products() {
+  const { t } = useTranslation();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -18,7 +20,7 @@ export default function Products() {
       <div className="flex items-center justify-center h-full">
         <div className="flex flex-col items-center gap-3">
           <div className="w-8 h-8 border-[3px] border-teal-100 border-t-teal-500 rounded-full animate-spin" />
-          <p className="text-sm text-slate-400 font-medium">Loading products...</p>
+          <p className="text-sm text-slate-400 font-medium">{t('products.loadingProducts')}</p>
         </div>
       </div>
     );
@@ -27,8 +29,8 @@ export default function Products() {
   return (
     <div className="p-8 max-w-6xl mx-auto">
       <div className="mb-6 animate-fade-in-up">
-        <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Products</h1>
-        <p className="text-base text-slate-500 mt-1">Energy products available for customer signups.</p>
+        <h1 className="text-3xl font-bold text-slate-900 tracking-tight">{t('products.title')}</h1>
+        <p className="text-base text-slate-500 mt-1">{t('products.subtitle')}</p>
       </div>
 
       {error && (
@@ -48,19 +50,19 @@ export default function Products() {
                 <path strokeLinecap="round" strokeLinejoin="round" d="m3.75 13.5 10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75Z" />
               </svg>
             </div>
-            <p className="text-sm font-semibold text-slate-500">No products configured</p>
+            <p className="text-sm font-semibold text-slate-500">{t('products.noProducts')}</p>
           </div>
         ) : (
           <table className="w-full">
             <thead>
               <tr className="border-b border-slate-50 bg-slate-50/50">
-                <th className="text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-4 py-2">Product</th>
-                <th className="text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-4 py-2">Model</th>
-                <th className="text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-4 py-2">Green</th>
-                <th className="text-right text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-4 py-2">Margin</th>
-                <th className="text-right text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-4 py-2">Supplement</th>
-                <th className="text-right text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-4 py-2">Subscription</th>
-                <th className="text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-4 py-2">Description</th>
+                <th className="text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-4 py-2">{t('products.colProduct')}</th>
+                <th className="text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-4 py-2">{t('products.colModel')}</th>
+                <th className="text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-4 py-2">{t('products.colGreen')}</th>
+                <th className="text-right text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-4 py-2">{t('products.colMargin')}</th>
+                <th className="text-right text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-4 py-2">{t('products.colSupplement')}</th>
+                <th className="text-right text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-4 py-2">{t('products.colSubscription')}</th>
+                <th className="text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-4 py-2">{t('products.colDescription')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">

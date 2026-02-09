@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { api } from '../api';
+import { useTranslation } from '../i18n/LanguageContext';
 
 export default function CustomerDetail() {
+  const { t } = useTranslation();
   const { id } = useParams();
   const [customer, setCustomer] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -20,13 +22,13 @@ export default function CustomerDetail() {
       <div className="flex items-center justify-center h-full">
         <div className="flex flex-col items-center gap-3">
           <div className="w-8 h-8 border-[3px] border-teal-100 border-t-teal-500 rounded-full animate-spin" />
-          <p className="text-sm text-slate-400 font-medium">Loading customer...</p>
+          <p className="text-sm text-slate-400 font-medium">{t('customerDetail.loadingCustomer')}</p>
         </div>
       </div>
     );
   }
   if (error) return <div className="p-8"><div className="bg-rose-50 border border-rose-200 rounded-xl px-4 py-3 text-sm text-rose-600">{error}</div></div>;
-  if (!customer) return <div className="p-8"><p className="text-sm text-slate-500">Customer not found.</p></div>;
+  if (!customer) return <div className="p-8"><p className="text-sm text-slate-500">{t('customerDetail.notFound')}</p></div>;
 
   return (
     <div className="p-8 max-w-4xl mx-auto">
@@ -34,7 +36,7 @@ export default function CustomerDetail() {
         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
         </svg>
-        Back to customers
+        {t('customerDetail.backToCustomers')}
       </Link>
 
       <div className="flex items-center gap-4 mb-6 animate-fade-in-up">
@@ -53,7 +55,7 @@ export default function CustomerDetail() {
           customer.status === 'active' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-100 text-slate-500'
         }`}>
           <span className={`w-1.5 h-1.5 rounded-full ${customer.status === 'active' ? 'bg-emerald-400' : 'bg-slate-400'}`} />
-          {customer.status}
+          {t('status.' + customer.status)}
         </span>
       </div>
 
@@ -61,22 +63,22 @@ export default function CustomerDetail() {
         <div className="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="w-1 h-4 rounded-full bg-teal-500" />
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">Contracts</h3>
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">{t('customerDetail.contracts')}</h3>
           </div>
           <span className="text-xs font-semibold text-teal-600 bg-teal-50 px-2.5 py-0.5 rounded-full">{customer.contracts.length}</span>
         </div>
         {customer.contracts.length === 0 ? (
           <div className="p-10 text-center">
-            <p className="text-sm text-slate-400 font-medium">No contracts yet.</p>
+            <p className="text-sm text-slate-400 font-medium">{t('customerDetail.noContracts')}</p>
           </div>
         ) : (
           <table className="w-full">
             <thead>
               <tr className="border-b border-slate-50 bg-slate-50/50">
-                <th className="text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-4 py-2">GSRN</th>
-                <th className="text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-4 py-2">Billing</th>
-                <th className="text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-4 py-2">Payment</th>
-                <th className="text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-4 py-2">Start</th>
+                <th className="text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-4 py-2">{t('customerDetail.colGsrn')}</th>
+                <th className="text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-4 py-2">{t('customerDetail.colBilling')}</th>
+                <th className="text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-4 py-2">{t('customerDetail.colPayment')}</th>
+                <th className="text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-4 py-2">{t('customerDetail.colStart')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
@@ -99,24 +101,24 @@ export default function CustomerDetail() {
         <div className="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="w-1 h-4 rounded-full bg-teal-500" />
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">Metering Points</h3>
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">{t('customerDetail.meteringPoints')}</h3>
           </div>
           <span className="text-xs font-semibold text-teal-600 bg-teal-50 px-2.5 py-0.5 rounded-full">{customer.meteringPoints.length}</span>
         </div>
         {customer.meteringPoints.length === 0 ? (
           <div className="p-10 text-center">
-            <p className="text-sm text-slate-400 font-medium">No metering points linked.</p>
+            <p className="text-sm text-slate-400 font-medium">{t('customerDetail.noMeteringPoints')}</p>
           </div>
         ) : (
           <table className="w-full">
             <thead>
               <tr className="border-b border-slate-50 bg-slate-50/50">
-                <th className="text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-4 py-2">GSRN</th>
-                <th className="text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-4 py-2">Type</th>
-                <th className="text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-4 py-2">Settlement</th>
-                <th className="text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-4 py-2">Grid Area</th>
-                <th className="text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-4 py-2">Status</th>
-                <th className="text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-4 py-2">Supply Period</th>
+                <th className="text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-4 py-2">{t('customerDetail.colGsrn')}</th>
+                <th className="text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-4 py-2">{t('customerDetail.colType')}</th>
+                <th className="text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-4 py-2">{t('customerDetail.colSettlement')}</th>
+                <th className="text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-4 py-2">{t('customerDetail.colGridArea')}</th>
+                <th className="text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-4 py-2">{t('customerDetail.colStatus')}</th>
+                <th className="text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-4 py-2">{t('customerDetail.colSupplyPeriod')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
@@ -133,12 +135,12 @@ export default function CustomerDetail() {
                       mp.connectionStatus === 'connected' ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'
                     }`}>
                       <span className={`w-1.5 h-1.5 rounded-full ${mp.connectionStatus === 'connected' ? 'bg-emerald-400' : 'bg-slate-400'}`} />
-                      {mp.connectionStatus}
+                      {t('status.' + mp.connectionStatus)}
                     </span>
                   </td>
                   <td className="px-4 py-1.5 text-xs text-slate-500">
                     {mp.supplyStart
-                      ? `${mp.supplyStart}${mp.supplyEnd ? ` – ${mp.supplyEnd}` : ' – ongoing'}`
+                      ? `${mp.supplyStart}${mp.supplyEnd ? ` – ${mp.supplyEnd}` : ` – ${t('customerDetail.ongoing')}`}`
                       : <span className="text-slate-300">—</span>}
                   </td>
                 </tr>

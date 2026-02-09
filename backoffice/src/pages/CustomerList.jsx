@@ -1,10 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api';
+import { useTranslation } from '../i18n/LanguageContext';
 
 const PAGE_SIZE = 50;
 
 export default function CustomerList() {
+  const { t } = useTranslation();
   const [data, setData] = useState(null);
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
@@ -43,7 +45,7 @@ export default function CustomerList() {
       <div className="flex items-center justify-center h-full">
         <div className="flex flex-col items-center gap-3">
           <div className="w-8 h-8 border-[3px] border-teal-100 border-t-teal-500 rounded-full animate-spin" />
-          <p className="text-sm text-slate-400 font-medium">Loading customers...</p>
+          <p className="text-sm text-slate-400 font-medium">{t('customerList.loadingCustomers')}</p>
         </div>
       </div>
     );
@@ -52,8 +54,8 @@ export default function CustomerList() {
   return (
     <div className="p-8 max-w-6xl mx-auto">
       <div className="mb-6 animate-fade-in-up">
-        <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Customers</h1>
-        <p className="text-base text-slate-500 mt-1">Active portfolio of electricity customers.</p>
+        <h1 className="text-3xl font-bold text-slate-900 tracking-tight">{t('customerList.title')}</h1>
+        <p className="text-base text-slate-500 mt-1">{t('customerList.subtitle')}</p>
       </div>
 
       {/* Search bar */}
@@ -67,16 +69,16 @@ export default function CustomerList() {
               type="text"
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
-              placeholder="Search by name or CPR/CVR..."
+              placeholder={t('customerList.searchPlaceholder')}
               className="w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-500/10 transition-all"
             />
           </div>
           <button type="submit" className="px-4 py-2.5 bg-teal-500 text-white text-sm font-semibold rounded-xl hover:bg-teal-600 transition-colors">
-            Search
+            {t('common.search')}
           </button>
           {search && (
             <button type="button" onClick={clearSearch} className="px-3 py-2.5 text-sm text-slate-500 hover:text-slate-700 transition-colors">
-              Clear
+              {t('common.clear')}
             </button>
           )}
         </div>
@@ -99,19 +101,19 @@ export default function CustomerList() {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z" />
               </svg>
             </div>
-            <p className="text-sm font-semibold text-slate-500">{search ? 'No matches' : 'No customers yet'}</p>
+            <p className="text-sm font-semibold text-slate-500">{search ? t('customerList.noMatches') : t('customerList.noCustomersYet')}</p>
             <p className="text-xs text-slate-400 mt-1">
-              {search ? 'Try a different search term.' : 'Customers appear here after signup activation.'}
+              {search ? t('customerList.tryDifferentSearch') : t('customerList.appearsAfterActivation')}
             </p>
           </div>
         ) : (
           <table className="w-full">
             <thead>
               <tr className="border-b border-slate-50 bg-slate-50/50">
-                <th className="text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-4 py-2">Name</th>
-                <th className="text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-4 py-2">CPR/CVR</th>
-                <th className="text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-4 py-2">Type</th>
-                <th className="text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-4 py-2">Status</th>
+                <th className="text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-4 py-2">{t('customerList.colName')}</th>
+                <th className="text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-4 py-2">{t('customerList.colCprCvr')}</th>
+                <th className="text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-4 py-2">{t('customerList.colType')}</th>
+                <th className="text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-4 py-2">{t('customerList.colStatus')}</th>
                 <th className="px-4 py-2"><span className="sr-only">View</span></th>
               </tr>
             </thead>
@@ -139,7 +141,7 @@ export default function CustomerList() {
                       c.status === 'active' ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'
                     }`}>
                       <span className={`w-1.5 h-1.5 rounded-full ${c.status === 'active' ? 'bg-emerald-400' : 'bg-slate-400'}`} />
-                      {c.status}
+                      {t('status.' + c.status)}
                     </span>
                   </td>
                   <td className="px-4 py-1.5 text-right">
@@ -160,8 +162,8 @@ export default function CustomerList() {
       {!loading && totalPages > 1 && (
         <div className="flex items-center justify-between mt-4 px-1">
           <p className="text-xs text-slate-400 font-medium">
-            {totalCount.toLocaleString('da-DK')} customer{totalCount !== 1 ? 's' : ''}
-            {search && <span className="ml-1">matching "{search}"</span>}
+            {totalCount.toLocaleString('da-DK')} {t('customerList.customers', { count: totalCount })}
+            {search && <span className="ml-1">{t('customerList.matchingSearch', { search })}</span>}
           </p>
           <div className="flex items-center gap-1">
             <button
@@ -169,7 +171,7 @@ export default function CustomerList() {
               disabled={page <= 1}
               className="px-3 py-1.5 text-xs font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
-              Previous
+              {t('common.previous')}
             </button>
             <span className="px-3 py-1.5 text-xs font-semibold text-slate-700">
               {page} / {totalPages}
@@ -179,7 +181,7 @@ export default function CustomerList() {
               disabled={page >= totalPages}
               className="px-3 py-1.5 text-xs font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
-              Next
+              {t('common.next')}
             </button>
           </div>
         </div>
@@ -187,8 +189,8 @@ export default function CustomerList() {
 
       {!loading && totalPages <= 1 && totalCount > 0 && (
         <p className="text-xs text-slate-400 mt-3 px-1 font-medium">
-          {totalCount.toLocaleString('da-DK')} customer{totalCount !== 1 ? 's' : ''}
-          {search && <span className="ml-1">matching "{search}"</span>}
+          {totalCount.toLocaleString('da-DK')} {t('customerList.customers', { count: totalCount })}
+          {search && <span className="ml-1">{t('customerList.matchingSearch', { search })}</span>}
         </p>
       )}
     </div>

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { api } from '../api';
+import { useTranslation } from '../i18n/LanguageContext';
 
 const statusStyles = {
   registered: { dot: 'bg-slate-400', badge: 'bg-slate-100 text-slate-600' },
@@ -10,17 +11,18 @@ const statusStyles = {
   cancelled:  { dot: 'bg-slate-400', badge: 'bg-slate-100 text-slate-500' },
 };
 
-function StatusBadge({ status }) {
+function StatusBadge({ status, label }) {
   const cfg = statusStyles[status] || statusStyles.registered;
   return (
     <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold ${cfg.badge}`}>
       <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
-      {status}
+      {label || status}
     </span>
   );
 }
 
 export default function SignupDetail() {
+  const { t } = useTranslation();
   const { id } = useParams();
   const navigate = useNavigate();
   const [signup, setSignup] = useState(null);
@@ -38,7 +40,7 @@ export default function SignupDetail() {
   }, [id]);
 
   async function handleCancel() {
-    if (!signup || !confirm('Cancel this signup?')) return;
+    if (!signup || !confirm(t('signupDetail.cancelConfirm'))) return;
     setCancelling(true);
     try {
       await api.cancelSignup(signup.signupNumber);
@@ -73,13 +75,13 @@ export default function SignupDetail() {
       <div className="flex items-center justify-center h-full">
         <div className="flex flex-col items-center gap-3">
           <div className="w-8 h-8 border-[3px] border-teal-100 border-t-teal-500 rounded-full animate-spin" />
-          <p className="text-sm text-slate-400 font-medium">Loading signup...</p>
+          <p className="text-sm text-slate-400 font-medium">{t('signupDetail.loadingSignup')}</p>
         </div>
       </div>
     );
   }
   if (error) return <div className="p-8"><div className="bg-rose-50 border border-rose-200 rounded-xl px-4 py-3 text-sm text-rose-600">{error}</div></div>;
-  if (!signup) return <div className="p-8"><p className="text-sm text-slate-500">Signup not found.</p></div>;
+  if (!signup) return <div className="p-8"><p className="text-sm text-slate-500">{t('signupDetail.notFound')}</p></div>;
 
   const canCancel = signup.status === 'registered' || signup.status === 'processing';
   const correctionChain = signup.correctionChain || [];
@@ -90,13 +92,13 @@ export default function SignupDetail() {
         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
         </svg>
-        Back to signups
+        {t('signupDetail.backToSignups')}
       </Link>
 
       <div className="flex items-center justify-between mb-6 animate-fade-in-up">
         <div className="flex items-center gap-3">
           <h1 className="text-3xl font-bold text-slate-900 tracking-tight">{signup.signupNumber}</h1>
-          <StatusBadge status={signup.status} />
+          <StatusBadge status={signup.status} label={t('status.' + signup.status)} />
         </div>
         {canCancel && (
           <button
@@ -107,7 +109,7 @@ export default function SignupDetail() {
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
             </svg>
-            {cancelling ? 'Cancelling...' : 'Cancel'}
+            {cancelling ? t('signupDetail.cancelling') : t('common.cancel')}
           </button>
         )}
       </div>
@@ -121,9 +123,9 @@ export default function SignupDetail() {
             </svg>
           </div>
           <div>
-            <p className="text-sm font-semibold text-teal-800">Correction of rejected signup</p>
+            <p className="text-sm font-semibold text-teal-800">{t('signupDetail.correctionOf')}</p>
             <p className="text-xs text-teal-600 mt-0.5">
-              This signup corrects{' '}
+              {t('signupDetail.correctsLink')}{' '}
               <Link to={`/signups/${signup.correctedFromId}`} className="font-semibold underline hover:text-teal-800">
                 {signup.correctedFromSignupNumber}
               </Link>
@@ -142,13 +144,13 @@ export default function SignupDetail() {
               </svg>
             </div>
             <div className="flex-1">
-              <p className="text-sm font-semibold text-rose-800">Rejected by DataHub</p>
+              <p className="text-sm font-semibold text-rose-800">{t('signupDetail.rejectedByDatahub')}</p>
               <p className="text-sm text-rose-600 mt-1">{signup.rejectionReason}</p>
               <button
                 onClick={handleCreateCorrected}
                 className="inline-flex items-center gap-1.5 mt-3 px-4 py-2 bg-teal-500 text-white text-sm font-semibold rounded-xl shadow-md shadow-teal-500/20 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200"
               >
-                Create corrected signup
+                {t('signupDetail.createCorrected')}
                 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
                 </svg>
@@ -163,7 +165,7 @@ export default function SignupDetail() {
         <div className="mb-5 bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden animate-fade-in-up">
           <div className="px-5 py-3.5 border-b border-slate-100 flex items-center gap-2">
             <div className="w-1 h-4 rounded-full bg-teal-500" />
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">Correction History</h3>
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">{t('signupDetail.correctionHistory')}</h3>
           </div>
           <div className="p-4">
             <div className="flex items-center gap-2 flex-wrap">
@@ -198,41 +200,41 @@ export default function SignupDetail() {
       <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden mb-5 animate-fade-in-up" style={{ animationDelay: '60ms' }}>
         <div className="px-5 py-3.5 border-b border-slate-100 flex items-center gap-2">
           <div className="w-1 h-4 rounded-full bg-teal-500" />
-          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">Details</h3>
+          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">{t('signupDetail.details')}</h3>
         </div>
         <div className="grid grid-cols-2 divide-y divide-slate-100">
-          <Field label="Type" value={signup.type === 'move_in' ? 'Move-in (BRS-009)' : 'Supplier switch (BRS-001)'} />
-          <Field label="Effective Date" value={signup.effectiveDate} />
-          <Field label="GSRN" value={<span className="font-mono text-xs bg-slate-100 px-2 py-1 rounded-md text-slate-600">{signup.gsrn}</span>} />
-          <Field label="DAR ID" value={<span className="font-mono text-xs text-slate-400">{signup.darId}</span>} />
-          <Field label="Product" value={signup.productName} />
-          <Field label="Created" value={new Date(signup.createdAt).toLocaleString('da-DK')} />
+          <Field label={t('signupDetail.type')} value={signup.type === 'move_in' ? t('signupDetail.typeMoveIn') : t('signupDetail.typeSwitch')} />
+          <Field label={t('signupDetail.effectiveDate')} value={signup.effectiveDate} />
+          <Field label={t('signupDetail.gsrn')} value={<span className="font-mono text-xs bg-slate-100 px-2 py-1 rounded-md text-slate-600">{signup.gsrn}</span>} />
+          <Field label={t('signupDetail.darId')} value={<span className="font-mono text-xs text-slate-400">{signup.darId}</span>} />
+          <Field label={t('signupDetail.product')} value={signup.productName} />
+          <Field label={t('signupDetail.created')} value={new Date(signup.createdAt).toLocaleString('da-DK')} />
         </div>
       </div>
 
       <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden mb-5 animate-fade-in-up" style={{ animationDelay: '120ms' }}>
         <div className="px-5 py-3.5 border-b border-slate-100 flex items-center gap-2">
           <div className="w-1 h-4 rounded-full bg-teal-500" />
-          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">Customer</h3>
+          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">{t('signupDetail.customer')}</h3>
         </div>
         <div className="grid grid-cols-2 divide-y divide-slate-100">
           <Field
-            label="Name"
+            label={t('signupDetail.name')}
             value={
               <Link to={`/customers/${signup.customerId}`} className="font-semibold text-teal-600 hover:text-teal-800 transition-colors">
                 {signup.customerName}
               </Link>
             }
           />
-          <Field label="CPR/CVR" value={<span className="font-mono text-xs bg-slate-100 px-2 py-1 rounded-md text-slate-500">{signup.cprCvr}</span>} />
-          <Field label="Contact Type" value={signup.contactType} />
+          <Field label={t('signupDetail.cprCvr')} value={<span className="font-mono text-xs bg-slate-100 px-2 py-1 rounded-md text-slate-500">{signup.cprCvr}</span>} />
+          <Field label={t('signupDetail.contactType')} value={signup.contactType} />
         </div>
       </div>
 
       <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden animate-fade-in-up" style={{ animationDelay: '180ms' }}>
         <div className="px-5 py-3.5 border-b border-slate-100 flex items-center gap-2">
           <div className="w-1 h-4 rounded-full bg-teal-500" />
-          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">Process Timeline</h3>
+          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">{t('signupDetail.processTimeline')}</h3>
         </div>
         {events.length === 0 ? (
           <div className="p-10 text-center">
@@ -241,7 +243,7 @@ export default function SignupDetail() {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
               </svg>
             </div>
-            <p className="text-sm text-slate-400 font-medium">No events yet</p>
+            <p className="text-sm text-slate-400 font-medium">{t('signupDetail.noEventsYet')}</p>
           </div>
         ) : (
           <div className="p-5">
