@@ -335,10 +335,10 @@ public sealed class PortfolioRepository : IPortfolioRepository
     {
         const string sql = """
             SELECT
-                (SELECT COUNT(*) FROM portfolio.signup WHERE status IN ('registered', 'processing')) AS pending_signups,
-                (SELECT COUNT(*) FROM portfolio.customer WHERE status = 'active') AS active_customers,
-                (SELECT COUNT(*) FROM portfolio.signup WHERE status = 'rejected') AS rejected_signups,
-                (SELECT COUNT(*) FROM portfolio.product WHERE is_active = true) AS product_count
+                (SELECT COUNT(*) FROM portfolio.signup WHERE status IN ('registered', 'processing')) AS PendingSignups,
+                (SELECT COUNT(*) FROM portfolio.customer WHERE status = 'active') AS ActiveCustomers,
+                (SELECT COUNT(*) FROM portfolio.signup WHERE status = 'rejected') AS RejectedSignups,
+                (SELECT COUNT(*) FROM portfolio.product WHERE is_active = true) AS ProductCount
             """;
 
         await using var conn = new NpgsqlConnection(_connectionString);
