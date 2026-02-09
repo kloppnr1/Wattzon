@@ -66,12 +66,14 @@ public sealed class EnergiDataServiceClient : ISpotPriceProvider
     {
         // energidataservice.dk interprets dates in Danish timezone (CET/CEST).
         // We pass dates as yyyy-MM-dd which the API interprets as Danish midnight.
+        // The filter parameter must be URL-encoded JSON.
         var filter = JsonSerializer.Serialize(new { PriceArea = new[] { priceArea } });
+        var encodedFilter = Uri.EscapeDataString(filter);
         var url = $"{BaseUrl}/{dataset}" +
                   $"?start={from:yyyy-MM-dd}" +
                   $"&end={to:yyyy-MM-dd}" +
-                  $"&filter={filter}" +
-                  $"&sort=HourUTC asc" +
+                  $"&filter={encodedFilter}" +
+                  $"&sort=HourUTC%20asc" +
                   $"&columns=HourUTC,PriceArea,SpotPriceDKK";
 
         _logger.LogInformation(
