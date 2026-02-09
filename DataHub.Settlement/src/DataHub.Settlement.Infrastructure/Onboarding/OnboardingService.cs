@@ -188,9 +188,10 @@ public sealed class OnboardingService : IOnboardingService
                 }
                 else
                 {
-                    // Create new customer
+                    // Create new customer (map contact_type from signup to customer schema)
+                    var customerContactType = MapContactType(signupDetail.ContactType);
                     var customer = await _portfolioRepo.CreateCustomerAsync(
-                        signupDetail.CustomerName, signupDetail.CprCvr, signupDetail.ContactType, ct);
+                        signupDetail.CustomerName, signupDetail.CprCvr, customerContactType, ct);
 
                     await _signupRepo.LinkCustomerAsync(signup.Id, customer.Id, ct);
 
@@ -216,6 +217,17 @@ public sealed class OnboardingService : IOnboardingService
             "rejected" => "rejected",
             "cancelled" => "cancelled",
             _ => null,
+        };
+    }
+
+    private static string MapContactType(string signupContactType)
+    {
+        // Map signup.customer_contact_type ('person'/'company') to customer.contact_type ('private'/'business')
+        return signupContactType switch
+        {
+            "person" => "private",
+            "company" => "business",
+            _ => signupContactType, // Fallback to original value
         };
     }
 

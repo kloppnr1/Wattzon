@@ -128,8 +128,8 @@ public class QueuePollerTests
         // 4. Customer created, Contract created, Process marked "completed"
 
         var ct = CancellationToken.None;
-        const string gsrn = "571313100000012345";
-        const string cprCvr = "0101901234";
+        const string gsrn = "571313100000012345"; // Must match RSM-007 fixture
+        const string cprCvr = "9999999999"; // Unique CPR/CVR for this test
 
         // ──── ARRANGE ────
 
@@ -138,7 +138,8 @@ public class QueuePollerTests
         var parser = new CimJsonParser();
         var processRepo = new ProcessRepository(TestDatabase.ConnectionString);
         var signupRepo = new SignupRepository(TestDatabase.ConnectionString);
-        var clock = new TestClock { Today = new DateOnly(2025, 1, 1) };
+        // Set clock to early December to allow 15 business days notice for Jan 1 effective date (accounting for Christmas holidays)
+        var clock = new TestClock { Today = new DateOnly(2024, 12, 5) };
         var onboardingService = new OnboardingService(
             signupRepo, _portfolioRepo, processRepo,
             new StubAddressLookupClient(), clock,
@@ -185,9 +186,9 @@ public class QueuePollerTests
         var processBefore = await processRepo.GetAsync(signup.ProcessRequestId.Value, ct);
         processBefore!.Status.Should().Be("effectuation_pending");
 
-        // Verify no customer exists yet
-        var customersBefore = await _portfolioRepo.GetCustomersAsync(ct);
-        customersBefore.Should().BeEmpty("no customer should exist before RSM-007");
+        // Verify no customer exists for this CPR/CVR yet
+        var customerBefore = await _portfolioRepo.GetCustomerByCprCvrAsync(cprCvr, ct);
+        customerBefore.Should().BeNull("customer should not exist for this CPR/CVR before RSM-007");
 
         // ──── ACT ────
 
@@ -205,13 +206,12 @@ public class QueuePollerTests
         var processAfter = await processRepo.GetAsync(signup.ProcessRequestId.Value, ct);
         processAfter!.Status.Should().Be("completed", "RSM-007 should mark process as completed");
 
-        // 8. Verify Customer created
-        var customersAfter = await _portfolioRepo.GetCustomersAsync(ct);
-        customersAfter.Should().HaveCount(1, "RSM-007 should create customer");
-        var customer = customersAfter[0];
-        customer.Name.Should().Be("RSM-007 Test Customer");
+        // 8. Verify Customer created for this CPR/CVR
+        var customer = await _portfolioRepo.GetCustomerByCprCvrAsync(cprCvr, ct);
+        customer.Should().NotBeNull("RSM-007 should create customer");
+        customer!.Name.Should().Be("RSM-007 Test Customer");
         customer.CprCvr.Should().Be(cprCvr);
-        customer.ContactType.Should().Be("person");
+        customer.ContactType.Should().Be("private", "signup contact_type 'person' maps to customer contact_type 'private'");
 
         // 9. Verify Signup updated with customer_id and status "active"
         var signupAfter = await signupRepo.GetByIdAsync(signup.Id, ct);

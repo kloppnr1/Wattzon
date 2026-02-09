@@ -110,7 +110,7 @@ public sealed class CustomerCreationTimingTests : IAsyncLifetime
         var customer = customers[0];
         customer.Name.Should().Be("Jane Smith");
         customer.CprCvr.Should().Be("9876543210");
-        customer.ContactType.Should().Be("company");
+        customer.ContactType.Should().Be("business", "signup contact_type 'company' maps to customer contact_type 'business'");
 
         // Verify signup is now linked to customer
         var updatedSignup = await _signupRepo.GetByIdAsync(signup.Id, CancellationToken.None);
