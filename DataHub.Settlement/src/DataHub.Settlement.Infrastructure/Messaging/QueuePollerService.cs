@@ -200,7 +200,8 @@ public sealed class QueuePollerService : BackgroundService
                 await _onboardingService.SyncFromProcessAsync(signup.ProcessRequestId.Value, "completed", null, ct);
 
                 // 3. Reload signup to get the customer_id (just created or linked)
-                signup = await _signupRepo.GetActiveByGsrnAsync(masterData.MeteringPointId, ct);
+                // Note: Can't use GetActiveByGsrnAsync here because it filters OUT status='active'
+                signup = await _signupRepo.GetByIdAsync(signup.Id, ct);
 
                 if (signup?.CustomerId is not null)
                 {
