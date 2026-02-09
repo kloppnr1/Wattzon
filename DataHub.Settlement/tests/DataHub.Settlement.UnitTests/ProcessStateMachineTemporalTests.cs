@@ -11,22 +11,9 @@ public class ProcessStateMachineTemporalTests
 
     private ProcessStateMachine CreateSut() => new(_repo, _clock);
 
-    [Fact]
-    public async Task Cannot_effectuate_before_effective_date()
-    {
-        _clock.Today = new DateOnly(2025, 1, 15);
-        var sut = CreateSut();
-
-        var request = await sut.CreateRequestAsync("571313100000012345", "supplier_switch",
-            new DateOnly(2025, 2, 1), CancellationToken.None);
-        await sut.MarkSentAsync(request.Id, "corr-123", CancellationToken.None);
-        await sut.MarkAcknowledgedAsync(request.Id, CancellationToken.None);
-
-        var act = () => sut.MarkCompletedAsync(request.Id, CancellationToken.None);
-
-        await act.Should().ThrowAsync<InvalidOperationException>()
-            .WithMessage("*effective date*future*");
-    }
+    // NOTE: Temporal guard on MarkCompletedAsync was intentionally removed.
+    // RSM-007 is the ONLY signal that marks processes "completed", and we trust
+    // DataHub to only send RSM-007 when appropriate. See V022 architecture decision.
 
     [Fact]
     public async Task Can_effectuate_on_effective_date()
