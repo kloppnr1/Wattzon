@@ -1,4 +1,6 @@
+using DataHub.Settlement.Application.AddressLookup;
 using DataHub.Settlement.Application.DataHub;
+using DataHub.Settlement.Application.Lifecycle;
 using DataHub.Settlement.Application.Metering;
 using DataHub.Settlement.Application.Onboarding;
 using DataHub.Settlement.Infrastructure.Lifecycle;
@@ -30,6 +32,9 @@ public class QueuePollerTests
 
     private static string LoadSingleDayFixture() =>
         File.ReadAllText(Path.Combine("..", "..", "..", "..", "..", "fixtures", "rsm012-single-day.json"));
+
+    private static string LoadRsm007Fixture() =>
+        File.ReadAllText(Path.Combine("..", "..", "..", "..", "..", "fixtures", "rsm007-activation.json"));
 
     [Fact]
     public async Task Processes_rsm012_message_end_to_end()
@@ -111,5 +116,141 @@ public class QueuePollerTests
         // Queue should be freed
         var peek = await client.PeekAsync(QueueName.Timeseries, CancellationToken.None);
         peek.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task RSM007_creates_customer_and_activates_portfolio()
+    {
+        // This test verifies the complete RSM-007 activation flow:
+        // 1. Signup created with customer info (customer_id = NULL)
+        // 2. Process advances to effectuation_pending
+        // 3. RSM-007 received (via QueuePoller)
+        // 4. Customer created, Contract created, Process marked "completed"
+
+        var ct = CancellationToken.None;
+        const string gsrn = "571313100000012345";
+        const string cprCvr = "0101901234";
+
+        // ──── ARRANGE ────
+
+        // 1. Set up repositories and services
+        var client = new FakeDataHubClient();
+        var parser = new CimJsonParser();
+        var processRepo = new ProcessRepository(TestDatabase.ConnectionString);
+        var signupRepo = new SignupRepository(TestDatabase.ConnectionString);
+        var clock = new TestClock { Today = new DateOnly(2025, 1, 1) };
+        var onboardingService = new OnboardingService(
+            signupRepo, _portfolioRepo, processRepo,
+            new StubAddressLookupClient(), clock,
+            NullLogger<OnboardingService>.Instance);
+
+        var poller = new QueuePollerService(
+            client, parser, _meteringRepo, _portfolioRepo, processRepo, signupRepo,
+            onboardingService, clock, _messageLog,
+            NullLogger<QueuePollerService>.Instance);
+
+        // 2. Ensure grid area exists (required for RSM-007)
+        await _portfolioRepo.EnsureGridAreaAsync("344", "5790000392261", "N1 A/S", "DK1", ct);
+
+        // 3. Create product
+        var product = await _portfolioRepo.CreateProductAsync(
+            "Spot Test", "spot", 0.04m, null, 39.00m, ct);
+
+        // 4. Create signup via OnboardingService
+        var signupRequest = new SignupRequest(
+            DarId: "test-dar-rsm007",
+            CustomerName: "RSM-007 Test Customer",
+            CprCvr: cprCvr,
+            ContactType: "person",
+            Email: "rsm007@test.com",
+            Phone: "+4512345678",
+            ProductId: product.Id,
+            Type: "switch",
+            EffectiveDate: new DateOnly(2025, 1, 1),
+            Gsrn: gsrn
+        );
+
+        var signupResponse = await onboardingService.CreateSignupAsync(signupRequest, ct);
+        var signup = await signupRepo.GetBySignupNumberAsync(signupResponse.SignupId, ct);
+
+        // Verify initial state: customer_id is NULL
+        signup.Should().NotBeNull();
+        signup!.CustomerId.Should().BeNull("customer should not exist before RSM-007");
+
+        // 5. Advance process to effectuation_pending
+        var stateMachine = new ProcessStateMachine(processRepo, clock);
+        await stateMachine.MarkSentAsync(signup.ProcessRequestId!.Value, "corr-rsm007-test", ct);
+        await stateMachine.MarkAcknowledgedAsync(signup.ProcessRequestId.Value, ct);
+
+        var processBefore = await processRepo.GetAsync(signup.ProcessRequestId.Value, ct);
+        processBefore!.Status.Should().Be("effectuation_pending");
+
+        // Verify no customer exists yet
+        var customersBefore = await _portfolioRepo.GetCustomersAsync(ct);
+        customersBefore.Should().BeEmpty("no customer should exist before RSM-007");
+
+        // ──── ACT ────
+
+        // 6. Enqueue RSM-007 message and process it
+        client.Enqueue(QueueName.MasterData,
+            new DataHubMessage("msg-rsm007-test", "RSM-007", "corr-rsm007-test", LoadRsm007Fixture()));
+
+        var processed = await poller.PollQueueAsync(QueueName.MasterData, ct);
+
+        // ──── ASSERT ────
+
+        processed.Should().BeTrue("RSM-007 should be processed successfully");
+
+        // 7. Verify process marked as "completed"
+        var processAfter = await processRepo.GetAsync(signup.ProcessRequestId.Value, ct);
+        processAfter!.Status.Should().Be("completed", "RSM-007 should mark process as completed");
+
+        // 8. Verify Customer created
+        var customersAfter = await _portfolioRepo.GetCustomersAsync(ct);
+        customersAfter.Should().HaveCount(1, "RSM-007 should create customer");
+        var customer = customersAfter[0];
+        customer.Name.Should().Be("RSM-007 Test Customer");
+        customer.CprCvr.Should().Be(cprCvr);
+        customer.ContactType.Should().Be("person");
+
+        // 9. Verify Signup updated with customer_id and status "active"
+        var signupAfter = await signupRepo.GetByIdAsync(signup.Id, ct);
+        signupAfter.Should().NotBeNull();
+        signupAfter!.CustomerId.Should().Be(customer.Id, "signup should be linked to customer");
+        signupAfter.Status.Should().Be("active", "signup should be active after RSM-007");
+
+        // 10. Verify Contract created
+        var contracts = await _portfolioRepo.GetContractsForCustomerAsync(customer.Id, ct);
+        contracts.Should().HaveCount(1, "RSM-007 should create contract");
+        var contract = contracts[0];
+        contract.Gsrn.Should().Be(gsrn);
+        contract.ProductId.Should().Be(product.Id);
+        contract.BillingFrequency.Should().Be("quarterly");
+        contract.PaymentModel.Should().Be("aconto");
+
+        // 11. Verify SupplyPeriod created
+        var supplyPeriods = await _portfolioRepo.GetSupplyPeriodsAsync(gsrn, ct);
+        supplyPeriods.Should().HaveCount(1, "RSM-007 should create supply period");
+        var supplyPeriod = supplyPeriods[0];
+        supplyPeriod.StartDate.Should().Be(new DateOnly(2025, 1, 1));
+        supplyPeriod.EndDate.Should().BeNull("supply period should be open-ended");
+
+        // 12. Verify message dequeued
+        var peek = await client.PeekAsync(QueueName.MasterData, ct);
+        peek.Should().BeNull("message should be dequeued after processing");
+    }
+
+    /// <summary>
+    /// Stub address lookup that returns the GSRN used in RSM-007 fixture
+    /// </summary>
+    private sealed class StubAddressLookupClient : IAddressLookupClient
+    {
+        public Task<AddressLookupResult> LookupByDarIdAsync(string darId, CancellationToken ct)
+        {
+            return Task.FromResult(new AddressLookupResult(new List<MeteringPointInfo>
+            {
+                new("571313100000012345", "E17", "344")
+            }));
+        }
     }
 }
