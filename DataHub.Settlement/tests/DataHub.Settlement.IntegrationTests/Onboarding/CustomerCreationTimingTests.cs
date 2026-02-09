@@ -22,10 +22,10 @@ public sealed class CustomerCreationTimingTests : IAsyncLifetime
 
     public CustomerCreationTimingTests()
     {
-        _signupRepo = new SignupRepository(_db.TestConnectionString);
-        _portfolioRepo = new PortfolioRepository(_db.TestConnectionString);
+        _signupRepo = new SignupRepository(TestDatabase.ConnectionString);
+        _portfolioRepo = new PortfolioRepository(TestDatabase.ConnectionString);
 
-        var processRepo = new ProcessRepository(_db.TestConnectionString);
+        var processRepo = new ProcessRepository(TestDatabase.ConnectionString);
         var addressLookup = new StubAddressLookupClient();
         var clock = new TestClock();
         var logger = new Microsoft.Extensions.Logging.Abstractions.NullLogger<OnboardingService>();
@@ -73,7 +73,7 @@ public sealed class CustomerCreationTimingTests : IAsyncLifetime
         signupDetail.Should().NotBeNull();
         signupDetail!.CustomerName.Should().Be("John Doe");
         signupDetail.CprCvr.Should().Be("1234567890");
-        signupDetail.CustomerContactType.Should().Be("person");
+        signupDetail.ContactType.Should().Be("person");
     }
 
     [Fact]
@@ -206,6 +206,72 @@ public sealed class CustomerCreationTimingTests : IAsyncLifetime
         signup3.CustomerId.Should().BeNull();
     }
 
+    [Fact]
+    public async Task Customer_SharedAcrossMultipleMeteringPoints()
+    {
+        // Arrange - Create product
+        var product = await _portfolioRepo.CreateProductAsync(
+            "Spot Test", "spot", 0.04m, null, 39m, CancellationToken.None);
+
+        // Act 1 - Create and activate first signup (home address)
+        var request1 = new SignupRequest(
+            DarId: "test-dar-home",
+            CustomerName: "Jane Doe",
+            CprCvr: "1234567890",
+            ContactType: "person",
+            Email: "jane@example.com",
+            Phone: "+4512345678",
+            ProductId: product.Id,
+            Type: "switch",
+            EffectiveDate: DateOnly.FromDateTime(DateTime.UtcNow).AddDays(20),
+            Gsrn: "571313180000000021"
+        );
+
+        var response1 = await _onboardingService.CreateSignupAsync(request1, CancellationToken.None);
+        var signup1 = await _signupRepo.GetBySignupNumberAsync(response1.SignupId, CancellationToken.None);
+
+        // Activate first signup → Customer created
+        await _onboardingService.SyncFromProcessAsync(
+            signup1!.ProcessRequestId!.Value, "completed", null, CancellationToken.None);
+
+        var customersAfterFirst = await _portfolioRepo.GetCustomersAsync(CancellationToken.None);
+        customersAfterFirst.Should().HaveCount(1, "first signup should create a customer");
+        var customer = customersAfterFirst[0];
+
+        // Act 2 - Create and activate second signup (summer residence, SAME CPR/CVR)
+        var request2 = new SignupRequest(
+            DarId: "test-dar-summer",
+            CustomerName: "Jane Doe", // Same person
+            CprCvr: "1234567890",     // SAME CPR/CVR
+            ContactType: "person",
+            Email: "jane@example.com",
+            Phone: "+4512345678",
+            ProductId: product.Id,
+            Type: "switch",
+            EffectiveDate: DateOnly.FromDateTime(DateTime.UtcNow).AddDays(20),
+            Gsrn: "571313180000000022" // DIFFERENT GSRN (second metering point)
+        );
+
+        var response2 = await _onboardingService.CreateSignupAsync(request2, CancellationToken.None);
+        var signup2 = await _signupRepo.GetBySignupNumberAsync(response2.SignupId, CancellationToken.None);
+
+        // Activate second signup → Should link to EXISTING customer
+        await _onboardingService.SyncFromProcessAsync(
+            signup2!.ProcessRequestId!.Value, "completed", null, CancellationToken.None);
+
+        // Assert - Still only ONE customer exists
+        var customersAfterSecond = await _portfolioRepo.GetCustomersAsync(CancellationToken.None);
+        customersAfterSecond.Should().HaveCount(1, "second signup should NOT create a new customer");
+
+        // Both signups should be linked to the SAME customer
+        var updatedSignup1 = await _signupRepo.GetByIdAsync(signup1.Id, CancellationToken.None);
+        var updatedSignup2 = await _signupRepo.GetByIdAsync(signup2.Id, CancellationToken.None);
+
+        updatedSignup1!.CustomerId.Should().Be(customer.Id);
+        updatedSignup2!.CustomerId.Should().Be(customer.Id);
+        updatedSignup1.CustomerId.Should().Be(updatedSignup2.CustomerId, "both signups should share the same customer");
+    }
+
     /// <summary>
     /// Stub that returns a matching GSRN for any DAR ID.
     /// Tests provide explicit GSRN in request which will be validated against this list.
@@ -222,7 +288,9 @@ public sealed class CustomerCreationTimingTests : IAsyncLifetime
                 new("571313180000000003", "E17", "344"),
                 new("571313180000000011", "E17", "344"),
                 new("571313180000000012", "E17", "344"),
-                new("571313180000000013", "E17", "344")
+                new("571313180000000013", "E17", "344"),
+                new("571313180000000021", "E17", "344"),
+                new("571313180000000022", "E17", "344")
             };
 
             return Task.FromResult(new AddressLookupResult(gsrns));

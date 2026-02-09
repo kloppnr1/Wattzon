@@ -43,15 +43,8 @@ public sealed class ProcessStateMachine
 
     public async Task MarkCompletedAsync(Guid requestId, CancellationToken ct)
     {
-        var request = await _repository.GetAsync(requestId, ct)
-            ?? throw new InvalidOperationException($"Process request {requestId} not found");
-
-        if (request.EffectiveDate.HasValue && _clock.Today < request.EffectiveDate.Value)
-        {
-            throw new InvalidOperationException(
-                $"Cannot effectuate process {requestId}: effective date {request.EffectiveDate.Value} is in the future (today is {_clock.Today})");
-        }
-
+        // RSM-007 is the authoritative signal from DataHub that supply has started
+        // No temporal guard - we trust DataHub's activation signal
         await TransitionAsync(requestId, "completed", null, "completed", ct);
     }
 

@@ -56,8 +56,9 @@ public sealed class ProcessSchedulerService : BackgroundService
 
     internal async Task RunTickAsync(CancellationToken ct)
     {
+        // ProcessScheduler only sends pending processes to DataHub
+        // Activation (marking processes as "completed") is handled by RSM-007 receipt
         await SendPendingRequestsAsync(ct);
-        await EffectuateReadyProcessesAsync(ct);
     }
 
     private async Task SendPendingRequestsAsync(CancellationToken ct)
@@ -118,31 +119,7 @@ public sealed class ProcessSchedulerService : BackgroundService
         }
     }
 
-    private async Task EffectuateReadyProcessesAsync(CancellationToken ct)
-    {
-        var effectuationPending = await _processRepo.GetByStatusAsync("effectuation_pending", ct);
-        var today = _clock.Today;
-
-        foreach (var process in effectuationPending)
-        {
-            if (!process.EffectiveDate.HasValue || process.EffectiveDate.Value > today)
-                continue;
-
-            try
-            {
-                var stateMachine = new ProcessStateMachine(_processRepo, _clock);
-                await stateMachine.MarkCompletedAsync(process.Id, ct);
-
-                // Sync signup status
-                await _onboardingService.SyncFromProcessAsync(process.Id, "completed", null, ct);
-
-                _logger.LogInformation("Auto-effectuated process {ProcessId} for GSRN {Gsrn} (effective date {EffectiveDate})",
-                    process.Id, process.Gsrn, process.EffectiveDate.Value);
-            }
-            catch (Exception ex) when (ex is not OperationCanceledException)
-            {
-                _logger.LogError(ex, "Failed to auto-effectuate process {ProcessId}", process.Id);
-            }
-        }
-    }
+    // REMOVED: Effectuation is now handled exclusively by RSM-007 receipt
+    // ProcessScheduler only sends pending processes to DataHub
+    // RSM-007 is the authoritative signal that supply has started
 }

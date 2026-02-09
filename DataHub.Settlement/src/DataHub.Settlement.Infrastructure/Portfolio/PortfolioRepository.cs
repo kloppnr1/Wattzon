@@ -51,6 +51,21 @@ public sealed class PortfolioRepository : IPortfolioRepository
             new CommandDefinition(sql, new { Name = name, CprCvr = cprCvr, ContactType = contactType }, cancellationToken: ct));
     }
 
+    public async Task<Customer?> GetCustomerByCprCvrAsync(string cprCvr, CancellationToken ct)
+    {
+        const string sql = """
+            SELECT id, name, cpr_cvr, contact_type, status
+            FROM portfolio.customer
+            WHERE cpr_cvr = @CprCvr
+            LIMIT 1
+            """;
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+        await conn.OpenAsync(ct);
+        return await conn.QuerySingleOrDefaultAsync<Customer>(
+            new CommandDefinition(sql, new { CprCvr = cprCvr }, cancellationToken: ct));
+    }
+
     public async Task<MeteringPoint> CreateMeteringPointAsync(MeteringPoint mp, CancellationToken ct)
     {
         const string sql = """

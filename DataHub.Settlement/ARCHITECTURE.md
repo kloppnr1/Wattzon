@@ -69,14 +69,16 @@ pending ──→ sent_to_datahub ──→ acknowledged ──→ effectuation_
                rejected                              cancelled
 ```
 
-- `pending → sent_to_datahub`: BRS message sent to DataHub.
-- `sent_to_datahub → acknowledged`: DataHub confirms receipt (RSM-007).
-- `acknowledged → effectuation_pending`: Auto-transition; awaiting the effective date.
-- `effectuation_pending → completed`: Effective date reached, supply begins. **Temporal guard**: the state machine checks `IClock.Today >= effectiveDate` and blocks early effectuation.
+- `pending → sent_to_datahub`: BRS message sent to DataHub (ProcessScheduler).
+- `sent_to_datahub → acknowledged`: DataHub confirms receipt (RSM-009).
+- `acknowledged → effectuation_pending`: Auto-transition; awaiting RSM-007.
+- `effectuation_pending → completed`: **RSM-007 received** — grid operator confirms supply has started. This is the authoritative activation signal.
 - `completed → offboarding → final_settled`: Customer leaves, final bill calculated.
 - `rejected` / `cancelled`: Terminal states for failed or withdrawn requests.
 
-**Why a state machine?** DataHub interactions are inherently asynchronous — you send a BRS request, wait hours or days for acknowledgement, then wait more days until the effective date. Explicit states make every process's current status queryable, prevent invalid transitions (e.g., you can't settle a customer who hasn't been effectuated), and give the UI clear status indicators.
+**Why a state machine?** DataHub interactions are inherently asynchronous — you send a BRS request, wait hours or days for acknowledgement, then wait more days for activation. Explicit states make every process's current status queryable, prevent invalid transitions (e.g., you can't settle a customer who hasn't been activated), and give the UI clear status indicators.
+
+**RSM-007 as the sole activation trigger:** Only the RSM-007 handler marks processes as "completed". ProcessScheduler sends pending processes to DataHub but does NOT effectuate them. This eliminates race conditions and aligns with the business reality: the grid operator's confirmation is authoritative.
 
 ### IClock Abstraction
 
@@ -91,6 +93,58 @@ public interface IClock
 Implementations: `SystemClock` (production), `SimulatedClock` (dashboard time-travel).
 
 **Why abstract time?** Business logic depends heavily on "today" — effective dates, metering delivery windows, aconto billing cycles. Without abstraction, testing temporal logic requires waiting real time or fragile date mocking. The `SimulatedClock` also powers the Operations page, where users can step through multi-day business processes day-by-day for demos and verification.
+
+### Customer Onboarding & Portfolio Creation
+
+**The critical rule: Customer entities are NOT created until RSM-007 activation.**
+
+**RSM-007 is the authoritative activation signal** — it is the ONLY trigger that marks processes as "completed" and creates customers. ProcessSchedulerService only sends pending processes to DataHub; it does NOT effectuate them.
+
+When a user creates a signup via the back-office application:
+
+1. **Signup Created** (OnboardingService.CreateSignupAsync):
+   - ProcessRequest created (status: `pending`)
+   - Signup record created with customer info fields: `customer_name`, `customer_cpr_cvr`, `customer_contact_type`
+   - **`customer_id` is NULL** — no Customer entity exists yet
+   - Rationale: Don't create billing entities until DataHub confirms activation via RSM-007
+
+2. **Process Sent** (ProcessSchedulerService):
+   - BRS-001 (supplier switch) or BRS-009 (move in) sent to DataHub
+   - Process: `pending` → `sent_to_datahub`
+   - Signup: `registered` → `processing`
+
+3. **DataHub Acknowledges** (RSM-009):
+   - Process: `sent_to_datahub` → `acknowledged` → `effectuation_pending`
+   - Signup: still `processing`
+   - Customer still does NOT exist
+
+4. **RSM-007 Received** (QueuePollerService) — **ACTIVATION TRIGGER**:
+   - This is the ONLY place that marks process `effectuation_pending` → `completed`
+   - **Customer entity created** via `OnboardingService.SyncFromProcessAsync`
+   - Deduplication: Checks for existing customer by CPR/CVR (multi-metering point scenario)
+   - If existing customer found → link signup to existing customer_id
+   - If not found → create new Customer entity
+   - `signup.customer_id` set to Customer.Id
+   - Signup: `processing` → `active`
+   - **MeteringPoint created**
+   - **Contract created** (requires customer_id)
+   - **SupplyPeriod created**
+
+**Why RSM-007 is authoritative:**
+
+RSM-007 is sent by the grid operator when they physically activate the metering point. The effective_date is our *requested* start date, but RSM-007 confirms the *actual* start of supply. We trust DataHub's signal over our own clock.
+
+**No temporal guard:** `ProcessStateMachine.MarkCompletedAsync` has no temporal guard — we trust RSM-007 even if it arrives before the requested effective_date (clock skew, early activation).
+
+**No race condition:** Only RSM-007 marks processes "completed". ProcessScheduler only sends pending processes to DataHub.
+
+**Multi-Metering Point Scenario:**
+
+A single customer can have multiple metering points (e.g., home + summer residence):
+- Same CPR/CVR, different GSRNs
+- Second signup checks for existing customer via `IPortfolioRepository.GetCustomerByCprCvrAsync`
+- Links to existing customer instead of creating duplicate
+- Result: 1 Customer, 2 Contracts, 2 MeteringPoints, 2 Signups
 
 ---
 
