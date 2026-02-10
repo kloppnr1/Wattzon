@@ -25,6 +25,7 @@ public static class DatabaseSeeder
         await conn.ExecuteAsync("DELETE FROM portfolio.signup");
         await conn.ExecuteAsync("DELETE FROM lifecycle.process_event");
         await conn.ExecuteAsync("DELETE FROM lifecycle.process_request");
+        await conn.ExecuteAsync("DELETE FROM portfolio.payer");
         await conn.ExecuteAsync("DELETE FROM portfolio.customer");
 
         var rng = new Random(42);
@@ -83,6 +84,19 @@ public static class DatabaseSeeder
         var companyPrefixes = new[] { "Nordic", "Dansk", "Green", "Sol", "Vind", "El", "Smart", "Digital", "Eco", "Nord" };
         var companySuffixes = new[] { "Energy", "Tech", "Solutions", "Service", "Group", "Power", "Systems", "Trading", "Design", "Consult" };
 
+        // Danish address data for billing addresses
+        var streets = new[] { "Vesterbrogade", "Nørrebrogade", "Østerbrogade", "Amagerbrogade", "Gammel Kongevej",
+            "Strandvejen", "Kongens Nytorv", "Gothersgade", "Bredgade", "Store Kongensgade",
+            "Frederiksberg Allé", "Jagtvej", "Tagensvej", "Vigerslev Allé", "Roskildevej",
+            "Hovedgaden", "Jernbanegade", "Algade", "Storegade", "Torvet" };
+        var cities = new[] {
+            ("1620", "København V"), ("2200", "København N"), ("2100", "København Ø"), ("2300", "København S"),
+            ("1850", "Frederiksberg C"), ("2900", "Hellerup"), ("8000", "Aarhus C"), ("5000", "Odense C"),
+            ("9000", "Aalborg"), ("7100", "Vejle"), ("6000", "Kolding"), ("4000", "Roskilde"),
+            ("2800", "Kongens Lyngby"), ("2630", "Taastrup"), ("2750", "Ballerup") };
+        var floors = new[] { (string?)null, "st", "1", "2", "3", "4", "5" };
+        var doors = new[] { (string?)null, "th", "tv", "mf", "1", "2", "3" };
+
         string PickGridArea(int index) => (index % 100) switch
         {
             < 48 => "543",
@@ -137,14 +151,22 @@ public static class DatabaseSeeder
 
         // ── Phase 2b: Create customers ───────────────────────────────────
         var customerMap = new Dictionary<string, Guid>();
+        int custIdx = 0;
         foreach (var s in signupDefs.Where(s => s.Status == "active"))
         {
             if (customerMap.ContainsKey(s.CprCvr)) continue;
             var customerId = Guid.NewGuid();
             customerMap[s.CprCvr] = customerId;
+            var city = cities[custIdx % cities.Length];
             await conn.ExecuteAsync(
-                "INSERT INTO portfolio.customer (id, name, cpr_cvr, contact_type, status) VALUES (@Id, @Name, @CprCvr, @ContactType, 'active')",
-                new { Id = customerId, Name = s.Name, CprCvr = s.CprCvr, ContactType = s.ContactType });
+                "INSERT INTO portfolio.customer (id, name, cpr_cvr, contact_type, status, billing_street, billing_house_number, billing_floor, billing_door, billing_postal_code, billing_city) VALUES (@Id, @Name, @CprCvr, @ContactType, 'active', @Street, @HouseNum, @Floor, @Door, @PostalCode, @City)",
+                new { Id = customerId, Name = s.Name, CprCvr = s.CprCvr, ContactType = s.ContactType,
+                    Street = streets[custIdx % streets.Length],
+                    HouseNum = $"{1 + custIdx % 120}",
+                    Floor = floors[custIdx % floors.Length],
+                    Door = doors[custIdx % doors.Length],
+                    PostalCode = city.Item1, City = city.Item2 });
+            custIdx++;
         }
 
         for (int i = 0; i < 260; i++)
@@ -166,9 +188,16 @@ public static class DatabaseSeeder
             if (customerMap.ContainsKey(cprCvr)) continue;
             var customerId = Guid.NewGuid();
             customerMap[cprCvr] = customerId;
+            var city = cities[custIdx % cities.Length];
             await conn.ExecuteAsync(
-                "INSERT INTO portfolio.customer (id, name, cpr_cvr, contact_type, status) VALUES (@Id, @Name, @CprCvr, @ContactType, 'active')",
-                new { Id = customerId, Name = name, CprCvr = cprCvr, ContactType = contactType });
+                "INSERT INTO portfolio.customer (id, name, cpr_cvr, contact_type, status, billing_street, billing_house_number, billing_floor, billing_door, billing_postal_code, billing_city) VALUES (@Id, @Name, @CprCvr, @ContactType, 'active', @Street, @HouseNum, @Floor, @Door, @PostalCode, @City)",
+                new { Id = customerId, Name = name, CprCvr = cprCvr, ContactType = contactType,
+                    Street = streets[custIdx % streets.Length],
+                    HouseNum = $"{1 + custIdx % 120}",
+                    Floor = floors[custIdx % floors.Length],
+                    Door = doors[custIdx % doors.Length],
+                    PostalCode = city.Item1, City = city.Item2 });
+            custIdx++;
         }
 
         // ── Phase 3: Signups + process requests ─────────────────────────
@@ -211,8 +240,14 @@ public static class DatabaseSeeder
                     });
             }
 
+            var signupCity = cities[signupNumber % cities.Length];
             await conn.ExecuteAsync(
-                "INSERT INTO portfolio.signup (id, signup_number, dar_id, gsrn, customer_id, product_id, process_request_id, type, effective_date, status, created_at, customer_name, customer_cpr_cvr, customer_contact_type) VALUES (@Id, @SignupNum, @DarId, @Gsrn, @CustomerId, @ProductId, @ProcessRequestId, @Type, @EffectiveDate, @Status, @Created, @CustomerName, @CustomerCprCvr, @CustomerContactType)",
+                @"INSERT INTO portfolio.signup (id, signup_number, dar_id, gsrn, customer_id, product_id, process_request_id,
+                    type, effective_date, status, created_at, customer_name, customer_cpr_cvr, customer_contact_type,
+                    billing_street, billing_house_number, billing_floor, billing_door, billing_postal_code, billing_city)
+                  VALUES (@Id, @SignupNum, @DarId, @Gsrn, @CustomerId, @ProductId, @ProcessRequestId,
+                    @Type, @EffectiveDate, @Status, @Created, @CustomerName, @CustomerCprCvr, @CustomerContactType,
+                    @BillStreet, @BillHouseNum, @BillFloor, @BillDoor, @BillPostalCode, @BillCity)",
                 new
                 {
                     Id = signupId, SignupNum = $"SGN-2025-{signupNumber:D5}",
@@ -222,7 +257,12 @@ public static class DatabaseSeeder
                     ProcessRequestId = processRequestId,
                     Type = s.Type, EffectiveDate = effectiveDate, Status = s.Status,
                     Created = DateTime.UtcNow.AddDays(-rng.Next(10, 60)),
-                    CustomerName = s.Name, CustomerCprCvr = s.CprCvr, CustomerContactType = s.SignupContactType
+                    CustomerName = s.Name, CustomerCprCvr = s.CprCvr, CustomerContactType = s.SignupContactType,
+                    BillStreet = streets[signupNumber % streets.Length],
+                    BillHouseNum = $"{1 + signupNumber % 120}",
+                    BillFloor = floors[signupNumber % floors.Length],
+                    BillDoor = doors[signupNumber % doors.Length],
+                    BillPostalCode = signupCity.Item1, BillCity = signupCity.Item2
                 });
             signupNumber++;
         }
@@ -286,6 +326,44 @@ public static class DatabaseSeeder
                 "INSERT INTO portfolio.supply_period (id, gsrn, start_date) VALUES (@Id, @Gsrn, @Start)",
                 new { Id = Guid.NewGuid(), Gsrn = gsrn2, Start = new DateTime(2025, 1, 1) });
             activeMeteringPoints.Add(gsrn2);
+        }
+
+        // ── Phase 4b: Payers ───────────────────────────────────────────
+        // ~10% of active customers have a third-party payer (e.g. employer, parent, housing association)
+        var payerNames = new[] { "Boligforeningen Sjælland", "Dansk Industri ApS", "Nordisk Ejendomme A/S",
+            "Hansen & Søn Holding", "Grøn Bolig K/S", "Energi Danmark A/S", "Vestjysk Boligselskab",
+            "København Kommune", "Aarhus Boligforening", "Norden Facility I/S" };
+        var payerMap = new Dictionary<int, Guid>();
+        var activeSignups = signupDefs.Where(s => s.Status == "active").ToList();
+
+        for (int i = 0; i < 10; i++)
+        {
+            var payerId = Guid.NewGuid();
+            payerMap[i] = payerId;
+            var payerCity = cities[i % cities.Length];
+            await conn.ExecuteAsync(
+                @"INSERT INTO portfolio.payer (id, name, cpr_cvr, contact_type, email, phone,
+                    billing_street, billing_house_number, billing_postal_code, billing_city)
+                  VALUES (@Id, @Name, @CprCvr, 'business', @Email, @Phone,
+                    @Street, @HouseNum, @PostalCode, @City)",
+                new {
+                    Id = payerId, Name = payerNames[i],
+                    CprCvr = $"{70000000 + i:D8}",
+                    Email = $"faktura@{payerNames[i].ToLower().Replace(" ", "").Replace("&", "").Replace("/", "")[..8]}.dk",
+                    Phone = $"+45 {70000000 + rng.Next(100000, 999999)}",
+                    Street = streets[(i + 5) % streets.Length],
+                    HouseNum = $"{10 + i * 3}",
+                    PostalCode = payerCity.Item1, City = payerCity.Item2 });
+        }
+
+        // Link ~20 contracts to payers (every 10th active signup)
+        for (int i = 0; i < activeSignups.Count; i += 10)
+        {
+            var s = activeSignups[i];
+            var payerIdx = (i / 10) % payerMap.Count;
+            await conn.ExecuteAsync(
+                "UPDATE portfolio.contract SET payer_id = @PayerId WHERE gsrn = @Gsrn",
+                new { PayerId = payerMap[payerIdx], Gsrn = s.Gsrn });
         }
 
         // 5 disconnected
