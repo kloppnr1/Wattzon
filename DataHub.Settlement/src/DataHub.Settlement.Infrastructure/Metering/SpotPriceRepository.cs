@@ -64,11 +64,14 @@ public sealed class SpotPriceRepository : ISpotPriceRepository
         return rows.ToList();
     }
 
-    public async Task<(IReadOnlyList<SpotPriceRow> Items, int TotalCount)> GetPricesPagedAsync(
+    public async Task<SpotPricePagedResult> GetPricesPagedAsync(
         string priceArea, DateTime from, DateTime to, int page, int pageSize, CancellationToken ct)
     {
-        const string countSql = """
-            SELECT COUNT(*)
+        const string statsSql = """
+            SELECT COUNT(*) AS TotalCount,
+                   COALESCE(AVG(price_per_kwh), 0) AS AvgPrice,
+                   COALESCE(MIN(price_per_kwh), 0) AS MinPrice,
+                   COALESCE(MAX(price_per_kwh), 0) AS MaxPrice
             FROM metering.spot_price
             WHERE price_area = @PriceArea AND "timestamp" >= @From AND "timestamp" < @To
             """;
@@ -85,13 +88,14 @@ public sealed class SpotPriceRepository : ISpotPriceRepository
         await conn.OpenAsync(ct);
 
         var args = new { PriceArea = priceArea, From = from, To = to };
-        var totalCount = await conn.QuerySingleAsync<int>(new CommandDefinition(countSql, args, cancellationToken: ct));
+        var stats = await conn.QuerySingleAsync<(int TotalCount, decimal AvgPrice, decimal MinPrice, decimal MaxPrice)>(
+            new CommandDefinition(statsSql, args, cancellationToken: ct));
 
         var offset = (page - 1) * pageSize;
         var rows = await conn.QueryAsync<SpotPriceRow>(
             new CommandDefinition(dataSql, new { PriceArea = priceArea, From = from, To = to, Limit = pageSize, Offset = offset }, cancellationToken: ct));
 
-        return (rows.ToList(), totalCount);
+        return new SpotPricePagedResult(rows.ToList(), stats.TotalCount, stats.AvgPrice, stats.MinPrice, stats.MaxPrice);
     }
 
     public async Task<DateOnly?> GetLatestPriceDateAsync(string priceArea, CancellationToken ct)

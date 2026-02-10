@@ -409,19 +409,22 @@ app.MapGet("/api/metering/spot-prices", async (
     var p = Math.Max(page ?? 1, 1);
     var ps = Math.Clamp(pageSize ?? 200, 1, 500);
 
-    var (prices, totalCount) = await repo.GetPricesPagedAsync(area, start, end, p, ps, ct);
-    var totalPages = (int)Math.Ceiling((double)totalCount / ps);
+    var result = await repo.GetPricesPagedAsync(area, start, end, p, ps, ct);
+    var totalPages = (int)Math.Ceiling((double)result.TotalCount / ps);
 
     return Results.Ok(new
     {
         priceArea = area,
         from = fromDate,
         to = toDate,
-        totalCount,
+        totalCount = result.TotalCount,
         page = p,
         pageSize = ps,
         totalPages,
-        items = prices.Select(price => new
+        avgPrice = result.AvgPrice,
+        minPrice = result.MinPrice,
+        maxPrice = result.MaxPrice,
+        items = result.Items.Select(price => new
         {
             timestamp = price.Timestamp,
             priceArea = price.PriceArea,

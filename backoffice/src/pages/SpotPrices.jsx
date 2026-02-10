@@ -55,12 +55,9 @@ export default function SpotPrices() {
   const items = data?.items ?? [];
   const totalCount = data?.totalCount ?? 0;
   const totalPages = data?.totalPages ?? 1;
-
-  // Stats (for current page)
-  const prices = items.map(p => p.pricePerKwh);
-  const avgPrice = prices.length > 0 ? (prices.reduce((a, b) => a + b, 0) / prices.length) : 0;
-  const minPrice = prices.length > 0 ? Math.min(...prices) : 0;
-  const maxPrice = prices.length > 0 ? Math.max(...prices) : 0;
+  const avgPrice = data?.avgPrice ?? 0;
+  const minPrice = data?.minPrice ?? 0;
+  const maxPrice = data?.maxPrice ?? 0;
 
   const latestDate = priceArea === 'DK1' ? latest?.dk1 : latest?.dk2;
 
