@@ -61,7 +61,7 @@ public class ProcessSchedulerTests
         public Task<Signup> CreateAsync(string signupNumber, string darId, string gsrn,
             string customerName, string customerCprCvr, string customerContactType,
             Guid productId, Guid processRequestId, string type, DateOnly effectiveDate,
-            Guid? correctedFromId, CancellationToken ct)
+            Guid? correctedFromId, SignupAddressInfo? addressInfo, CancellationToken ct)
             => throw new NotImplementedException();
         public Task<string> NextSignupNumberAsync(CancellationToken ct)
             => throw new NotImplementedException();
@@ -90,6 +90,8 @@ public class ProcessSchedulerTests
         public Task<SignupDetail?> GetDetailByIdAsync(Guid id, CancellationToken ct)
             => throw new NotImplementedException();
         public Task<IReadOnlyList<SignupCorrectionLink>> GetCorrectionChainAsync(Guid signupId, CancellationToken ct)
+            => throw new NotImplementedException();
+        public Task<SignupAddressInfo?> GetAddressInfoAsync(Guid signupId, CancellationToken ct)
             => throw new NotImplementedException();
     }
 
