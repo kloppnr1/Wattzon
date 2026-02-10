@@ -193,7 +193,8 @@ export default {
   'event.awaiting_effectuation': 'Awaiting effectuation',
   'event.completed': 'Effectuated',
   'event.rejection_reason': 'Rejected',
-  'event.cancellation_reason': 'Cancelled',
+  'event.cancelled': 'Cancelled',
+  'event.cancellation_reason': 'Cancellation reason',
   'event.offboarding_started': 'Offboarding started',
   'event.final_settled': 'Final settled',
 

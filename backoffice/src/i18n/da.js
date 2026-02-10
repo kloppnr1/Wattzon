@@ -193,7 +193,8 @@ export default {
   'event.awaiting_effectuation': 'Afventer effektuering',
   'event.completed': 'Effektueret',
   'event.rejection_reason': 'Afvist',
-  'event.cancellation_reason': 'Annulleret',
+  'event.cancelled': 'Annulleret',
+  'event.cancellation_reason': 'Annulleringsårsag',
   'event.offboarding_started': 'Fraflytning påbegyndt',
   'event.final_settled': 'Endeligt afregnet',
 

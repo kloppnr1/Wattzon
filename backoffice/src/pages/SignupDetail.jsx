@@ -277,6 +277,7 @@ export default function SignupDetail() {
                   const dotColor = evt.eventType === 'created' ? 'bg-slate-400'
                     : evt.eventType === 'completed' ? 'bg-emerald-500'
                     : evt.eventType === 'rejection_reason' ? 'bg-rose-500'
+                    : evt.eventType === 'cancelled' ? 'bg-slate-400'
                     : evt.eventType === 'cancellation_reason' ? 'bg-slate-400'
                     : 'bg-teal-500';
                   const isFirst = i === 0;
@@ -317,14 +318,14 @@ export default function SignupDetail() {
                   );
                 })}
                 {/* Pending step indicator */}
-                {events.length > 0 && !['completed', 'rejection_reason', 'cancellation_reason', 'final_settled'].includes(events[0].eventType) && (
+                {events.length > 0 && !['completed', 'rejected', 'rejection_reason', 'cancelled', 'cancellation_reason', 'final_settled'].includes(events[events.length - 1].eventType) && (
                   <div className="flex gap-4 relative animate-slide-in" style={{ animationDelay: `${events.length * 80}ms` }}>
                     <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 z-10 bg-teal-100 border-2 border-teal-300">
                       <div className="w-2 h-2 rounded-full bg-teal-500 animate-pulse" />
                     </div>
                     <div className="pb-1 -mt-0.5">
                       <span className="text-sm font-medium text-teal-600">
-                        {tPending(events[0].eventType)}
+                        {tPending(events[events.length - 1].eventType)}
                       </span>
                     </div>
                   </div>
