@@ -406,13 +406,11 @@ app.MapGet("/api/metering/spot-prices", async (
     var start = fromDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
     var end = toDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
 
-    var prices = await repo.GetPricesAsync(area, start, end, ct);
-
-    var totalCount = prices.Count;
     var p = Math.Max(page ?? 1, 1);
     var ps = Math.Clamp(pageSize ?? 200, 1, 500);
+
+    var (prices, totalCount) = await repo.GetPricesPagedAsync(area, start, end, p, ps, ct);
     var totalPages = (int)Math.Ceiling((double)totalCount / ps);
-    var pagedItems = prices.Skip((p - 1) * ps).Take(ps);
 
     return Results.Ok(new
     {
@@ -423,7 +421,7 @@ app.MapGet("/api/metering/spot-prices", async (
         page = p,
         pageSize = ps,
         totalPages,
-        items = pagedItems.Select(price => new
+        items = prices.Select(price => new
         {
             timestamp = price.Timestamp,
             priceArea = price.PriceArea,

@@ -79,6 +79,7 @@ public class SettlementDataLoaderTests
         public Task StorePricesAsync(IReadOnlyList<SpotPriceRow> prices, CancellationToken ct) => Task.CompletedTask;
         public Task<decimal> GetPriceAsync(string priceArea, DateTime hour, CancellationToken ct) => Task.FromResult(0m);
         public Task<IReadOnlyList<SpotPriceRow>> GetPricesAsync(string priceArea, DateTime from, DateTime to, CancellationToken ct) => Task.FromResult(prices);
+        public Task<(IReadOnlyList<SpotPriceRow> Items, int TotalCount)> GetPricesPagedAsync(string priceArea, DateTime from, DateTime to, int page, int pageSize, CancellationToken ct) => Task.FromResult<(IReadOnlyList<SpotPriceRow>, int)>((prices, prices.Count));
         public Task<DateOnly?> GetLatestPriceDateAsync(string priceArea, CancellationToken ct) => Task.FromResult<DateOnly?>(null);
         public Task<DateOnly?> GetEarliestPriceDateAsync(string priceArea, CancellationToken ct) => Task.FromResult<DateOnly?>(null);
     }

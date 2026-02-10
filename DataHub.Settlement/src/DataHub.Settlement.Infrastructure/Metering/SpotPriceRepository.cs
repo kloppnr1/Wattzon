@@ -64,6 +64,36 @@ public sealed class SpotPriceRepository : ISpotPriceRepository
         return rows.ToList();
     }
 
+    public async Task<(IReadOnlyList<SpotPriceRow> Items, int TotalCount)> GetPricesPagedAsync(
+        string priceArea, DateTime from, DateTime to, int page, int pageSize, CancellationToken ct)
+    {
+        const string countSql = """
+            SELECT COUNT(*)
+            FROM metering.spot_price
+            WHERE price_area = @PriceArea AND "timestamp" >= @From AND "timestamp" < @To
+            """;
+
+        const string dataSql = """
+            SELECT price_area AS PriceArea, "timestamp" AS Timestamp, price_per_kwh AS PricePerKwh, resolution AS Resolution
+            FROM metering.spot_price
+            WHERE price_area = @PriceArea AND "timestamp" >= @From AND "timestamp" < @To
+            ORDER BY "timestamp"
+            LIMIT @Limit OFFSET @Offset
+            """;
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+        await conn.OpenAsync(ct);
+
+        var args = new { PriceArea = priceArea, From = from, To = to };
+        var totalCount = await conn.QuerySingleAsync<int>(new CommandDefinition(countSql, args, cancellationToken: ct));
+
+        var offset = (page - 1) * pageSize;
+        var rows = await conn.QueryAsync<SpotPriceRow>(
+            new CommandDefinition(dataSql, new { PriceArea = priceArea, From = from, To = to, Limit = pageSize, Offset = offset }, cancellationToken: ct));
+
+        return (rows.ToList(), totalCount);
+    }
+
     public async Task<DateOnly?> GetLatestPriceDateAsync(string priceArea, CancellationToken ct)
     {
         const string sql = """
