@@ -72,6 +72,11 @@ export const api = {
   getDeadLetter: (id) => request(`/messages/dead-letters/${id}`),
   getMessageStats: () => request(`/messages/stats`),
 
+  // Spot Prices
+  getSpotPrices: ({ priceArea, from, to } = {}) =>
+    request(`/metering/spot-prices${qs({ priceArea, from, to })}`),
+  getSpotPriceLatest: () => request(`/metering/spot-prices/latest`),
+
   // Conversations & Deliveries
   getConversations: ({ page, pageSize } = {}) =>
     request(`/messages/conversations${qs({ page, pageSize })}`),
