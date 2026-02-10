@@ -197,6 +197,7 @@ public sealed class OnboardingService : IOnboardingService
                 break;
 
             case "processing":
+            case "awaiting_effectuation":
                 // Already sent to DataHub — send BRS-003 cancellation, then cancel locally
                 if (signup.ProcessRequestId.HasValue)
                 {
@@ -317,7 +318,8 @@ public sealed class OnboardingService : IOnboardingService
         return processStatus switch
         {
             "pending" => "registered",
-            "sent_to_datahub" or "acknowledged" or "effectuation_pending" => "processing",
+            "sent_to_datahub" or "acknowledged" => "processing",
+            "effectuation_pending" => "awaiting_effectuation",
             "completed" => "active",
             "rejected" => "rejected",
             "cancelled" => "cancelled",

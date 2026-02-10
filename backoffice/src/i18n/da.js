@@ -39,6 +39,7 @@ export default {
   // ── Status badges ──
   'status.registered': 'registreret',
   'status.processing': 'behandles',
+  'status.awaiting_effectuation': 'afventer effektuering',
   'status.active': 'aktiv',
   'status.rejected': 'afvist',
   'status.cancelled': 'annulleret',

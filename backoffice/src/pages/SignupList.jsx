@@ -5,12 +5,13 @@ import { useTranslation } from '../i18n/LanguageContext';
 
 const PAGE_SIZE = 50;
 
-const STATUS_OPTIONS = ['all', 'registered', 'processing', 'active', 'rejected', 'cancelled'];
+const STATUS_OPTIONS = ['all', 'registered', 'processing', 'awaiting_effectuation', 'active', 'rejected', 'cancelled'];
 
 const statusStyles = {
-  registered: { dot: 'bg-slate-400', badge: 'bg-slate-100 text-slate-600' },
-  processing: { dot: 'bg-teal-400', badge: 'bg-teal-50 text-teal-700' },
-  active:     { dot: 'bg-emerald-400', badge: 'bg-emerald-50 text-emerald-700' },
+  registered:            { dot: 'bg-slate-400', badge: 'bg-slate-100 text-slate-600' },
+  processing:            { dot: 'bg-teal-400', badge: 'bg-teal-50 text-teal-700' },
+  awaiting_effectuation: { dot: 'bg-amber-400', badge: 'bg-amber-50 text-amber-700' },
+  active:                { dot: 'bg-emerald-400', badge: 'bg-emerald-50 text-emerald-700' },
   rejected:   { dot: 'bg-rose-400', badge: 'bg-rose-50 text-rose-700' },
   cancelled:  { dot: 'bg-slate-400', badge: 'bg-slate-100 text-slate-500' },
 };

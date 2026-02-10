@@ -4,9 +4,10 @@ import { api } from '../api';
 import { useTranslation } from '../i18n/LanguageContext';
 
 const statusStyles = {
-  registered: { dot: 'bg-slate-400', badge: 'bg-slate-100 text-slate-600' },
-  processing: { dot: 'bg-teal-400', badge: 'bg-teal-50 text-teal-700' },
-  active:     { dot: 'bg-emerald-400', badge: 'bg-emerald-50 text-emerald-700' },
+  registered:            { dot: 'bg-slate-400', badge: 'bg-slate-100 text-slate-600' },
+  processing:            { dot: 'bg-teal-400', badge: 'bg-teal-50 text-teal-700' },
+  awaiting_effectuation: { dot: 'bg-amber-400', badge: 'bg-amber-50 text-amber-700' },
+  active:                { dot: 'bg-emerald-400', badge: 'bg-emerald-50 text-emerald-700' },
   rejected:   { dot: 'bg-rose-400', badge: 'bg-rose-50 text-rose-700' },
   cancelled:  { dot: 'bg-slate-400', badge: 'bg-slate-100 text-slate-500' },
 };
@@ -40,7 +41,7 @@ export default function SignupDetail() {
   }, [id]);
 
   useEffect(() => {
-    if (!signup || !['registered', 'processing'].includes(signup.status)) return;
+    if (!signup || !['registered', 'processing', 'awaiting_effectuation'].includes(signup.status)) return;
     const interval = setInterval(() => {
       Promise.all([api.getSignup(id), api.getSignupEvents(id)])
         .then(([s, e]) => { setSignup(s); setEvents(e); });
@@ -92,7 +93,7 @@ export default function SignupDetail() {
   if (error) return <div className="p-8"><div className="bg-rose-50 border border-rose-200 rounded-xl px-4 py-3 text-sm text-rose-600">{error}</div></div>;
   if (!signup) return <div className="p-8"><p className="text-sm text-slate-500">{t('signupDetail.notFound')}</p></div>;
 
-  const canCancel = signup.status === 'registered' || signup.status === 'processing';
+  const canCancel = ['registered', 'processing', 'awaiting_effectuation'].includes(signup.status);
   const correctionChain = signup.correctionChain || [];
 
   return (
