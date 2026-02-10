@@ -7,7 +7,8 @@ public record Address(
     string? Floor,
     string? Door,
     string? PostalCode,
-    string? City);
+    string? City,
+    string? DarId = null);
 
 public record Customer(
     Guid Id, string Name, string CprCvr, string ContactType, string Status,

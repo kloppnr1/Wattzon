@@ -95,6 +95,9 @@ export default function SignupNew() {
       if (suggestionsRef.current && !suggestionsRef.current.contains(e.target)) {
         setShowSuggestions(false);
       }
+      if (billingSuggestionsRef.current && !billingSuggestionsRef.current.contains(e.target)) {
+        setShowBillingSuggestions(false);
+      }
     }
     document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
@@ -163,14 +166,16 @@ export default function SignupNew() {
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
 
-  // Billing address
+  // Billing address (DAWA lookup)
   const [billingSameAsSupply, setBillingSameAsSupply] = useState(true);
-  const [billingStreet, setBillingStreet] = useState('');
-  const [billingHouseNumber, setBillingHouseNumber] = useState('');
-  const [billingFloor, setBillingFloor] = useState('');
-  const [billingDoor, setBillingDoor] = useState('');
-  const [billingPostalCode, setBillingPostalCode] = useState('');
-  const [billingCity, setBillingCity] = useState('');
+  const [billingAddressQuery, setBillingAddressQuery] = useState('');
+  const [selectedBillingAddress, setSelectedBillingAddress] = useState(null);
+  const [showBillingSuggestions, setShowBillingSuggestions] = useState(false);
+  const billingSuggestionsRef = useRef(null);
+
+  const { results: billingSuggestions, loading: searchingBillingAddress } = useDawaSearch(billingAddressQuery, {
+    enabled: !billingSameAsSupply && !selectedBillingAddress,
+  });
 
   // Step 3: Process
   const [type, setType] = useState('switch');
@@ -186,7 +191,7 @@ export default function SignupNew() {
     try {
       const addr = billingSameAsSupply && selectedAddress
         ? selectedAddress
-        : { street: billingStreet, houseNumber: billingHouseNumber, floor: billingFloor, door: billingDoor, postalCode: billingPostalCode, city: billingCity };
+        : selectedBillingAddress;
       const payload = {
         darId,
         gsrn: selectedGsrn,
@@ -198,12 +203,13 @@ export default function SignupNew() {
         productId: selectedProduct,
         type,
         effectiveDate,
-        billingStreet: addr.street || undefined,
-        billingHouseNumber: addr.houseNumber || undefined,
-        billingFloor: addr.floor || undefined,
-        billingDoor: addr.door || undefined,
-        billingPostalCode: addr.postalCode || undefined,
-        billingCity: addr.city || undefined,
+        billingDarId: addr?.darId || undefined,
+        billingStreet: addr?.street || undefined,
+        billingHouseNumber: addr?.houseNumber || undefined,
+        billingFloor: addr?.floor || undefined,
+        billingDoor: addr?.door || undefined,
+        billingPostalCode: addr?.postalCode || undefined,
+        billingCity: addr?.city || undefined,
       };
       if (correctedFromId) {
         payload.correctedFromId = correctedFromId;
@@ -739,41 +745,61 @@ export default function SignupNew() {
                       <span className="text-sm text-slate-800 font-medium">{selectedAddress.text}</span>
                     </div>
                   ) : (
-                    <div className="space-y-4">
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        <div className="sm:col-span-2">
-                          <label className="block text-sm font-semibold text-slate-700 mb-2">{t('signupNew.street')}</label>
-                          <input type="text" value={billingStreet} onChange={(e) => setBillingStreet(e.target.value)} placeholder={t('signupNew.streetPlaceholder')}
-                            className="w-full rounded-lg border border-slate-200 bg-white px-4 py-3.5 text-sm text-slate-800 placeholder:text-slate-300 shadow-sm focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 transition-all" />
+                    <div className="relative" ref={billingSuggestionsRef}>
+                      {selectedBillingAddress ? (
+                        <div className="flex items-center gap-3 rounded-lg border-2 border-emerald-300 bg-emerald-50/50 px-4 py-3.5">
+                          <svg className="w-5 h-5 text-emerald-500 shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 0 1 15 0Z" />
+                          </svg>
+                          <span className="text-sm text-slate-800 flex-1 font-medium">{selectedBillingAddress.text}</span>
+                          <button onClick={() => { setSelectedBillingAddress(null); setBillingAddressQuery(''); }}
+                            className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-md transition-all">
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+                            </svg>
+                          </button>
                         </div>
-                        <div>
-                          <label className="block text-sm font-semibold text-slate-700 mb-2">{t('signupNew.houseNumber')}</label>
-                          <input type="text" value={billingHouseNumber} onChange={(e) => setBillingHouseNumber(e.target.value)} placeholder="12"
-                            className="w-full rounded-lg border border-slate-200 bg-white px-4 py-3.5 text-sm text-slate-800 placeholder:text-slate-300 shadow-sm focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 transition-all" />
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                        <div>
-                          <label className="block text-sm font-semibold text-slate-700 mb-2">{t('signupNew.floor')}</label>
-                          <input type="text" value={billingFloor} onChange={(e) => setBillingFloor(e.target.value)} placeholder="2"
-                            className="w-full rounded-lg border border-slate-200 bg-white px-4 py-3.5 text-sm text-slate-800 placeholder:text-slate-300 shadow-sm focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 transition-all" />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-semibold text-slate-700 mb-2">{t('signupNew.door')}</label>
-                          <input type="text" value={billingDoor} onChange={(e) => setBillingDoor(e.target.value)} placeholder="th"
-                            className="w-full rounded-lg border border-slate-200 bg-white px-4 py-3.5 text-sm text-slate-800 placeholder:text-slate-300 shadow-sm focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 transition-all" />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-semibold text-slate-700 mb-2">{t('signupNew.postalCode')}</label>
-                          <input type="text" value={billingPostalCode} onChange={(e) => setBillingPostalCode(e.target.value)} placeholder="8000"
-                            className="w-full rounded-lg border border-slate-200 bg-white px-4 py-3.5 text-sm text-slate-800 placeholder:text-slate-300 shadow-sm focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 transition-all" />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-semibold text-slate-700 mb-2">{t('signupNew.city')}</label>
-                          <input type="text" value={billingCity} onChange={(e) => setBillingCity(e.target.value)} placeholder="Aarhus C"
-                            className="w-full rounded-lg border border-slate-200 bg-white px-4 py-3.5 text-sm text-slate-800 placeholder:text-slate-300 shadow-sm focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 transition-all" />
-                        </div>
-                      </div>
+                      ) : (
+                        <>
+                          <div className="relative">
+                            <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+                            </svg>
+                            <input
+                              type="text"
+                              value={billingAddressQuery}
+                              onChange={(e) => { setBillingAddressQuery(e.target.value); setShowBillingSuggestions(true); }}
+                              onFocus={() => setShowBillingSuggestions(true)}
+                              placeholder={t('signupNew.addressPlaceholder')}
+                              className="w-full rounded-lg border border-slate-200 bg-white pl-11 pr-4 py-3.5 text-sm text-slate-800 placeholder:text-slate-300 shadow-sm focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 transition-all"
+                            />
+                            {searchingBillingAddress && (
+                              <div className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 border-2 border-teal-200 border-t-teal-600 rounded-full animate-spin" />
+                            )}
+                          </div>
+                          {showBillingSuggestions && billingSuggestions.length > 0 && (
+                            <div className="absolute z-10 mt-2 w-full bg-white rounded-lg shadow-xl border border-slate-200 overflow-hidden">
+                              {billingSuggestions.map((s, i) => (
+                                <button
+                                  key={i}
+                                  onClick={() => { setSelectedBillingAddress(s); setBillingAddressQuery(s.text); setShowBillingSuggestions(false); }}
+                                  className="w-full text-left px-4 py-3 text-sm text-slate-700 hover:bg-teal-50 hover:text-teal-700 flex items-center gap-3 transition-colors border-b border-slate-50 last:border-b-0"
+                                >
+                                  <svg className="w-4 h-4 text-slate-300 shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 0 1 15 0Z" />
+                                  </svg>
+                                  {s.text}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </>
+                      )}
+                      {selectedBillingAddress && (
+                        <p className="text-xs text-slate-400 mt-2 font-mono">DAR: {selectedBillingAddress.darId}</p>
+                      )}
                     </div>
                   )}
                 </div>
@@ -849,9 +875,9 @@ export default function SignupNew() {
                     {(() => {
                       const a = billingSameAsSupply && selectedAddress
                         ? selectedAddress
-                        : { street: billingStreet, houseNumber: billingHouseNumber, floor: billingFloor, door: billingDoor, postalCode: billingPostalCode, city: billingCity };
-                      return (a.street || a.postalCode) ? (
-                        <SummaryRow label={t('signupNew.summaryBilling')} value={`${a.street} ${a.houseNumber}${a.floor ? `, ${a.floor}.` : ''}${a.door ? ` ${a.door}` : ''}, ${a.postalCode} ${a.city}`} onEdit={() => setStep(2)} />
+                        : selectedBillingAddress;
+                      return a?.text ? (
+                        <SummaryRow label={t('signupNew.summaryBilling')} value={a.text} onEdit={() => setStep(2)} />
                       ) : null;
                     })()}
                     <SummaryRow label={t('signupNew.summaryType')} value={type === 'move_in' ? t('signupNew.moveIn') : t('signupNew.supplierSwitch')} />

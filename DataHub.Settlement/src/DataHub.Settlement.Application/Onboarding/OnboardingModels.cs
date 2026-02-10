@@ -34,6 +34,7 @@ public record SignupRequest(
     string? Gsrn = null,
     Guid? CorrectedFromId = null,
     // Billing address (customer's postal address — distinct from supply point)
+    string? BillingDarId = null,
     string? BillingStreet = null,
     string? BillingHouseNumber = null,
     string? BillingFloor = null,
@@ -100,6 +101,7 @@ public record SignupCorrectionLink(
 
 /// <summary>Billing address and optional payer info captured at signup time.</summary>
 public record SignupAddressInfo(
+    string? BillingDarId,
     string? BillingStreet, string? BillingHouseNumber, string? BillingFloor,
     string? BillingDoor, string? BillingPostalCode, string? BillingCity,
     string? PayerName, string? PayerCprCvr, string? PayerContactType,

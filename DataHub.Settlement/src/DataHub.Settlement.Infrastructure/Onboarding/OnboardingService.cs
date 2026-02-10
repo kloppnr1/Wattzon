@@ -134,6 +134,7 @@ public sealed class OnboardingService : IOnboardingService
         // 9. Create signup (with customer info + address/payer, but customer not created yet)
         var dbContactType = MapContactTypeToDb(request.ContactType);
         var addressInfo = new SignupAddressInfo(
+            request.BillingDarId,
             request.BillingStreet, request.BillingHouseNumber, request.BillingFloor,
             request.BillingDoor, request.BillingPostalCode, request.BillingCity,
             request.PayerName, request.PayerCprCvr,
@@ -223,7 +224,8 @@ public sealed class OnboardingService : IOnboardingService
                     && (addressInfo.BillingStreet is not null || addressInfo.BillingPostalCode is not null || addressInfo.BillingCity is not null)
                     ? new Address(addressInfo.BillingStreet, addressInfo.BillingHouseNumber,
                         addressInfo.BillingFloor, addressInfo.BillingDoor,
-                        addressInfo.BillingPostalCode, addressInfo.BillingCity)
+                        addressInfo.BillingPostalCode, addressInfo.BillingCity,
+                        addressInfo.BillingDarId)
                     : null;
 
                 // Check if customer with this CPR/CVR already exists (multi-metering point scenario)
@@ -267,7 +269,7 @@ public sealed class OnboardingService : IOnboardingService
                         ? new Address(addressInfo.PayerBillingStreet, addressInfo.PayerBillingHouseNumber,
                             addressInfo.PayerBillingFloor, addressInfo.PayerBillingDoor,
                             addressInfo.PayerBillingPostalCode, addressInfo.PayerBillingCity)
-                        : null;
+                        : null;  // TODO: payer DAR ID not yet captured
 
                     var payer = await _portfolioRepo.CreatePayerAsync(
                         addressInfo.PayerName, addressInfo.PayerCprCvr ?? "",

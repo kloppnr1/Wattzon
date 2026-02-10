@@ -41,11 +41,11 @@ public sealed class PortfolioRepository : IPortfolioRepository
     {
         const string sql = """
             INSERT INTO portfolio.customer (name, cpr_cvr, contact_type,
-                billing_street, billing_house_number, billing_floor, billing_door, billing_postal_code, billing_city)
+                billing_dar_id, billing_street, billing_house_number, billing_floor, billing_door, billing_postal_code, billing_city)
             VALUES (@Name, @CprCvr, @ContactType,
-                @BillingStreet, @BillingHouseNumber, @BillingFloor, @BillingDoor, @BillingPostalCode, @BillingCity)
+                @BillingDarId, @BillingStreet, @BillingHouseNumber, @BillingFloor, @BillingDoor, @BillingPostalCode, @BillingCity)
             RETURNING id, name, cpr_cvr, contact_type, status,
-                billing_street, billing_house_number, billing_floor, billing_door, billing_postal_code, billing_city
+                billing_dar_id, billing_street, billing_house_number, billing_floor, billing_door, billing_postal_code, billing_city
             """;
 
         await using var conn = new NpgsqlConnection(_connectionString);
@@ -54,6 +54,7 @@ public sealed class PortfolioRepository : IPortfolioRepository
             new CommandDefinition(sql, new
             {
                 Name = name, CprCvr = cprCvr, ContactType = contactType,
+                BillingDarId = billingAddress?.DarId,
                 BillingStreet = billingAddress?.Street,
                 BillingHouseNumber = billingAddress?.HouseNumber,
                 BillingFloor = billingAddress?.Floor,
@@ -68,7 +69,7 @@ public sealed class PortfolioRepository : IPortfolioRepository
     {
         const string sql = """
             SELECT id, name, cpr_cvr, contact_type, status,
-                billing_street, billing_house_number, billing_floor, billing_door, billing_postal_code, billing_city
+                billing_dar_id, billing_street, billing_house_number, billing_floor, billing_door, billing_postal_code, billing_city
             FROM portfolio.customer
             WHERE cpr_cvr = @CprCvr
             LIMIT 1
@@ -289,7 +290,7 @@ public sealed class PortfolioRepository : IPortfolioRepository
     {
         const string sql = """
             SELECT id, name, cpr_cvr, contact_type, status,
-                billing_street, billing_house_number, billing_floor, billing_door, billing_postal_code, billing_city
+                billing_dar_id, billing_street, billing_house_number, billing_floor, billing_door, billing_postal_code, billing_city
             FROM portfolio.customer
             WHERE id = @Id
             """;
@@ -305,7 +306,7 @@ public sealed class PortfolioRepository : IPortfolioRepository
     {
         const string sql = """
             SELECT id, name, cpr_cvr, contact_type, status,
-                billing_street, billing_house_number, billing_floor, billing_door, billing_postal_code, billing_city
+                billing_dar_id, billing_street, billing_house_number, billing_floor, billing_door, billing_postal_code, billing_city
             FROM portfolio.customer
             ORDER BY name
             """;
@@ -325,7 +326,7 @@ public sealed class PortfolioRepository : IPortfolioRepository
         var countSql = $"SELECT COUNT(*) FROM portfolio.customer {whereClause}";
         var dataSql = $"""
             SELECT id, name, cpr_cvr, contact_type, status,
-                billing_street, billing_house_number, billing_floor, billing_door, billing_postal_code, billing_city
+                billing_dar_id, billing_street, billing_house_number, billing_floor, billing_door, billing_postal_code, billing_city
             FROM portfolio.customer
             {whereClause}
             ORDER BY name
@@ -406,11 +407,11 @@ public sealed class PortfolioRepository : IPortfolioRepository
     {
         const string sql = """
             INSERT INTO portfolio.payer (name, cpr_cvr, contact_type, email, phone,
-                billing_street, billing_house_number, billing_floor, billing_door, billing_postal_code, billing_city)
+                billing_dar_id, billing_street, billing_house_number, billing_floor, billing_door, billing_postal_code, billing_city)
             VALUES (@Name, @CprCvr, @ContactType, @Email, @Phone,
-                @BillingStreet, @BillingHouseNumber, @BillingFloor, @BillingDoor, @BillingPostalCode, @BillingCity)
+                @BillingDarId, @BillingStreet, @BillingHouseNumber, @BillingFloor, @BillingDoor, @BillingPostalCode, @BillingCity)
             RETURNING id, name, cpr_cvr, contact_type, email, phone,
-                billing_street, billing_house_number, billing_floor, billing_door, billing_postal_code, billing_city
+                billing_dar_id, billing_street, billing_house_number, billing_floor, billing_door, billing_postal_code, billing_city
             """;
 
         await using var conn = new NpgsqlConnection(_connectionString);
@@ -419,6 +420,7 @@ public sealed class PortfolioRepository : IPortfolioRepository
             new CommandDefinition(sql, new
             {
                 Name = name, CprCvr = cprCvr, ContactType = contactType, Email = email, Phone = phone,
+                BillingDarId = billingAddress?.DarId,
                 BillingStreet = billingAddress?.Street,
                 BillingHouseNumber = billingAddress?.HouseNumber,
                 BillingFloor = billingAddress?.Floor,
@@ -433,7 +435,7 @@ public sealed class PortfolioRepository : IPortfolioRepository
     {
         const string sql = """
             SELECT id, name, cpr_cvr, contact_type, email, phone,
-                billing_street, billing_house_number, billing_floor, billing_door, billing_postal_code, billing_city
+                billing_dar_id, billing_street, billing_house_number, billing_floor, billing_door, billing_postal_code, billing_city
             FROM portfolio.payer
             WHERE id = @Id
             """;
@@ -449,7 +451,7 @@ public sealed class PortfolioRepository : IPortfolioRepository
     {
         const string sql = """
             SELECT DISTINCT p.id, p.name, p.cpr_cvr, p.contact_type, p.email, p.phone,
-                p.billing_street, p.billing_house_number, p.billing_floor, p.billing_door, p.billing_postal_code, p.billing_city
+                p.billing_dar_id, p.billing_street, p.billing_house_number, p.billing_floor, p.billing_door, p.billing_postal_code, p.billing_city
             FROM portfolio.payer p
             JOIN portfolio.contract c ON c.payer_id = p.id
             WHERE c.customer_id = @CustomerId
@@ -466,7 +468,8 @@ public sealed class PortfolioRepository : IPortfolioRepository
     {
         const string sql = """
             UPDATE portfolio.customer
-            SET billing_street = @Street, billing_house_number = @HouseNumber,
+            SET billing_dar_id = @DarId,
+                billing_street = @Street, billing_house_number = @HouseNumber,
                 billing_floor = @Floor, billing_door = @Door,
                 billing_postal_code = @PostalCode, billing_city = @City,
                 updated_at = now()
@@ -478,7 +481,7 @@ public sealed class PortfolioRepository : IPortfolioRepository
         await conn.ExecuteAsync(new CommandDefinition(sql, new
         {
             Id = customerId,
-            address.Street, address.HouseNumber, address.Floor,
+            address.DarId, address.Street, address.HouseNumber, address.Floor,
             address.Door, address.PostalCode, address.City,
         }, cancellationToken: ct));
     }
@@ -487,14 +490,14 @@ public sealed class PortfolioRepository : IPortfolioRepository
 
     private record CustomerRow(
         Guid Id, string Name, string CprCvr, string ContactType, string Status,
-        string? BillingStreet, string? BillingHouseNumber, string? BillingFloor,
+        string? BillingDarId, string? BillingStreet, string? BillingHouseNumber, string? BillingFloor,
         string? BillingDoor, string? BillingPostalCode, string? BillingCity)
     {
         public Customer ToCustomer()
         {
             var hasAddress = BillingStreet is not null || BillingPostalCode is not null || BillingCity is not null;
             var address = hasAddress
-                ? new Address(BillingStreet, BillingHouseNumber, BillingFloor, BillingDoor, BillingPostalCode, BillingCity)
+                ? new Address(BillingStreet, BillingHouseNumber, BillingFloor, BillingDoor, BillingPostalCode, BillingCity, BillingDarId)
                 : null;
             return new Customer(Id, Name, CprCvr, ContactType, Status, address);
         }
@@ -502,14 +505,14 @@ public sealed class PortfolioRepository : IPortfolioRepository
 
     private record PayerRow(
         Guid Id, string Name, string CprCvr, string ContactType, string? Email, string? Phone,
-        string? BillingStreet, string? BillingHouseNumber, string? BillingFloor,
+        string? BillingDarId, string? BillingStreet, string? BillingHouseNumber, string? BillingFloor,
         string? BillingDoor, string? BillingPostalCode, string? BillingCity)
     {
         public Payer ToPayer()
         {
             var hasAddress = BillingStreet is not null || BillingPostalCode is not null || BillingCity is not null;
             var address = hasAddress
-                ? new Address(BillingStreet, BillingHouseNumber, BillingFloor, BillingDoor, BillingPostalCode, BillingCity)
+                ? new Address(BillingStreet, BillingHouseNumber, BillingFloor, BillingDoor, BillingPostalCode, BillingCity, BillingDarId)
                 : null;
             return new Payer(Id, Name, CprCvr, ContactType, Email, Phone, address);
         }
