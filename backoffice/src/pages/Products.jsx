@@ -27,7 +27,7 @@ export default function Products() {
   }
 
   return (
-    <div className="p-8 max-w-6xl mx-auto">
+    <div className="p-4 sm:p-8 max-w-6xl mx-auto">
       <div className="mb-6 animate-fade-in-up">
         <h1 className="text-3xl font-bold text-slate-900 tracking-tight">{t('products.title')}</h1>
         <p className="text-base text-slate-500 mt-1">{t('products.subtitle')}</p>
@@ -53,7 +53,8 @@ export default function Products() {
             <p className="text-sm font-semibold text-slate-500">{t('products.noProducts')}</p>
           </div>
         ) : (
-          <table className="w-full">
+          <div className="overflow-x-auto">
+          <table className="w-full min-w-[700px]">
             <thead>
               <tr className="border-b border-slate-50 bg-slate-50/50">
                 <th className="text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-4 py-2">{t('products.colProduct')}</th>
@@ -104,6 +105,7 @@ export default function Products() {
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </div>
 

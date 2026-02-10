@@ -87,7 +87,7 @@ export default function SignupDetail() {
   const correctionChain = signup.correctionChain || [];
 
   return (
-    <div className="p-8 max-w-3xl mx-auto">
+    <div className="p-4 sm:p-8 max-w-3xl mx-auto">
       <Link to="/signups" className="inline-flex items-center gap-1.5 text-sm text-slate-400 hover:text-teal-600 mb-4 transition-colors font-medium">
         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
@@ -95,7 +95,7 @@ export default function SignupDetail() {
         {t('signupDetail.backToSignups')}
       </Link>
 
-      <div className="flex items-center justify-between mb-6 animate-fade-in-up">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 animate-fade-in-up">
         <div className="flex items-center gap-3">
           <h1 className="text-3xl font-bold text-slate-900 tracking-tight">{signup.signupNumber}</h1>
           <StatusBadge status={signup.status} label={t('status.' + signup.status)} />
@@ -202,7 +202,7 @@ export default function SignupDetail() {
           <div className="w-1 h-4 rounded-full bg-teal-500" />
           <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">{t('signupDetail.details')}</h3>
         </div>
-        <div className="grid grid-cols-2 divide-y divide-slate-100">
+        <div className="grid grid-cols-1 sm:grid-cols-2 divide-y divide-slate-100">
           <Field label={t('signupDetail.type')} value={signup.type === 'move_in' ? t('signupDetail.typeMoveIn') : t('signupDetail.typeSwitch')} />
           <Field label={t('signupDetail.effectiveDate')} value={signup.effectiveDate} />
           <Field label={t('signupDetail.gsrn')} value={<span className="font-mono text-xs bg-slate-100 px-2 py-1 rounded-md text-slate-600">{signup.gsrn}</span>} />
@@ -217,7 +217,7 @@ export default function SignupDetail() {
           <div className="w-1 h-4 rounded-full bg-teal-500" />
           <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">{t('signupDetail.customer')}</h3>
         </div>
-        <div className="grid grid-cols-2 divide-y divide-slate-100">
+        <div className="grid grid-cols-1 sm:grid-cols-2 divide-y divide-slate-100">
           <Field
             label={t('signupDetail.name')}
             value={

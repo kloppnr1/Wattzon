@@ -48,14 +48,14 @@ export default function BillingPeriodDetail() {
 
   if (error || !period) {
     return (
-      <div className="p-8 max-w-6xl mx-auto">
+      <div className="p-4 sm:p-8 max-w-6xl mx-auto">
         <div className="text-center text-rose-600">Error: {error || 'Period not found'}</div>
-      </div>
+  </div>
     );
   }
 
   return (
-    <div className="p-8 max-w-6xl mx-auto">
+    <div className="p-4 sm:p-8 max-w-6xl mx-auto">
       {/* Breadcrumb */}
       <div className="mb-4 flex items-center gap-2 text-sm text-slate-500">
         <Link to="/billing" className="hover:text-teal-600">{t('billingDetail.breadcrumbBilling')}</Link>
@@ -72,7 +72,7 @@ export default function BillingPeriodDetail() {
       {/* Period info card */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6 animate-fade-in-up" style={{ animationDelay: '60ms' }}>
         <h2 className="text-lg font-semibold text-slate-900 mb-4">{t('billingDetail.periodInfo')}</h2>
-        <dl className="grid grid-cols-2 gap-x-8 gap-y-4">
+        <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4">
           <div>
             <dt className="text-sm font-medium text-slate-500">{t('billingDetail.periodStart')}</dt>
             <dd className="text-base font-semibold text-slate-900 mt-1">{period.periodStart}</dd>

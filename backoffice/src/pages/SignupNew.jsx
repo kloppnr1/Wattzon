@@ -658,7 +658,7 @@ export default function SignupNew() {
                       <input type="text" value={customerName} onChange={(e) => setCustomerName(e.target.value)}
                         className="w-full rounded-lg border border-slate-200 bg-white px-4 py-3.5 text-sm text-slate-800 placeholder:text-slate-300 shadow-sm focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 transition-all" />
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-semibold text-slate-700 mb-2">{t('signupNew.cprCvr')}</label>
                         <input type="text" value={cprCvr} onChange={(e) => setCprCvr(e.target.value)} placeholder="0101901234"
@@ -684,7 +684,7 @@ export default function SignupNew() {
                     <h3 className="text-[11px] font-black uppercase tracking-widest text-slate-400">{t('signupNew.contactInfo')}</h3>
                     <div className="flex-1 h-px bg-slate-100" />
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-semibold text-slate-700 mb-2">{t('signupNew.email')}</label>
                       <input type="email" value={email} onChange={(e) => setEmail(e.target.value)}
@@ -731,7 +731,7 @@ export default function SignupNew() {
                   <p className="text-slate-500 mt-1">{t('signupNew.reviewSubmitDesc')}</p>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-semibold text-slate-700 mb-2">{t('signupNew.processType')}</label>
                     <select value={type} onChange={(e) => setType(e.target.value)}

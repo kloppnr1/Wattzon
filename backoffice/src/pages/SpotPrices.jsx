@@ -73,7 +73,7 @@ export default function SpotPrices() {
   }
 
   return (
-    <div className="p-8 max-w-6xl mx-auto relative">
+    <div className="p-4 sm:p-8 max-w-6xl mx-auto relative">
       {/* Loading progress bar */}
       {loading && (
         <div className="absolute top-0 left-0 right-0 h-1 bg-teal-100 overflow-hidden rounded-full z-10">
@@ -133,7 +133,7 @@ export default function SpotPrices() {
       </div>
 
       {/* Stats cards */}
-      <div className="grid grid-cols-4 gap-4 mb-6 animate-fade-in-up" style={{ animationDelay: '90ms' }}>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 animate-fade-in-up" style={{ animationDelay: '90ms' }}>
         <div className="bg-gradient-to-br from-white to-slate-50 rounded-xl p-5 shadow-sm border border-slate-100">
           <div className="text-sm font-medium text-slate-500 mb-1">{t('spotPrices.totalPrices')}</div>
           <div className="text-3xl font-bold text-slate-900">{totalCount.toLocaleString(lang === 'da' ? 'da-DK' : 'en')}</div>
@@ -220,7 +220,7 @@ export default function SpotPrices() {
 
         {/* Footer with pagination */}
         {items.length > 0 && (
-          <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+          <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
             <div className="text-sm text-slate-600">
               {t('common.totalItems', { count: totalCount, label: t('spotPrices.showingPrices') })}
             </div>

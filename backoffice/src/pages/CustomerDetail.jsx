@@ -31,7 +31,7 @@ export default function CustomerDetail() {
   if (!customer) return <div className="p-8"><p className="text-sm text-slate-500">{t('customerDetail.notFound')}</p></div>;
 
   return (
-    <div className="p-8 max-w-4xl mx-auto">
+    <div className="p-4 sm:p-8 max-w-4xl mx-auto">
       <Link to="/customers" className="inline-flex items-center gap-1.5 text-sm text-slate-400 hover:text-teal-600 mb-4 transition-colors font-medium">
         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
@@ -39,7 +39,7 @@ export default function CustomerDetail() {
         {t('customerDetail.backToCustomers')}
       </Link>
 
-      <div className="flex items-center gap-4 mb-6 animate-fade-in-up">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-6 animate-fade-in-up">
         <div className="w-14 h-14 rounded-2xl bg-teal-500 flex items-center justify-center shadow-lg shadow-teal-500/25">
           <span className="text-base font-bold text-white">
             {customer.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
@@ -51,7 +51,7 @@ export default function CustomerDetail() {
             {customer.contactType} &middot; <span className="font-mono text-xs bg-slate-100 px-2 py-0.5 rounded-md">{customer.cprCvr}</span>
           </p>
         </div>
-        <span className={`ml-auto inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold ${
+        <span className={`sm:ml-auto inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold ${
           customer.status === 'active' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-100 text-slate-500'
         }`}>
           <span className={`w-1.5 h-1.5 rounded-full ${customer.status === 'active' ? 'bg-emerald-400' : 'bg-slate-400'}`} />
@@ -72,7 +72,8 @@ export default function CustomerDetail() {
             <p className="text-sm text-slate-400 font-medium">{t('customerDetail.noContracts')}</p>
           </div>
         ) : (
-          <table className="w-full">
+          <div className="overflow-x-auto">
+          <table className="w-full min-w-[450px]">
             <thead>
               <tr className="border-b border-slate-50 bg-slate-50/50">
                 <th className="text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-4 py-2">{t('customerDetail.colGsrn')}</th>
@@ -94,6 +95,7 @@ export default function CustomerDetail() {
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </div>
 
@@ -110,7 +112,8 @@ export default function CustomerDetail() {
             <p className="text-sm text-slate-400 font-medium">{t('customerDetail.noMeteringPoints')}</p>
           </div>
         ) : (
-          <table className="w-full">
+          <div className="overflow-x-auto">
+          <table className="w-full min-w-[650px]">
             <thead>
               <tr className="border-b border-slate-50 bg-slate-50/50">
                 <th className="text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-4 py-2">{t('customerDetail.colGsrn')}</th>
@@ -147,6 +150,7 @@ export default function CustomerDetail() {
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </div>
     </div>

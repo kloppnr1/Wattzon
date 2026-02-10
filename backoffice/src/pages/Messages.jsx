@@ -210,7 +210,7 @@ export default function Messages() {
   const deliveryDates = deliveries ? [...new Set(deliveries.map(d => d.deliveryDate))].sort((a, b) => new Date(b) - new Date(a)) : [];
 
   return (
-    <div className="p-8 max-w-6xl mx-auto">
+    <div className="p-4 sm:p-8 max-w-6xl mx-auto">
       {/* Page header */}
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-slate-900 tracking-tight">{t('messages.title')}</h1>
@@ -219,7 +219,7 @@ export default function Messages() {
 
       {/* Stats cards */}
       {stats && (
-        <div className="grid grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           <div className="bg-gradient-to-br from-white to-slate-50 rounded-xl p-5 shadow-sm border border-slate-100">
             <div className="text-sm font-medium text-slate-500 mb-1">{t('messages.totalMessages')}</div>
             <div className="text-3xl font-bold text-slate-900">{stats.totalInbound + stats.pendingOutbound}</div>
@@ -240,7 +240,7 @@ export default function Messages() {
       )}
 
       {/* Tabs */}
-      <div className="flex items-center gap-1 mb-5 bg-white rounded-xl p-1.5 w-fit shadow-sm border border-slate-100">
+      <div className="flex items-center gap-1 mb-5 bg-white rounded-xl p-1.5 w-fit max-w-full overflow-x-auto shadow-sm border border-slate-100">
         {[
           { key: 'conversations', label: t('messages.tabConversations') },
           { key: 'deliveries', label: t('messages.tabDeliveries') },
@@ -339,7 +339,7 @@ export default function Messages() {
             </table>
 
             {convPages > 1 && (
-              <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+              <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                 <div className="text-sm text-slate-600">
                   {t('common.showingRange', { from: (convPage - 1) * PAGE_SIZE + 1, to: Math.min(convPage * PAGE_SIZE, convTotal), total: convTotal })} {t('messages.showingConversations')}
                 </div>
@@ -383,7 +383,7 @@ export default function Messages() {
                       <div className="text-sm font-semibold text-slate-900">{dateStr}</div>
                       <div className="text-xs text-slate-400">{t('messages.deliveryMessages', { count: totalCount })}</div>
                     </div>
-                    <div className="grid grid-cols-3 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                       {dayDeliveries.map((d) => {
                         const typeLabel = d.messageType === 'RSM-012' ? t('messages.meteringData')
                           : d.messageType === 'RSM-014' ? t('messages.aggregation')
@@ -471,7 +471,7 @@ export default function Messages() {
             </div>
 
             {dlPages > 1 && (
-              <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+              <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                 <div className="text-sm text-slate-600">
                   {t('common.showingRange', { from: (dlPage - 1) * PAGE_SIZE + 1, to: Math.min(dlPage * PAGE_SIZE, dlTotal), total: dlTotal })} {t('messages.showingDeadLetters')}
                 </div>

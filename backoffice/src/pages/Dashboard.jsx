@@ -81,7 +81,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="p-8 max-w-6xl mx-auto">
+    <div className="p-4 sm:p-8 max-w-6xl mx-auto">
       {/* Header */}
       <div className="mb-8 animate-fade-in-up">
         <h1 className="text-3xl font-bold text-slate-900 tracking-tight">{t('dashboard.title')}</h1>
@@ -89,7 +89,7 @@ export default function Dashboard() {
       </div>
 
       {/* Stat cards */}
-      <div className="grid grid-cols-4 gap-4 mb-8 animate-fade-in-up" style={{ animationDelay: '60ms' }}>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8 animate-fade-in-up" style={{ animationDelay: '60ms' }}>
         {cards.map((s) => (
           <Link
             key={s.label}
@@ -127,7 +127,8 @@ export default function Dashboard() {
             <p className="text-xs text-slate-400 mt-1">{t('dashboard.createToStart')}</p>
           </div>
         ) : (
-          <table className="w-full">
+          <div className="overflow-x-auto">
+          <table className="w-full min-w-[600px]">
             <thead>
               <tr className="border-b border-slate-50 bg-slate-50/50">
                 <th className="text-left text-[11px] font-semibold text-slate-400 uppercase tracking-wider px-6 py-3">{t('dashboard.colSignup')}</th>
@@ -162,6 +163,7 @@ export default function Dashboard() {
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </div>
     </div>

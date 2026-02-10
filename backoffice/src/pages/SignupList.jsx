@@ -64,9 +64,9 @@ export default function SignupList() {
   }
 
   return (
-    <div className="p-8 max-w-6xl mx-auto">
+    <div className="p-4 sm:p-8 max-w-6xl mx-auto">
       {/* Page header */}
-      <div className="flex items-center justify-between mb-6 animate-fade-in-up">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 animate-fade-in-up">
         <div>
           <h1 className="text-3xl font-bold text-slate-900 tracking-tight">{t('signupList.title')}</h1>
           <p className="text-base text-slate-500 mt-1">{t('signupList.subtitle')}</p>
@@ -83,7 +83,7 @@ export default function SignupList() {
       </div>
 
       {/* Filter bar */}
-      <div className="flex items-center gap-1 mb-5 bg-white rounded-xl p-1.5 w-fit shadow-sm border border-slate-100 animate-fade-in-up" style={{ animationDelay: '60ms' }}>
+      <div className="flex items-center gap-1 mb-5 bg-white rounded-xl p-1.5 w-fit max-w-full overflow-x-auto shadow-sm border border-slate-100 animate-fade-in-up" style={{ animationDelay: '60ms' }}>
         {STATUS_OPTIONS.map((s) => (
           <button
             key={s}
@@ -123,7 +123,8 @@ export default function SignupList() {
             </p>
           </div>
         ) : (
-          <table className="w-full">
+          <div className="overflow-x-auto">
+          <table className="w-full min-w-[800px]">
             <thead>
               <tr className="border-b border-slate-50 bg-slate-50/50">
                 <th className="text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-4 py-2">{t('signupList.colSignup')}</th>
@@ -169,12 +170,13 @@ export default function SignupList() {
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </div>
 
       {/* Pagination */}
       {!loading && totalPages > 1 && (
-        <div className="flex items-center justify-between mt-4 px-1">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mt-4 px-1">
           <p className="text-xs text-slate-400 font-medium">
             {totalCount.toLocaleString('da-DK')} signup{totalCount !== 1 ? 's' : ''}
           </p>

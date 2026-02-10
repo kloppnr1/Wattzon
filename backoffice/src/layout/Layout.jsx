@@ -1,4 +1,5 @@
-import { NavLink, Outlet } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useTranslation } from '../i18n/LanguageContext';
 
 const navSections = [
@@ -99,11 +100,47 @@ const navSections = [
 
 export default function Layout() {
   const { lang, setLang, t } = useTranslation();
+  const location = useLocation();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // Auto-close sidebar on navigation
+  useEffect(() => {
+    setSidebarOpen(false);
+  }, [location.pathname]);
 
   return (
     <div className="flex h-screen bg-slate-50">
-      {/* Sidebar — flat teal */}
-      <aside className="w-[240px] bg-teal-600 flex flex-col shrink-0 shadow-2xl shadow-teal-900/20 relative overflow-hidden">
+      {/* Mobile top bar */}
+      <div className="fixed top-0 left-0 right-0 z-40 flex items-center gap-3 bg-teal-600 px-4 h-14 md:hidden shadow-lg">
+        <button
+          onClick={() => setSidebarOpen(true)}
+          className="p-1.5 rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition-colors"
+        >
+          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+          </svg>
+        </button>
+        <div className="w-8 h-8 rounded-lg bg-white/12 flex items-center justify-center">
+          <span className="text-[16px] font-black text-white/90 leading-none tracking-tighter">V</span>
+        </div>
+        <p className="text-[10px] text-teal-200/60 font-medium tracking-wide">Energy Platform</p>
+      </div>
+
+      {/* Dark overlay on mobile */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/40 md:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      {/* Sidebar */}
+      <aside className={`
+        fixed inset-y-0 left-0 z-50 w-[240px] bg-teal-600 flex flex-col shrink-0 shadow-2xl shadow-teal-900/20 relative overflow-hidden
+        transition-transform duration-300 ease-in-out
+        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+        md:static md:translate-x-0
+      `}>
         {/* Decorative orbs */}
         <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl" />
         <div className="absolute bottom-20 left-0 w-24 h-24 bg-teal-400/10 rounded-full -translate-x-1/2 blur-xl" />
@@ -131,6 +168,7 @@ export default function Layout() {
                     key={to}
                     to={to}
                     end={end || to === '/signups'}
+                    onClick={() => setSidebarOpen(false)}
                     className={({ isActive }) =>
                       `group relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium transition-all duration-200 ${
                         isActive
@@ -188,7 +226,7 @@ export default function Layout() {
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 overflow-auto">
+      <main className="flex-1 overflow-auto pt-14 md:pt-0">
         <Outlet />
       </main>
     </div>
