@@ -55,6 +55,13 @@ app.UseStaticFiles();
 // Health
 app.MapGet("/health", () => Results.Ok(new { status = "healthy" }));
 
+// Seed test data
+app.MapPost("/api/seed", async () =>
+{
+    await DatabaseSeeder.SeedAsync(connectionString);
+    return Results.Ok(new { message = "Database seeded successfully." });
+});
+
 // --- Products ---
 
 // GET /api/products — list active products
