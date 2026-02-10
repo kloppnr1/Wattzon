@@ -38,7 +38,7 @@ The solution follows **Clean Architecture** with strict dependency direction: ou
 | **Application** | Interfaces (`IDataHubClient`, repositories), service contracts, `ProcessStateMachine`. |
 | **Infrastructure** | Dapper repositories, Npgsql, DbUp migrations, HTTP DataHub client, dashboard services. |
 | **Worker** | Background service host — queue polling, settlement orchestration, process scheduling. |
-| **Api** | Minimal API for external access. |
+| **Api** | Minimal API for external access — portfolio, billing, messaging, corrections, and seeding endpoints. |
 | **Web** | Blazor Server dashboard for visualization, simulation, and operations. |
 | **Simulator** | Standalone mock DataHub API for testing without real credentials. |
 
@@ -296,7 +296,7 @@ For a settlement system where query correctness directly affects billing accurac
 
 ### Migrations
 
-21 migration files from `V001__create_extensions.sql` through `V021__message_audit.sql`, covering schema creation, table definitions, hypertable setup, compression policies, and incremental feature additions (aconto, correction settlement, elvarme, solar, erroneous switch).
+24 migration files from `V001__create_extensions.sql` through `V024__correction_settlement_enhancements.sql`, covering schema creation, table definitions, hypertable setup, compression policies, and incremental feature additions (aconto, correction settlement, elvarme, solar, erroneous switch, onboarding, signups, correction batch grouping).
 
 Notable: `V009__create_hypertable.sql` uses `WithoutTransaction()` because TimescaleDB's `create_hypertable` cannot run inside a transaction.
 
@@ -364,9 +364,9 @@ The Operations page uses `SimulatedClock` to compress this timeline — users ca
 
 ---
 
-## Production Back Office (Volt)
+## Production Back Office (V)
 
-> **📊 PRODUCTION APPLICATION**: Volt is the end-user tool for back-office staff managing customer operations.
+> **📊 PRODUCTION APPLICATION**: V is the end-user tool for back-office staff managing customer operations.
 
 ### Technology
 
@@ -392,7 +392,7 @@ backoffice/
 
 ### Integration
 
-Volt communicates with the settlement system exclusively through the REST API (`DataHub.Settlement.Api`):
+V communicates with the settlement system exclusively through the REST API (`DataHub.Settlement.Api`):
 
 - **No shared code** — completely decoupled from the .NET backend
 - **HTTP-only communication** — API runs on `localhost:5001`, UI on `localhost:5173`
@@ -407,6 +407,10 @@ Volt communicates with the settlement system exclusively through the REST API (`
 | **Signups** | List all signups with status filtering, create new signups, view details |
 | **Customers** | List customers, view customer detail with contracts and metering points |
 | **Products** | View available electricity products (margin, subscription, terms) |
+| **Spot Prices** | Current and historical Nord Pool spot prices |
+| **Billing** | Billing periods, settlement runs, line-item breakdown |
+| **Corrections** | Settlement corrections list with filtering, trigger manual corrections, correction detail with charge-type lines |
+| **Messages** | DataHub message log with inbound/outbound messages and dead letters |
 
 ### Why Separate from the Blazor Dashboard?
 

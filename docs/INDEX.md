@@ -33,10 +33,10 @@ This repository contains **two web applications** with different purposes:
 - **Features**: Simulation, time-travel, CIM message viewer, settlement debugging
 - **Status**: Development/testing tool only — NOT for production
 
-### 📊 Volt Back Office (React)
+### 📊 V Back Office (React)
 - **Port**: localhost:5173
 - **For**: Customer service staff
-- **Features**: Signup management, customer lookup, rejection handling, pipeline monitoring
+- **Features**: Signup management, customer lookup, rejection handling, pipeline monitoring, settlement corrections
 - **Status**: Production end-user application
 
 **Documentation**: See [README.md](../README.md) Quick Start for setup instructions.

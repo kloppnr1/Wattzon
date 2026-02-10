@@ -230,7 +230,7 @@ export default function Layout() {
               </button>
             </div>
           </div>
-          <p className="text-[10px] text-teal-200/30 mt-1">Volt v0.1</p>
+          <p className="text-[10px] text-teal-200/30 mt-1">V v0.1</p>
         </div>
       </aside>
 

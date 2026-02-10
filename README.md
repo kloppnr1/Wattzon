@@ -38,7 +38,7 @@ dotnet run --project src/DataHub.Settlement.Worker    # Background services
 
 #### For Production (Back-Office Operations)
 
-The **Volt** back-office application is the production tool for customer service, signup handling, and operational monitoring.
+The **V** back-office application is the production tool for customer service, signup handling, and operational monitoring.
 
 ```bash
 # Terminal 1: Start PostgreSQL
@@ -56,14 +56,14 @@ dotnet run                                            # Populates database with 
 # Terminal 4: Start the back-office UI
 cd backoffice
 npm install
-npm run dev                                           # Volt UI at localhost:5173
+npm run dev                                           # V UI at localhost:5173
 ```
 
-> **📊 PRODUCTION TOOL**: The Volt back-office app (`backoffice/`) provides complete visibility into settlement operations, billing data, DataHub messaging, customer management, and signup handling.
+> **📊 PRODUCTION TOOL**: The V back-office app (`backoffice/`) provides complete visibility into settlement operations, billing data, DataHub messaging, customer management, signup handling, and settlement corrections.
 
 **Access**: Open http://localhost:5173 in your browser.
 
-**Demo Data**: The seeder creates 6 signups, 6 customers, 4 metering points, 3 billing periods with settlement runs, 40 settlement lines, 25 inbound messages, and 18 outbound requests for testing the back-office UI.
+**Demo Data**: The seeder creates 6 signups, 6 customers, 4 metering points, 3 billing periods with settlement runs, 40 settlement lines, 25 inbound messages, 18 outbound requests, metering data history for 5 GSRNs (October 2025), and 3 pre-existing correction records for testing the back-office UI.
 
 ---
 
@@ -112,10 +112,10 @@ This repository contains two web applications with distinct purposes:
 | Application | Technology | Purpose | Port | Users |
 |------------|-----------|---------|------|-------|
 | **Settlement API** | ASP.NET Minimal API | REST API for settlement operations, billing data, messaging logs | 5001 | Back-office UI, integrations |
-| **Volt (Back Office)** | React + Vite | Customer signups, billing visibility, settlement runs, DataHub messaging, operational monitoring | 5173 | Customer service staff, operations |
+| **V (Back Office)** | React + Vite | Customer signups, billing visibility, settlement runs, corrections, DataHub messaging, operational monitoring | 5173 | Customer service staff, operations |
 
 **When to use which:**
-- **Managing customer signups or viewing operational data?** → Use Volt back office (http://localhost:5173)
+- **Managing customer signups or viewing operational data?** → Use V back office (http://localhost:5173)
 - **Building API integrations?** → Use Settlement API (http://localhost:5001/api)
 - **Checking logs and traces?** → Use Aspire Dashboard (http://localhost:18888)
 - **Testing settlement calculations?** → Run Worker with Docker Compose simulator
