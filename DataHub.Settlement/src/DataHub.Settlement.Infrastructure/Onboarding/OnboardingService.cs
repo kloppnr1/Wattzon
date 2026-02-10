@@ -132,10 +132,11 @@ public sealed class OnboardingService : IOnboardingService
         var process = await stateMachine.CreateRequestAsync(gsrn, processType, request.EffectiveDate, ct);
 
         // 9. Create signup (with customer info, but customer not created yet)
+        var dbContactType = MapContactTypeToDb(request.ContactType);
         var signupNumber = await _signupRepo.NextSignupNumberAsync(ct);
         var signup = await _signupRepo.CreateAsync(
             signupNumber, request.DarId ?? "", gsrn,
-            request.CustomerName, request.CprCvr, request.ContactType,
+            request.CustomerName, request.CprCvr, dbContactType,
             request.ProductId, process.Id, request.Type, request.EffectiveDate,
             request.CorrectedFromId, ct);
 
@@ -262,6 +263,17 @@ public sealed class OnboardingService : IOnboardingService
             "person" => "private",
             "company" => "business",
             _ => signupContactType, // Fallback to original value
+        };
+    }
+
+    private static string MapContactTypeToDb(string contactType)
+    {
+        // Map API contact type ('private'/'business') to DB constraint ('person'/'company')
+        return contactType switch
+        {
+            "private" => "person",
+            "business" => "company",
+            _ => contactType,
         };
     }
 
