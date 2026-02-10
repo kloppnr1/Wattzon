@@ -1,6 +1,7 @@
 using DataHub.Settlement.Application.AddressLookup;
 using DataHub.Settlement.Application.Billing;
 using DataHub.Settlement.Application.Lifecycle;
+using DataHub.Settlement.Application.Metering;
 using DataHub.Settlement.Application.Messaging;
 using DataHub.Settlement.Application.Onboarding;
 using DataHub.Settlement.Application.Portfolio;
@@ -10,6 +11,7 @@ using DataHub.Settlement.Infrastructure.AddressLookup;
 using DataHub.Settlement.Infrastructure.Billing;
 using DataHub.Settlement.Infrastructure.Database;
 using DataHub.Settlement.Infrastructure.Lifecycle;
+using DataHub.Settlement.Infrastructure.Metering;
 using DataHub.Settlement.Infrastructure.Messaging;
 using DataHub.Settlement.Infrastructure.Onboarding;
 using DataHub.Settlement.Infrastructure.Portfolio;
@@ -38,6 +40,7 @@ builder.Services.AddSingleton<IProcessRepository>(new ProcessRepository(connecti
 builder.Services.AddSingleton<ISignupRepository>(new SignupRepository(connectionString));
 builder.Services.AddSingleton<IOnboardingService, OnboardingService>();
 builder.Services.AddSingleton<IBillingRepository>(new BillingRepository(connectionString));
+builder.Services.AddSingleton<ISpotPriceRepository>(new SpotPriceRepository(connectionString));
 builder.Services.AddSingleton<IMessageRepository>(new MessageRepository(connectionString));
 
 var app = builder.Build();
@@ -387,6 +390,45 @@ app.MapGet("/api/messages/deliveries", async (IMessageRepository repo, Cancellat
 {
     var deliveries = await repo.GetDataDeliveriesAsync(ct);
     return Results.Ok(deliveries);
+});
+
+// --- Spot Prices (metering) ---
+
+// GET /api/metering/spot-prices — spot prices with date range filter
+app.MapGet("/api/metering/spot-prices", async (
+    string? priceArea, DateOnly? from, DateOnly? to,
+    ISpotPriceRepository repo, CancellationToken ct) =>
+{
+    var area = priceArea ?? "DK1";
+    var toDate = to ?? DateOnly.FromDateTime(DateTime.UtcNow).AddDays(2);
+    var fromDate = from ?? toDate.AddDays(-7);
+    var start = fromDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+    var end = toDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+
+    var prices = await repo.GetPricesAsync(area, start, end, ct);
+
+    return Results.Ok(new
+    {
+        priceArea = area,
+        from = fromDate,
+        to = toDate,
+        totalCount = prices.Count,
+        items = prices.Select(p => new
+        {
+            timestamp = p.Timestamp,
+            priceArea = p.PriceArea,
+            pricePerKwh = p.PricePerKwh,
+            resolution = p.Resolution,
+        }),
+    });
+});
+
+// GET /api/metering/spot-prices/latest — latest price date per area
+app.MapGet("/api/metering/spot-prices/latest", async (ISpotPriceRepository repo, CancellationToken ct) =>
+{
+    var dk1 = await repo.GetLatestPriceDateAsync("DK1", ct);
+    var dk2 = await repo.GetLatestPriceDateAsync("DK2", ct);
+    return Results.Ok(new { dk1, dk2 });
 });
 
 app.Run();

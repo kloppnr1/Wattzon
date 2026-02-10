@@ -11,6 +11,7 @@ import Products from './pages/Products';
 import BillingPeriods from './pages/BillingPeriods';
 import BillingPeriodDetail from './pages/BillingPeriodDetail';
 import SettlementRunDetail from './pages/SettlementRunDetail';
+import SpotPrices from './pages/SpotPrices';
 import Messages from './pages/Messages';
 import InboundMessageDetail from './pages/InboundMessageDetail';
 import OutboundRequestDetail from './pages/OutboundRequestDetail';
@@ -29,6 +30,7 @@ export default function App() {
             <Route path="/customers" element={<CustomerList />} />
             <Route path="/customers/:id" element={<CustomerDetail />} />
             <Route path="/products" element={<Products />} />
+            <Route path="/spot-prices" element={<SpotPrices />} />
             <Route path="/billing" element={<BillingPeriods />} />
             <Route path="/billing/periods/:id" element={<BillingPeriodDetail />} />
             <Route path="/billing/runs/:id" element={<SettlementRunDetail />} />
