@@ -396,13 +396,13 @@ app.MapGet("/api/messages/deliveries", async (IMessageRepository repo, Cancellat
 
 // GET /api/metering/spot-prices — spot prices with date range filter + pagination
 app.MapGet("/api/metering/spot-prices", async (
-    string? priceArea, DateOnly? from, DateOnly? to,
+    string? priceArea, string? from, string? to,
     int? page, int? pageSize,
     ISpotPriceRepository repo, CancellationToken ct) =>
 {
     var area = priceArea ?? "DK1";
-    var toDate = to ?? DateOnly.FromDateTime(DateTime.UtcNow).AddDays(2);
-    var fromDate = from ?? toDate.AddDays(-7);
+    var toDate = !string.IsNullOrEmpty(to) && DateOnly.TryParse(to, out var toParsed) ? toParsed : DateOnly.FromDateTime(DateTime.UtcNow).AddDays(2);
+    var fromDate = !string.IsNullOrEmpty(from) && DateOnly.TryParse(from, out var fromParsed) ? fromParsed : toDate.AddDays(-7);
     var start = fromDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
     var end = toDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
 
