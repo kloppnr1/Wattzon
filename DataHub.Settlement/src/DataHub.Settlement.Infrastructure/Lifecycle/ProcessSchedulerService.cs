@@ -9,7 +9,7 @@ namespace DataHub.Settlement.Infrastructure.Lifecycle;
 
 public sealed class ProcessSchedulerService : BackgroundService
 {
-    private static readonly TimeSpan PollInterval = TimeSpan.FromMinutes(1);
+    private static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(30);
 
     private readonly IProcessRepository _processRepo;
     private readonly ISignupRepository _signupRepo;
