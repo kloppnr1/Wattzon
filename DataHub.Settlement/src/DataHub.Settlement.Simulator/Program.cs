@@ -52,8 +52,12 @@ app.MapPost("/v1.0/cim/requestchangeofsupplier", async (HttpRequest request) =>
 
     if (gsrn is not null && state.IsGsrnActive(gsrn))
     {
-        state.EnqueueMessage("MasterData", "RSM-009", correlationId,
-            BuildRsm009Json(correlationId, false, "E16", "Supplier already holds this metering point"));
+        _ = Task.Run(async () =>
+        {
+            await Task.Delay(15_000);
+            state.EnqueueMessage("MasterData", "RSM-009", correlationId,
+                BuildRsm009Json(correlationId, false, "E16", "Supplier already holds this metering point"));
+        });
 
         return Results.Ok(new
         {
@@ -67,13 +71,17 @@ app.MapPost("/v1.0/cim/requestchangeofsupplier", async (HttpRequest request) =>
     if (gsrn is not null)
         state.ActivateGsrn(gsrn);
 
-    // Auto-enqueue RSM-009 (acknowledgment) + RSM-007 (master data confirmation)
-    state.EnqueueMessage("MasterData", "RSM-009", correlationId,
-        BuildRsm009Json(correlationId, true));
+    // Auto-enqueue RSM-009 (acknowledgment) + RSM-007 (master data confirmation) after 15s delay
+    _ = Task.Run(async () =>
+    {
+        await Task.Delay(15_000);
+        state.EnqueueMessage("MasterData", "RSM-009", correlationId,
+            BuildRsm009Json(correlationId, true));
 
-    var effectiveDate = ExtractEffectiveDate(body) ?? "2025-01-01T00:00:00Z";
-    state.EnqueueMessage("MasterData", "RSM-007", correlationId,
-        ScenarioLoader.BuildRsm007Json(gsrn ?? "571313100000012345", effectiveDate));
+        var effectiveDate = ExtractEffectiveDate(body) ?? "2025-01-01T00:00:00Z";
+        state.EnqueueMessage("MasterData", "RSM-007", correlationId,
+            ScenarioLoader.BuildRsm007Json(gsrn ?? "571313100000012345", effectiveDate));
+    });
 
     return Results.Ok(new
     {
@@ -92,8 +100,12 @@ app.MapPost("/v1.0/cim/requestendofsupply", async (HttpRequest request) =>
 
     if (gsrn is not null && !state.IsGsrnActive(gsrn))
     {
-        state.EnqueueMessage("MasterData", "RSM-009", correlationId,
-            BuildRsm009Json(correlationId, false, "E16", "No active supply for this metering point"));
+        _ = Task.Run(async () =>
+        {
+            await Task.Delay(15_000);
+            state.EnqueueMessage("MasterData", "RSM-009", correlationId,
+                BuildRsm009Json(correlationId, false, "E16", "No active supply for this metering point"));
+        });
 
         return Results.Ok(new
         {
@@ -107,9 +119,13 @@ app.MapPost("/v1.0/cim/requestendofsupply", async (HttpRequest request) =>
     if (gsrn is not null)
         state.DeactivateGsrn(gsrn);
 
-    // Auto-enqueue RSM-009 only (no RSM-007 for end-of-supply)
-    state.EnqueueMessage("MasterData", "RSM-009", correlationId,
-        BuildRsm009Json(correlationId, true));
+    // Auto-enqueue RSM-009 only (no RSM-007 for end-of-supply) after 15s delay
+    _ = Task.Run(async () =>
+    {
+        await Task.Delay(15_000);
+        state.EnqueueMessage("MasterData", "RSM-009", correlationId,
+            BuildRsm009Json(correlationId, true));
+    });
 
     return Results.Ok(new
     {
@@ -125,8 +141,12 @@ app.MapPost("/v1.0/cim/requestcancelchangeofsupplier", async (HttpRequest reques
 
     var correlationId = Guid.NewGuid().ToString();
 
-    state.EnqueueMessage("MasterData", "RSM-009", correlationId,
-        BuildRsm009Json(correlationId, true));
+    _ = Task.Run(async () =>
+    {
+        await Task.Delay(15_000);
+        state.EnqueueMessage("MasterData", "RSM-009", correlationId,
+            BuildRsm009Json(correlationId, true));
+    });
 
     return Results.Ok(new
     {

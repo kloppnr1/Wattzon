@@ -145,7 +145,7 @@ public sealed class OnboardingService : IOnboardingService
             signup.SignupNumber, gsrn, request.Type, request.EffectiveDate,
             request.CorrectedFromId.HasValue ? $", correcting {request.CorrectedFromId}" : "");
 
-        return new SignupResponse(signup.SignupNumber, signup.Status, gsrn, request.EffectiveDate);
+        return new SignupResponse(signup.Id, signup.SignupNumber, signup.Status, gsrn, request.EffectiveDate);
     }
 
     public async Task<SignupStatusResponse?> GetStatusAsync(string signupNumber, CancellationToken ct)

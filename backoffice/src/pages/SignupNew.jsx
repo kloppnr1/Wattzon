@@ -190,8 +190,8 @@ export default function SignupNew() {
       if (correctedFromId) {
         payload.correctedFromId = correctedFromId;
       }
-      await api.createSignup(payload);
-      navigate('/signups');
+      const result = await api.createSignup(payload);
+      navigate(`/signups/${result.id}`);
     } catch (e) {
       setError(e.message);
       setSubmitting(false);

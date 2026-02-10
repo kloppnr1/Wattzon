@@ -23,6 +23,7 @@ public sealed class NullOnboardingService : IOnboardingService
     public Task<SignupResponse> CreateSignupAsync(SignupRequest request, CancellationToken ct)
     {
         return Task.FromResult(new SignupResponse(
+            Id: Guid.NewGuid(),
             SignupId: Guid.NewGuid().ToString(),
             Status: "created",
             Gsrn: "571313100000000000",

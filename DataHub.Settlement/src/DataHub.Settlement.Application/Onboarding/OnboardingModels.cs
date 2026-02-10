@@ -35,6 +35,7 @@ public record SignupRequest(
     Guid? CorrectedFromId = null);
 
 public record SignupResponse(
+    Guid Id,
     string SignupId,
     string Status,
     string Gsrn,

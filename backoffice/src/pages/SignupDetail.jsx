@@ -39,6 +39,15 @@ export default function SignupDetail() {
       .finally(() => setLoading(false));
   }, [id]);
 
+  useEffect(() => {
+    if (!signup || !['registered', 'processing'].includes(signup.status)) return;
+    const interval = setInterval(() => {
+      Promise.all([api.getSignup(id), api.getSignupEvents(id)])
+        .then(([s, e]) => { setSignup(s); setEvents(e); });
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [id, signup?.status]);
+
   async function handleCancel() {
     if (!signup || !confirm(t('signupDetail.cancelConfirm'))) return;
     setCancelling(true);
