@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { api } from '../api';
 import { useTranslation } from '../i18n/LanguageContext';
 
+const PAGE_SIZE = 200;
+
 function formatDate(d) {
   return d.toISOString().slice(0, 10);
 }
@@ -23,16 +25,17 @@ export default function SpotPrices() {
   const [priceArea, setPriceArea] = useState('DK1');
   const [from, setFrom] = useState(defaultFrom);
   const [to, setTo] = useState(defaultTo);
+  const [page, setPage] = useState(1);
   const [data, setData] = useState(null);
   const [latest, setLatest] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const fetchData = useCallback(() => {
+  const fetchData = useCallback((p) => {
     setError(null);
     setLoading(true);
     Promise.all([
-      api.getSpotPrices({ priceArea, from, to }),
+      api.getSpotPrices({ priceArea, from, to, page: p, pageSize: PAGE_SIZE }),
       api.getSpotPriceLatest(),
     ])
       .then(([prices, lat]) => { setData(prices); setLatest(lat); })
@@ -40,12 +43,20 @@ export default function SpotPrices() {
       .finally(() => setLoading(false));
   }, [priceArea, from, to]);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  // Reset to page 1 when filters change
+  useEffect(() => { setPage(1); fetchData(1); }, [fetchData]);
+
+  // Fetch when page changes (but not on filter change — handled above)
+  const handlePageChange = (newPage) => {
+    setPage(newPage);
+    fetchData(newPage);
+  };
 
   const items = data?.items ?? [];
   const totalCount = data?.totalCount ?? 0;
+  const totalPages = data?.totalPages ?? 1;
 
-  // Stats
+  // Stats (for current page)
   const prices = items.map(p => p.pricePerKwh);
   const avgPrice = prices.length > 0 ? (prices.reduce((a, b) => a + b, 0) / prices.length) : 0;
   const minPrice = prices.length > 0 ? Math.min(...prices) : 0;
@@ -210,12 +221,33 @@ export default function SpotPrices() {
           </table>
         </div>
 
-        {/* Footer with count */}
+        {/* Footer with pagination */}
         {items.length > 0 && (
           <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
             <div className="text-sm text-slate-600">
               {t('common.totalItems', { count: totalCount, label: t('spotPrices.showingPrices') })}
             </div>
+            {totalPages > 1 && (
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => handlePageChange(Math.max(1, page - 1))}
+                  disabled={page <= 1}
+                  className="px-3 py-1.5 text-xs font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                >
+                  {t('common.previous')}
+                </button>
+                <span className="px-3 py-1.5 text-xs font-semibold text-slate-700">
+                  {page} / {totalPages}
+                </span>
+                <button
+                  onClick={() => handlePageChange(Math.min(totalPages, page + 1))}
+                  disabled={page >= totalPages}
+                  className="px-3 py-1.5 text-xs font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                >
+                  {t('common.next')}
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>

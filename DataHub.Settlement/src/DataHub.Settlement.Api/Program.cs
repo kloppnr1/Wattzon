@@ -394,9 +394,10 @@ app.MapGet("/api/messages/deliveries", async (IMessageRepository repo, Cancellat
 
 // --- Spot Prices (metering) ---
 
-// GET /api/metering/spot-prices — spot prices with date range filter
+// GET /api/metering/spot-prices — spot prices with date range filter + pagination
 app.MapGet("/api/metering/spot-prices", async (
     string? priceArea, DateOnly? from, DateOnly? to,
+    int? page, int? pageSize,
     ISpotPriceRepository repo, CancellationToken ct) =>
 {
     var area = priceArea ?? "DK1";
@@ -407,18 +408,27 @@ app.MapGet("/api/metering/spot-prices", async (
 
     var prices = await repo.GetPricesAsync(area, start, end, ct);
 
+    var totalCount = prices.Count;
+    var p = Math.Max(page ?? 1, 1);
+    var ps = Math.Clamp(pageSize ?? 200, 1, 500);
+    var totalPages = (int)Math.Ceiling((double)totalCount / ps);
+    var pagedItems = prices.Skip((p - 1) * ps).Take(ps);
+
     return Results.Ok(new
     {
         priceArea = area,
         from = fromDate,
         to = toDate,
-        totalCount = prices.Count,
-        items = prices.Select(p => new
+        totalCount,
+        page = p,
+        pageSize = ps,
+        totalPages,
+        items = pagedItems.Select(price => new
         {
-            timestamp = p.Timestamp,
-            priceArea = p.PriceArea,
-            pricePerKwh = p.PricePerKwh,
-            resolution = p.Resolution,
+            timestamp = price.Timestamp,
+            priceArea = price.PriceArea,
+            pricePerKwh = price.PricePerKwh,
+            resolution = price.Resolution,
         }),
     });
 });

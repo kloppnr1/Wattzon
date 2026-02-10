@@ -73,8 +73,8 @@ export const api = {
   getMessageStats: () => request(`/messages/stats`),
 
   // Spot Prices
-  getSpotPrices: ({ priceArea, from, to } = {}) =>
-    request(`/metering/spot-prices${qs({ priceArea, from, to })}`),
+  getSpotPrices: ({ priceArea, from, to, page, pageSize } = {}) =>
+    request(`/metering/spot-prices${qs({ priceArea, from, to, page, pageSize })}`),
   getSpotPriceLatest: () => request(`/metering/spot-prices/latest`),
 
   // Conversations & Deliveries
