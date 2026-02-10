@@ -22,9 +22,14 @@ public sealed class SpotPriceFetchingService : BackgroundService
     // How many days back to ensure coverage (handles restarts, gaps)
     private const int DaysBack = 7;
 
+    // Initial backfill: 1 month before the hourly→quarter-hour cutover (Oct 1 2025)
+    private static readonly DateOnly InitialBackfillFrom = new(2025, 9, 1);
+
     private readonly ISpotPriceProvider _provider;
     private readonly ISpotPriceRepository _repository;
     private readonly ILogger<SpotPriceFetchingService> _logger;
+
+    private bool _initialLoadDone;
 
     public SpotPriceFetchingService(
         ISpotPriceProvider provider,
@@ -58,8 +63,32 @@ public sealed class SpotPriceFetchingService : BackgroundService
     private async Task FetchAllPriceAreasAsync(CancellationToken ct)
     {
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
-        var from = today.AddDays(-DaysBack);
         var to = today.AddDays(DaysAhead);
+        var from = today.AddDays(-DaysBack);
+
+        // On first run, check if we need to backfill historical data
+        if (!_initialLoadDone)
+        {
+            _initialLoadDone = true;
+            var needsBackfill = false;
+
+            foreach (var area in PriceAreas)
+            {
+                var earliest = await _repository.GetEarliestPriceDateAsync(area, ct);
+                if (earliest is null || earliest > InitialBackfillFrom)
+                {
+                    needsBackfill = true;
+                    break;
+                }
+            }
+
+            if (needsBackfill)
+            {
+                from = InitialBackfillFrom;
+                _logger.LogInformation(
+                    "Initial backfill: fetching spot prices from {From} to {To}", from, to);
+            }
+        }
 
         foreach (var priceArea in PriceAreas)
         {

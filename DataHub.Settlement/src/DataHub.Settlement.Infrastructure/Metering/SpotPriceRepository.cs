@@ -80,4 +80,21 @@ public sealed class SpotPriceRepository : ISpotPriceRepository
 
         return result.HasValue ? DateOnly.FromDateTime(result.Value) : null;
     }
+
+    public async Task<DateOnly?> GetEarliestPriceDateAsync(string priceArea, CancellationToken ct)
+    {
+        const string sql = """
+            SELECT MIN("timestamp")
+            FROM metering.spot_price
+            WHERE price_area = @PriceArea
+            """;
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+        await conn.OpenAsync(ct);
+
+        var result = await conn.QuerySingleOrDefaultAsync<DateTime?>(
+            new CommandDefinition(sql, new { PriceArea = priceArea }, cancellationToken: ct));
+
+        return result.HasValue ? DateOnly.FromDateTime(result.Value) : null;
+    }
 }

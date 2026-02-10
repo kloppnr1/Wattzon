@@ -65,7 +65,14 @@ export default function SpotPrices() {
   }
 
   return (
-    <div className="p-8 max-w-6xl mx-auto">
+    <div className="p-8 max-w-6xl mx-auto relative">
+      {/* Loading progress bar */}
+      {loading && (
+        <div className="absolute top-0 left-0 right-0 h-1 bg-teal-100 overflow-hidden rounded-full z-10">
+          <div className="h-full bg-teal-500 rounded-full animate-progress-bar" />
+        </div>
+      )}
+
       {/* Page header */}
       <div className="mb-6 animate-fade-in-up">
         <h1 className="text-3xl font-bold text-slate-900 tracking-tight">{t('spotPrices.title')}</h1>

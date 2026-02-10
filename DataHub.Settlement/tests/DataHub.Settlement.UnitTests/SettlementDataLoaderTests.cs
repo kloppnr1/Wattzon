@@ -80,6 +80,7 @@ public class SettlementDataLoaderTests
         public Task<decimal> GetPriceAsync(string priceArea, DateTime hour, CancellationToken ct) => Task.FromResult(0m);
         public Task<IReadOnlyList<SpotPriceRow>> GetPricesAsync(string priceArea, DateTime from, DateTime to, CancellationToken ct) => Task.FromResult(prices);
         public Task<DateOnly?> GetLatestPriceDateAsync(string priceArea, CancellationToken ct) => Task.FromResult<DateOnly?>(null);
+        public Task<DateOnly?> GetEarliestPriceDateAsync(string priceArea, CancellationToken ct) => Task.FromResult<DateOnly?>(null);
     }
 
     private sealed class InMemoryTariffRepository(IReadOnlyList<TariffRateRow> rates, decimal electricityTax, decimal gridSubscription) : ITariffRepository
