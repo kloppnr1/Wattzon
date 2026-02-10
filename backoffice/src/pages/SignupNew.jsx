@@ -163,6 +163,14 @@ export default function SignupNew() {
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
 
+  // Billing address
+  const [billingStreet, setBillingStreet] = useState('');
+  const [billingHouseNumber, setBillingHouseNumber] = useState('');
+  const [billingFloor, setBillingFloor] = useState('');
+  const [billingDoor, setBillingDoor] = useState('');
+  const [billingPostalCode, setBillingPostalCode] = useState('');
+  const [billingCity, setBillingCity] = useState('');
+
   // Step 3: Process
   const [type, setType] = useState('switch');
   const [effectiveDate, setEffectiveDate] = useState('');
@@ -186,6 +194,12 @@ export default function SignupNew() {
         productId: selectedProduct,
         type,
         effectiveDate,
+        billingStreet: billingStreet || undefined,
+        billingHouseNumber: billingHouseNumber || undefined,
+        billingFloor: billingFloor || undefined,
+        billingDoor: billingDoor || undefined,
+        billingPostalCode: billingPostalCode || undefined,
+        billingCity: billingCity || undefined,
       };
       if (correctedFromId) {
         payload.correctedFromId = correctedFromId;
@@ -698,6 +712,51 @@ export default function SignupNew() {
                   </div>
                 </div>
 
+                {/* Billing Address section */}
+                <div>
+                  <div className="flex items-center gap-3 mb-5">
+                    <div className="w-8 h-px bg-teal-500" />
+                    <h3 className="text-[11px] font-black uppercase tracking-widest text-slate-400">{t('signupNew.billingAddress')}</h3>
+                    <div className="flex-1 h-px bg-slate-100" />
+                  </div>
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <div className="sm:col-span-2">
+                        <label className="block text-sm font-semibold text-slate-700 mb-2">{t('signupNew.street')}</label>
+                        <input type="text" value={billingStreet} onChange={(e) => setBillingStreet(e.target.value)} placeholder={t('signupNew.streetPlaceholder')}
+                          className="w-full rounded-lg border border-slate-200 bg-white px-4 py-3.5 text-sm text-slate-800 placeholder:text-slate-300 shadow-sm focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 transition-all" />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-semibold text-slate-700 mb-2">{t('signupNew.houseNumber')}</label>
+                        <input type="text" value={billingHouseNumber} onChange={(e) => setBillingHouseNumber(e.target.value)} placeholder="12"
+                          className="w-full rounded-lg border border-slate-200 bg-white px-4 py-3.5 text-sm text-slate-800 placeholder:text-slate-300 shadow-sm focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 transition-all" />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                      <div>
+                        <label className="block text-sm font-semibold text-slate-700 mb-2">{t('signupNew.floor')}</label>
+                        <input type="text" value={billingFloor} onChange={(e) => setBillingFloor(e.target.value)} placeholder="2"
+                          className="w-full rounded-lg border border-slate-200 bg-white px-4 py-3.5 text-sm text-slate-800 placeholder:text-slate-300 shadow-sm focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 transition-all" />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-semibold text-slate-700 mb-2">{t('signupNew.door')}</label>
+                        <input type="text" value={billingDoor} onChange={(e) => setBillingDoor(e.target.value)} placeholder="th"
+                          className="w-full rounded-lg border border-slate-200 bg-white px-4 py-3.5 text-sm text-slate-800 placeholder:text-slate-300 shadow-sm focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 transition-all" />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-semibold text-slate-700 mb-2">{t('signupNew.postalCode')}</label>
+                        <input type="text" value={billingPostalCode} onChange={(e) => setBillingPostalCode(e.target.value)} placeholder="8000"
+                          className="w-full rounded-lg border border-slate-200 bg-white px-4 py-3.5 text-sm text-slate-800 placeholder:text-slate-300 shadow-sm focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 transition-all" />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-semibold text-slate-700 mb-2">{t('signupNew.city')}</label>
+                        <input type="text" value={billingCity} onChange={(e) => setBillingCity(e.target.value)} placeholder="Aarhus C"
+                          className="w-full rounded-lg border border-slate-200 bg-white px-4 py-3.5 text-sm text-slate-800 placeholder:text-slate-300 shadow-sm focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 transition-all" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
                 {/* Navigation */}
                 <div className="flex items-center justify-between pt-6 mt-2 border-t border-slate-100">
                   <button
@@ -766,6 +825,9 @@ export default function SignupNew() {
                     <SummaryRow label={t('signupNew.summaryProduct')} value={selectedProductObj?.name} onEdit={() => setStep(1)} />
                     <SummaryRow label={t('signupNew.summaryCustomer')} value={`${customerName} (${cprCvr})`} onEdit={() => setStep(2)} />
                     <SummaryRow label={t('signupNew.summaryContact')} value={`${contactType} · ${email} · ${phone || '—'}`} onEdit={() => setStep(2)} />
+                    {billingStreet && (
+                      <SummaryRow label={t('signupNew.summaryBilling')} value={`${billingStreet} ${billingHouseNumber}${billingFloor ? `, ${billingFloor}.` : ''}${billingDoor ? ` ${billingDoor}` : ''}, ${billingPostalCode} ${billingCity}`} onEdit={() => setStep(2)} />
+                    )}
                     <SummaryRow label={t('signupNew.summaryType')} value={type === 'move_in' ? t('signupNew.moveIn') : t('signupNew.supplierSwitch')} />
                     <SummaryRow label={t('signupNew.summaryEffective')} value={effectiveDate || t('signupNew.notSet')} highlight={!effectiveDate} />
                   </div>

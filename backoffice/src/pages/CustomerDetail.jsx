@@ -59,6 +59,26 @@ export default function CustomerDetail() {
         </span>
       </div>
 
+      {customer.billingAddress && (customer.billingAddress.street || customer.billingAddress.postalCode) && (
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden mb-5 animate-fade-in-up" style={{ animationDelay: '40ms' }}>
+          <div className="px-5 py-3.5 border-b border-slate-100 flex items-center gap-2">
+            <div className="w-1 h-4 rounded-full bg-teal-500" />
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">{t('customerDetail.billingAddress')}</h3>
+          </div>
+          <div className="px-5 py-4">
+            <p className="text-sm text-slate-700 font-medium">
+              {[customer.billingAddress.street, customer.billingAddress.houseNumber].filter(Boolean).join(' ')}
+              {(customer.billingAddress.floor || customer.billingAddress.door) && (
+                <span className="text-slate-400">, {[customer.billingAddress.floor && `${customer.billingAddress.floor}.`, customer.billingAddress.door].filter(Boolean).join(' ')}</span>
+              )}
+            </p>
+            <p className="text-sm text-slate-500 mt-0.5">
+              {[customer.billingAddress.postalCode, customer.billingAddress.city].filter(Boolean).join(' ')}
+            </p>
+          </div>
+        </div>
+      )}
+
       <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden mb-5 animate-fade-in-up" style={{ animationDelay: '60ms' }}>
         <div className="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between">
           <div className="flex items-center gap-2">
