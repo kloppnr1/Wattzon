@@ -153,14 +153,14 @@ public class DatabaseSchemaTests : IAsyncLifetime
         await using var tx = await _connection.BeginTransactionAsync();
 
         await using var insert = new NpgsqlCommand(
-            @"INSERT INTO metering.spot_price (price_area, hour, price_per_kwh, source)
-              VALUES ('DK1', '2025-01-15T10:00:00Z', 1.234567, 'test')
-              ON CONFLICT (price_area, hour) DO UPDATE SET price_per_kwh = EXCLUDED.price_per_kwh",
+            @"INSERT INTO metering.spot_price (price_area, ""timestamp"", price_per_kwh, resolution)
+              VALUES ('DK1', '2025-01-15T10:00:00Z', 1.234567, 'PT1H')
+              ON CONFLICT (price_area, ""timestamp"") DO UPDATE SET price_per_kwh = EXCLUDED.price_per_kwh",
             _connection, tx);
         await insert.ExecuteNonQueryAsync();
 
         await using var select = new NpgsqlCommand(
-            "SELECT price_per_kwh FROM metering.spot_price WHERE price_area = 'DK1' AND hour = '2025-01-15T10:00:00Z'",
+            @"SELECT price_per_kwh FROM metering.spot_price WHERE price_area = 'DK1' AND ""timestamp"" = '2025-01-15T10:00:00Z'",
             _connection, tx);
         var price = (decimal)(await select.ExecuteScalarAsync())!;
         price.Should().Be(1.234567m);
