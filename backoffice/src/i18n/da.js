@@ -163,6 +163,8 @@ export default {
   'signupNew.summaryType': 'Type',
   'signupNew.summaryEffective': 'Ikrafttrædelse',
   'signupNew.notSet': 'Ikke angivet',
+  'signupNew.activeProcess': 'Aktiv proces',
+  'signupNew.allMeteringPointsBlocked': 'Alle målepunkter på denne adresse har aktive processer. Vent venligst til de er afsluttet, eller vælg en anden adresse.',
   'signupNew.creating': 'Opretter...',
   'signupNew.createCorrectedSignup': 'Opret korrigeret tilmelding',
   'signupNew.createSignup': 'Opret tilmelding',

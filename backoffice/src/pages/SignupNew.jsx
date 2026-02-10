@@ -123,7 +123,9 @@ export default function SignupNew() {
     try {
       const result = await api.lookupAddress(id);
       setMeteringPoints(result);
-      if (result.length === 1) setSelectedGsrn(result[0].gsrn);
+      const available = result.filter((mp) => !mp.has_active_process);
+      if (available.length === 1) setSelectedGsrn(available[0].gsrn);
+      else if (result.length === 1 && !result[0].has_active_process) setSelectedGsrn(result[0].gsrn);
     } catch (e) {
       setError(e.message);
     } finally {
@@ -401,25 +403,48 @@ export default function SignupNew() {
                         ? t('signupNew.meteringPointFound')
                         : t('signupNew.meteringPointsSelect', { count: meteringPoints.length })}
                     </p>
+
+                    {/* All blocked banner */}
+                    {meteringPoints.every((mp) => mp.has_active_process) && (
+                      <div className="border-l-4 border-amber-400 bg-amber-50/50 rounded-r-lg px-5 py-3.5 text-sm text-amber-800 font-medium mb-3">
+                        {t('signupNew.allMeteringPointsBlocked')}
+                      </div>
+                    )}
+
                     <div className="space-y-2">
-                      {meteringPoints.map((mp) => (
+                      {meteringPoints.map((mp) => {
+                        const blocked = mp.has_active_process;
+                        return (
                         <label
                           key={mp.gsrn}
-                          className={`group flex items-center gap-4 rounded-lg px-5 py-4 cursor-pointer transition-all duration-200 border-2 ${
-                            selectedGsrn === mp.gsrn
-                              ? 'border-teal-500 bg-teal-50/40 shadow-sm'
-                              : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50/50'
+                          className={`group flex items-center gap-4 rounded-lg px-5 py-4 transition-all duration-200 border-2 ${
+                            blocked
+                              ? 'border-slate-200 bg-slate-50/50 opacity-60 cursor-not-allowed'
+                              : selectedGsrn === mp.gsrn
+                              ? 'border-teal-500 bg-teal-50/40 shadow-sm cursor-pointer'
+                              : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50/50 cursor-pointer'
                           }`}
                         >
                           <input
                             type="radio"
                             name="gsrn"
                             checked={selectedGsrn === mp.gsrn}
-                            onChange={() => setSelectedGsrn(mp.gsrn)}
+                            onChange={() => !blocked && setSelectedGsrn(mp.gsrn)}
+                            disabled={blocked}
                             className="accent-teal-600"
                           />
                           <div className="flex-1 min-w-0">
-                            <p className="font-mono text-base font-bold text-slate-900 tracking-wide">{mp.gsrn}</p>
+                            <div className="flex items-center gap-2">
+                              <p className="font-mono text-base font-bold text-slate-900 tracking-wide">{mp.gsrn}</p>
+                              {blocked && (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-700 uppercase tracking-wider border border-amber-200">
+                                  <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+                                  </svg>
+                                  {t('signupNew.activeProcess')}
+                                </span>
+                              )}
+                            </div>
                             <div className="flex items-center gap-2 mt-1">
                               <span className="inline-flex px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-500 uppercase tracking-wider">
                                 {mp.type}
@@ -430,13 +455,14 @@ export default function SignupNew() {
                               </span>
                             </div>
                           </div>
-                          {selectedGsrn === mp.gsrn && (
+                          {!blocked && selectedGsrn === mp.gsrn && (
                             <svg className="w-5 h-5 text-teal-500 shrink-0" fill="currentColor" viewBox="0 0 20 20">
                               <path fillRule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm3.857-9.809a.75.75 0 0 0-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 1 0-1.06 1.061l2.5 2.5a.75.75 0 0 0 1.137-.089l4-5.5Z" clipRule="evenodd" />
                             </svg>
                           )}
                         </label>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 )}
@@ -445,7 +471,7 @@ export default function SignupNew() {
                 <div className="flex justify-end pt-6 mt-2 border-t border-slate-100">
                   <button
                     onClick={() => { setError(null); setStep(1); }}
-                    disabled={!selectedGsrn}
+                    disabled={!selectedGsrn || (meteringPoints && meteringPoints.find((mp) => mp.gsrn === selectedGsrn)?.has_active_process)}
                     className="inline-flex items-center gap-2 px-6 py-3 bg-teal-600 text-white text-sm font-bold rounded-lg shadow-md shadow-teal-600/20 hover:bg-teal-700 hover:-translate-y-0.5 hover:shadow-lg disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-md transition-all duration-200"
                   >
                     {t('common.continue')}

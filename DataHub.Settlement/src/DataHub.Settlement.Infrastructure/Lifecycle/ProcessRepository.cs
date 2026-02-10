@@ -187,6 +187,21 @@ public sealed class ProcessRepository : IProcessRepository
         return rows.ToList();
     }
 
+    public async Task<bool> HasActiveByGsrnAsync(string gsrn, CancellationToken ct)
+    {
+        const string sql = """
+            SELECT EXISTS(
+                SELECT 1 FROM lifecycle.process_request
+                WHERE gsrn = @Gsrn
+                AND status NOT IN ('completed','cancelled','rejected','final_settled')
+            )
+            """;
+        await using var conn = new NpgsqlConnection(_connectionString);
+        await conn.OpenAsync(ct);
+        return await conn.QuerySingleAsync<bool>(
+            new CommandDefinition(sql, new { Gsrn = gsrn }, cancellationToken: ct));
+    }
+
     public async Task<IReadOnlyList<ProcessRequest>> GetByStatusAsync(string status, CancellationToken ct)
     {
         const string sql = """

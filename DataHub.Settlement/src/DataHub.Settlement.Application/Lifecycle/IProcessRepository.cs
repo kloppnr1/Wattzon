@@ -11,4 +11,5 @@ public interface IProcessRepository
     Task AddEventAsync(Guid processRequestId, string eventType, string? payload, string? source, CancellationToken ct);
     Task<IReadOnlyList<ProcessEvent>> GetEventsAsync(Guid processRequestId, CancellationToken ct);
     Task<IReadOnlyList<ProcessRequest>> GetByStatusAsync(string status, CancellationToken ct);
+    Task<bool> HasActiveByGsrnAsync(string gsrn, CancellationToken ct);
 }

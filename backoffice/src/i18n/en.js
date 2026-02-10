@@ -163,6 +163,8 @@ export default {
   'signupNew.summaryType': 'Type',
   'signupNew.summaryEffective': 'Effective',
   'signupNew.notSet': 'Not set',
+  'signupNew.activeProcess': 'Active process',
+  'signupNew.allMeteringPointsBlocked': 'All metering points at this address have active processes. Please wait for them to complete or choose a different address.',
   'signupNew.creating': 'Creating...',
   'signupNew.createCorrectedSignup': 'Create Corrected Signup',
   'signupNew.createSignup': 'Create Signup',

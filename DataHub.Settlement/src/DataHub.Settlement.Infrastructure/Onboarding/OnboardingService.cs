@@ -34,6 +34,20 @@ public sealed class OnboardingService : IOnboardingService
         _logger = logger;
     }
 
+    public async Task<AddressLookupResponse> LookupAddressAsync(string darId, CancellationToken ct)
+    {
+        var result = await _addressLookup.LookupByDarIdAsync(darId, ct);
+
+        var meteringPoints = new List<MeteringPointResponse>();
+        foreach (var mp in result.MeteringPoints)
+        {
+            var hasActive = await _processRepo.HasActiveByGsrnAsync(mp.Gsrn, ct);
+            meteringPoints.Add(new MeteringPointResponse(mp.Gsrn, mp.Type, mp.GridAreaCode, hasActive));
+        }
+
+        return new AddressLookupResponse(meteringPoints);
+    }
+
     public async Task<SignupResponse> CreateSignupAsync(SignupRequest request, CancellationToken ct)
     {
         // 0. If this is a correction, validate the original signup exists and is rejected

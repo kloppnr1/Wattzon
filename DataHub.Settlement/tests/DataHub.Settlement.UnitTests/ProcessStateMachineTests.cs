@@ -224,5 +224,13 @@ public class ProcessStateMachineTests
             var matching = _requests.Values.Where(r => r.Status == status).ToList();
             return Task.FromResult<IReadOnlyList<ProcessRequest>>(matching);
         }
+
+        public Task<bool> HasActiveByGsrnAsync(string gsrn, CancellationToken ct)
+        {
+            var hasActive = _requests.Values.Any(r =>
+                r.Gsrn == gsrn &&
+                r.Status is not ("completed" or "cancelled" or "rejected" or "final_settled"));
+            return Task.FromResult(hasActive);
+        }
     }
 }

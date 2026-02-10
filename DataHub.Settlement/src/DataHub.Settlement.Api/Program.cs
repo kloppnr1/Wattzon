@@ -87,6 +87,14 @@ app.MapPost("/api/signup", async (SignupRequest request, IOnboardingService serv
     {
         return Results.BadRequest(new { error = ex.Message });
     }
+    catch (ConflictException ex)
+    {
+        return Results.Conflict(new { error = ex.Message });
+    }
+    catch (InvalidOperationException ex)
+    {
+        return Results.Conflict(new { error = ex.Message });
+    }
 });
 
 // GET /api/signup/{id}/status — check signup progress
@@ -201,15 +209,16 @@ app.MapGet("/api/signups/{id:guid}/events", async (Guid id, ISignupRepository si
 
 // --- Address lookup ---
 
-// GET /api/address/{darId} — resolve DAR ID to GSRN(s)
-app.MapGet("/api/address/{darId}", async (string darId, IAddressLookupClient addressLookup, CancellationToken ct) =>
+// GET /api/address/{darId} — resolve DAR ID to GSRN(s) with active process check
+app.MapGet("/api/address/{darId}", async (string darId, IOnboardingService service, CancellationToken ct) =>
 {
-    var result = await addressLookup.LookupByDarIdAsync(darId, ct);
+    var result = await service.LookupAddressAsync(darId, ct);
     return Results.Ok(result.MeteringPoints.Select(mp => new
     {
         mp.Gsrn,
         mp.Type,
         grid_area_code = mp.GridAreaCode,
+        has_active_process = mp.HasActiveProcess,
     }));
 });
 

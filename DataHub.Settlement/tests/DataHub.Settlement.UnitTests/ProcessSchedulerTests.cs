@@ -125,6 +125,8 @@ public class ProcessSchedulerTests
 
     private sealed class StubOnboardingService : IOnboardingService
     {
+        public Task<AddressLookupResponse> LookupAddressAsync(string darId, CancellationToken ct)
+            => throw new NotImplementedException();
         public Task<SignupResponse> CreateSignupAsync(SignupRequest request, CancellationToken ct)
             => throw new NotImplementedException();
         public Task<SignupStatusResponse?> GetStatusAsync(string signupNumber, CancellationToken ct)

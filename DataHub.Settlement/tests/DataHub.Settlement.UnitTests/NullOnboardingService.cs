@@ -10,6 +10,11 @@ public sealed class NullOnboardingService : IOnboardingService
 {
     public static readonly IOnboardingService Instance = new NullOnboardingService();
 
+    public Task<AddressLookupResponse> LookupAddressAsync(string darId, CancellationToken ct)
+    {
+        return Task.FromResult(new AddressLookupResponse(Array.Empty<MeteringPointResponse>()));
+    }
+
     public Task<SignupResponse> CreateSignupAsync(SignupRequest request, CancellationToken ct)
     {
         return Task.FromResult(new SignupResponse(
