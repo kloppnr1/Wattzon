@@ -7,8 +7,8 @@ namespace DataHub.Settlement.Application.Parsing;
 public interface ICimParser
 {
     IReadOnlyList<ParsedTimeSeries> ParseRsm012(string json);
-    ParsedMasterData ParseRsm007(string json);
+    ParsedMasterData ParseRsm022(string json);
     Rsm004Result ParseRsm004(string json);
     Rsm014Aggregation ParseRsm014(string json);
-    Rsm009Result ParseRsm009(string json);
+    Rsm001ResponseResult ParseRsm001Response(string json);
 }

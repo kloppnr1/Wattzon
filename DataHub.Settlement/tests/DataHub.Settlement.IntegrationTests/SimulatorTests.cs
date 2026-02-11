@@ -40,7 +40,7 @@ public class SimulatorTests : IClassFixture<WebApplicationFactory<Program>>
         peekResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var msg = await peekResponse.Content.ReadFromJsonAsync<PeekResponse>(JsonOptions);
-        msg!.MessageType.Should().Be("RSM-007");
+        msg!.MessageType.Should().Be("RSM-022");
     }
 
     [Fact]
@@ -73,7 +73,7 @@ public class SimulatorTests : IClassFixture<WebApplicationFactory<Program>>
         peekResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var msg = await peekResponse.Content.ReadFromJsonAsync<PeekResponse>(JsonOptions);
-        msg!.MessageType.Should().Be("RSM-007");
+        msg!.MessageType.Should().Be("RSM-022");
     }
 
     [Fact]
@@ -87,7 +87,7 @@ public class SimulatorTests : IClassFixture<WebApplicationFactory<Program>>
         peekResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var msg = await peekResponse.Content.ReadFromJsonAsync<PeekResponse>(JsonOptions);
-        msg!.MessageType.Should().Be("RSM-007");
+        msg!.MessageType.Should().Be("RSM-022");
     }
 
     private record PeekResponse(string MessageId, string MessageType, string? CorrelationId, string Content);

@@ -236,8 +236,8 @@ Track A has no dependencies on Track B. They can be developed in parallel.
               │  Orchestration      │  Owns the complexity:
               │  Layer              │  • BRS-001 vs BRS-009
               │                     │  • 15 business day calc
-              │                     │  • RSM-009 → status
-              │                     │  • RSM-007 → activation
+              │                     │  • RSM-001 → status
+              │                     │  • RSM-022 → activation
               └─────────────────────┘
 ```
 
@@ -255,9 +255,9 @@ The Danish energy market has structural complexity that the API must hide from t
 | **GSRN discovery** — customer knows address, not GSRN | We look up GSRN from DAR ID via Energinet address API | DAR ID (address identifier) |
 | **BRS-001 vs BRS-009** — supplier switch or move-in? Different processes, different notice periods | Orchestration maps `type` to correct BRS process | `type`: `switch` or `move_in` |
 | **Effective date and notice periods** — BRS-001 requires 15 business days, BRS-009 can be immediate | Orchestration validates the date against process-specific rules | Desired effective date |
-| **Grid area unknown at signup** — tariffs only arrive via RSM-007 after activation | Irrelevant for signup — grid tariffs are pass-through, same regardless of supplier | Nothing — products show margin + subscription only |
+| **Grid area unknown at signup** — tariffs only arrive via RSM-022 after activation | Irrelevant for signup — grid tariffs are pass-through, same regardless of supplier | Nothing — products show margin + subscription only |
 | **Rejection handling** — CPR/CVR mismatch, conflicting process (E16), invalid GSRN | Status shows `rejected` with reason. Back office reviews and handles correction manually | Nothing — status shows `rejected` with reason |
-| **RSM-007 activation** — master data arrives on effective date, reveals grid area, settlement method, meter type | Orchestration processes RSM-007, assigns tariffs, activates metering point | Nothing — status changes to `active` |
+| **RSM-022 activation** — master data arrives on effective date, reveals grid area, settlement method, meter type | Orchestration processes RSM-022, assigns tariffs, activates metering point | Nothing — status changes to `active` |
 
 **The sales channel's mental model:** "I submitted a signup. It's either processing, active, rejected, or cancelled."
 
@@ -362,16 +362,16 @@ The sales channel never sees `sent_to_datahub` vs. `acknowledged` vs. `effectuat
 
 This is where the real complexity lives. A key design decision shapes the entire flow:
 
-**Portfolio entities are NOT created at signup.** The signup only creates a customer record, a signup tracking record, and a process request. Metering point, contract, and supply period are created later when RSM-007 arrives with confirmed data from DataHub. This avoids placeholder data and conflicts with the existing `QueuePollerService` which creates metering points from RSM-007.
+**Portfolio entities are NOT created at signup.** The signup only creates a customer record, a signup tracking record, and a process request. Metering point, contract, and supply period are created later when RSM-022 arrives with confirmed data from DataHub. This avoids placeholder data and conflicts with the existing `QueuePollerService` which creates metering points from RSM-022.
 
 **Existing orchestration gaps that must be filled:**
 
 | Gap | What's missing | What to build |
 |-----|---------------|---------------|
 | Sending BRS-001/009 | No service picks up pending process requests and sends them to DataHub | Extend `ProcessSchedulerService` to send pending requests via `HttpDataHubClient` |
-| Processing RSM-009 | `QueuePollerService` doesn't handle acceptance/rejection receipts | Add RSM-009 handling to `QueuePollerService.ProcessMasterDataAsync()` |
+| Processing RSM-001 | `QueuePollerService` doesn't handle acceptance/rejection receipts | Add RSM-001 handling to `QueuePollerService.ProcessMasterDataAsync()` |
 | Signup status sync | No link between process state changes and signup status | Wire `OnboardingService.SyncFromProcessAsync()` into queue poller |
-| Portfolio creation on activation | Current RSM-007 handler creates metering point but not contract | Extend RSM-007 handler to also create contract + supply period from signup data |
+| Portfolio creation on activation | Current RSM-022 handler creates metering point but not contract | Extend RSM-022 handler to also create contract + supply period from signup data |
 
 **Step 1: Validate and create (synchronous, in API request)**
 ```
@@ -408,9 +408,9 @@ Portfolio entities NOT created here. No metering point, no contract, no supply p
 
 This fills the existing gap where nothing sends pending requests to DataHub.
 
-**Step 3: Handle RSM-009 receipt (background — QueuePollerService, NEW)**
+**Step 3: Handle RSM-001 receipt (background — QueuePollerService, NEW)**
 ```
-On RSM-009 from MasterData queue:
+On RSM-001 from MasterData queue:
   - Parse acceptance/rejection
   - Look up process by correlation ID
 
@@ -424,9 +424,9 @@ On RSM-009 from MasterData queue:
     - Sync signup status: processing → rejected (with reason)
 ```
 
-**Step 4: Handle RSM-007 activation (background — QueuePollerService, EXTENDED)**
+**Step 4: Handle RSM-022 activation (background — QueuePollerService, EXTENDED)**
 ```
-On RSM-007 from MasterData queue:
+On RSM-022 from MasterData queue:
   - Parse master data (grid area, type, settlement method, price area)
   - Existing behavior: create/update metering point, ensure grid area
 
@@ -490,9 +490,9 @@ The API accepts a **DAR ID** (Danish Address Register identifier), not a raw GSR
 | **Infrastructure** | `SignupRepository` (Dapper), `BusinessDayCalculator` (Danish holidays), product listing query |
 | **API** | 4 endpoints in `DataHub.Settlement.Api`, DI wiring, OpenAPI/Swagger |
 | **ProcessSchedulerService** (extend) | Pick up `pending` process requests, look up signup for CPR/CVR, build + send BRS-001/009 via `HttpDataHubClient`, transition to `sent_to_datahub` |
-| **QueuePollerService** (extend) | Add RSM-009 handling (accepted → acknowledged, rejected → rejected + reason). Extend RSM-007 handler to create contract + supply period from signup data |
+| **QueuePollerService** (extend) | Add RSM-001 handling (accepted → acknowledged, rejected → rejected + reason). Extend RSM-022 handler to create contract + supply period from signup data |
 | **Signup status sync** | Wire `OnboardingService.SyncFromProcessAsync()` into queue poller on every process state change |
-| **Simulator** | Onboarding scenario: signup → BRS-001 → RSM-009 accepted → RSM-007 → active |
+| **Simulator** | Onboarding scenario: signup → BRS-001 → RSM-001 accepted → RSM-022 → active |
 
 **Tests:**
 
@@ -506,21 +506,21 @@ The API accepts a **DAR ID** (Danish Address Register identifier), not a raw GSR
 | Signup creates customer + signup + process (no metering point, no contract) | Integration |
 | Signup queues correct BRS process (BRS-001 for switch, BRS-009 for move_in) | Integration |
 | ProcessSchedulerService sends pending BRS-001 to DataHub | Integration |
-| RSM-009 accepted → process acknowledged | Integration |
-| RSM-009 rejected → signup status rejected with reason | Integration |
-| RSM-007 → creates metering point + contract + supply period from signup | Integration |
+| RSM-001 accepted → process acknowledged | Integration |
+| RSM-001 rejected → signup status rejected with reason | Integration |
+| RSM-022 → creates metering point + contract + supply period from signup | Integration |
 | Status reflects simplified external states | Integration |
 | Cancel before send (registered → cancelled) | Integration |
 | Cancel after send (processing → RSM-002 cancel → cancellation_pending → cancelled) | Integration |
 | Cancel after activation returns 409 | Integration |
-| Full flow: signup → BRS-001 → RSM-009 → RSM-007 → portfolio created → status = active | Integration (simulator) |
+| Full flow: signup → BRS-001 → RSM-001 → RSM-022 → portfolio created → status = active | Integration (simulator) |
 
 **Exit criteria:**
 - All sales channels can create customers through 4 API endpoints
 - Sales channel sees simple status progression (registered → processing → active)
 - Pending process requests are automatically sent to DataHub (gap filled)
-- RSM-009 receipts are processed (gap filled)
-- RSM-007 creates portfolio entities from signup data (contract, supply period)
+- RSM-001 receipts are processed (gap filled)
+- RSM-022 creates portfolio entities from signup data (contract, supply period)
 - Portfolio only contains confirmed data — no placeholders
 - Cancellation works at all stages (registered, processing)
 - Full signup → activation flow works end-to-end against the simulator

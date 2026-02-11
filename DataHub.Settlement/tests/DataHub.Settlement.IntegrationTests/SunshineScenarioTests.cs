@@ -22,7 +22,7 @@ using Xunit;
 namespace DataHub.Settlement.IntegrationTests;
 
 /// <summary>
-/// End-to-end sunshine scenario: CRM → portfolio → BRS-001 → RSM-007 → RSM-012 → settlement → golden master.
+/// End-to-end sunshine scenario: CRM → portfolio → BRS-001 → RSM-022 → RSM-012 → settlement → golden master.
 /// Uses FakeDataHubClient (no HTTP, no external dependencies beyond TimescaleDB).
 /// </summary>
 [Collection("Database")]
@@ -98,17 +98,17 @@ public class SunshineScenarioTests
         var afterSent = await _processRepo.GetAsync(processRequest.Id, ct);
         afterSent!.Status.Should().Be("sent_to_datahub");
 
-        // ──── 5. ACT: RSM-009 (acknowledged by FakeDataHubClient synchronously) ────
+        // ──── 5. ACT: RSM-001 (acknowledged by FakeDataHubClient synchronously) ────
         await stateMachine.MarkAcknowledgedAsync(processRequest.Id, ct);
         var afterAck = await _processRepo.GetAsync(processRequest.Id, ct);
         afterAck!.Status.Should().Be("effectuation_pending");
 
-        // ──── 6. ACT: poll MasterData queue → RSM-007 → activate metering point ────
-        var rsm007Json = File.ReadAllText(Path.Combine("..", "..", "..", "..", "..", "fixtures", "rsm007-activation.json"));
-        fakeClient.Enqueue(QueueName.MasterData, new DataHubMessage("msg-rsm007", "RSM-007", null, rsm007Json));
+        // ──── 6. ACT: poll MasterData queue → RSM-022 → activate metering point ────
+        var rsm022Json = File.ReadAllText(Path.Combine("..", "..", "..", "..", "..", "fixtures", "rsm022-activation.json"));
+        fakeClient.Enqueue(QueueName.MasterData, new DataHubMessage("msg-rsm022", "RSM-022", null, rsm022Json));
 
         var parser = new CimJsonParser();
-        var masterData = parser.ParseRsm007(rsm007Json);
+        var masterData = parser.ParseRsm022(rsm022Json);
         await _portfolio.ActivateMeteringPointAsync(Gsrn, masterData.SupplyStart.UtcDateTime, ct);
 
         try
@@ -120,7 +120,7 @@ public class SunshineScenarioTests
             // Supply period may already exist from another test (e.g., QueuePollerTests)
         }
 
-        await fakeClient.DequeueAsync("msg-rsm007", ct);
+        await fakeClient.DequeueAsync("msg-rsm022", ct);
 
         // ──── 7. ACT: complete process ────
         await stateMachine.MarkCompletedAsync(processRequest.Id, ct);

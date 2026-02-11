@@ -26,7 +26,7 @@ public static class DataHubTimeline
 
         var submission = effectiveDate.AddDays(-7);
         var acknowledgment = submission.AddDays(1);
-        var rsm007 = effectiveDate.AddDays(-2);
+        var rsm022 = effectiveDate.AddDays(-2);
         var periodEnd = effectiveDate.AddMonths(1);
         var meteringComplete = periodEnd.AddDays(2);
 
@@ -35,7 +35,7 @@ public static class DataHubTimeline
             new("Seed Data", submission.AddDays(-3), "Seed reference data and create customer"),
             new("Submit BRS-001", submission, $"Submit change of supplier request (D-7 from {effectiveDate})"),
             new("DataHub Acknowledges", acknowledgment, "DataHub processes and acknowledges the request"),
-            new("Receive RSM-007", rsm007, "Master data received, metering point activated"),
+            new("Receive RSM-022", rsm022, "Master data received, metering point activated"),
             new("Effectuation", effectiveDate, "Supply begins, process completed"),
             new("RSM-012 Daily", effectiveDate.AddDays(1), $"Daily metering deliveries for {effectiveDate:MMM yyyy}"),
             new("Run Settlement", meteringComplete, "Settlement calculation and billing"),
@@ -48,7 +48,7 @@ public static class DataHubTimeline
     {
         var submission = effectiveDate.AddDays(-7);
         var acknowledgment = submission.AddDays(1);
-        var rsm007 = effectiveDate.AddDays(-2);
+        var rsm022 = effectiveDate.AddDays(-2);
         var periodEnd = effectiveDate.AddMonths(1);
         var meteringComplete = periodEnd.AddDays(2);
 
@@ -57,7 +57,7 @@ public static class DataHubTimeline
             new("Seed Data", submission.AddDays(-3), "Seed reference data and create customer"),
             new("Submit BRS-009", submission, $"Submit move-in request (D-7 from {effectiveDate})"),
             new("DataHub Acknowledges", acknowledgment, "DataHub processes and acknowledges the request"),
-            new("Receive RSM-007", rsm007, "Master data received, supply period created, metering point activated"),
+            new("Receive RSM-022", rsm022, "Master data received, supply period created, metering point activated"),
             new("Effectuation", effectiveDate, "Supply begins, process completed"),
             new("RSM-012 Daily", effectiveDate.AddDays(1), $"Daily metering deliveries for {effectiveDate:MMM yyyy}"),
             new("Run Settlement", meteringComplete, "Settlement calculation and billing"),
@@ -72,7 +72,7 @@ public static class DataHubTimeline
         var acknowledgment = submission.AddDays(1);
         var estimateDate = effectiveDate.AddDays(-5);
         var invoiceDate = effectiveDate.AddDays(-4);
-        var rsm007 = effectiveDate.AddDays(-2);
+        var rsm022 = effectiveDate.AddDays(-2);
         var paymentDate = effectiveDate.AddDays(7);
 
         var events = new List<TimelineEvent>
@@ -82,7 +82,7 @@ public static class DataHubTimeline
             new("DataHub Acknowledges", acknowledgment, "DataHub processes and acknowledges the request"),
             new("Estimate Aconto", estimateDate, "Calculate quarterly aconto estimate"),
             new("Send Invoice", invoiceDate, "Aconto invoice sent to customer"),
-            new("Receive RSM-007", rsm007, "Master data received, metering point activated"),
+            new("Receive RSM-022", rsm022, "Master data received, metering point activated"),
             new("Effectuation", effectiveDate, "Supply begins, process completed"),
             new("RSM-012 Daily", effectiveDate.AddDays(1), $"Daily metering deliveries for {effectiveDate:MMM yyyy}"),
             new("Record Payment", paymentDate, "Customer pays aconto via direct debit"),

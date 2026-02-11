@@ -39,7 +39,7 @@ function makeInbound(overrides = {}) {
   return {
     id: 'in-1',
     datahubMessageId: 'DH-001',
-    messageType: 'RSM-009',
+    messageType: 'RSM-001',
     correlationId: 'corr-001',
     queueName: 'cim-001',
     status: 'processed',
@@ -55,33 +55,33 @@ describe('ConversationTimeline', () => {
   });
 
   // ══════════════════════════════════════════════════════════════
-  //  SUNSHINE PATH: RSM-001 → RSM-009 ack → RSM-007 activation
+  //  SUNSHINE PATH: RSM-001 → RSM-001 ack → RSM-022 activation
   // ══════════════════════════════════════════════════════════════
 
-  it('renders sunshine path: outbound RSM-001, inbound RSM-009, inbound RSM-007', async () => {
+  it('renders sunshine path: outbound RSM-001, inbound RSM-001, inbound RSM-022', async () => {
     api.getConversation.mockResolvedValue({
       correlationId: 'corr-001',
       outbound: [makeOutbound()],
       inbound: [
-        makeInbound({ id: 'in-1', messageType: 'RSM-009', receivedAt: '2025-06-01T10:10:00Z' }),
-        makeInbound({ id: 'in-2', messageType: 'RSM-007', receivedAt: '2025-06-02T09:00:00Z' }),
+        makeInbound({ id: 'in-1', messageType: 'RSM-001', receivedAt: '2025-06-01T10:10:00Z' }),
+        makeInbound({ id: 'in-2', messageType: 'RSM-022', receivedAt: '2025-06-02T09:00:00Z' }),
       ],
     });
 
     renderTimeline();
 
     await waitFor(() => {
-      expect(screen.getByText('RSM-001')).toBeInTheDocument();
+      expect(screen.getAllByText('RSM-001')[0]).toBeInTheDocument();
     });
     expect(screen.getByText('sent to DataHub')).toBeInTheDocument();
-    expect(screen.getByText('RSM-009')).toBeInTheDocument();
+    expect(screen.getAllByText('RSM-001')[0]).toBeInTheDocument();
     expect(screen.getByText('Acknowledgement received')).toBeInTheDocument();
-    expect(screen.getByText('RSM-007')).toBeInTheDocument();
+    expect(screen.getByText('RSM-022')).toBeInTheDocument();
     expect(screen.getByText('Activation confirmed')).toBeInTheDocument();
   });
 
   // ══════════════════════════════════════════════════════════════
-  //  REJECTION PATH: RSM-001 (error) → RSM-009
+  //  REJECTION PATH: RSM-001 (error) → RSM-001
   // ══════════════════════════════════════════════════════════════
 
   it('renders rejection path with error suffix on outbound', async () => {
@@ -89,44 +89,44 @@ describe('ConversationTimeline', () => {
       correlationId: 'corr-002',
       outbound: [makeOutbound({ status: 'acknowledged_error' })],
       inbound: [
-        makeInbound({ messageType: 'RSM-009' }),
+        makeInbound({ messageType: 'RSM-001' }),
       ],
     });
 
     renderTimeline('corr-002');
 
     await waitFor(() => {
-      expect(screen.getByText('RSM-001')).toBeInTheDocument();
+      expect(screen.getAllByText('RSM-001')[0]).toBeInTheDocument();
     });
     expect(screen.getByText('(error)')).toBeInTheDocument();
-    expect(screen.getByText('RSM-009')).toBeInTheDocument();
+    expect(screen.getAllByText('RSM-001')[0]).toBeInTheDocument();
     expect(screen.getByText('Acknowledgement received')).toBeInTheDocument();
   });
 
   // ══════════════════════════════════════════════════════════════
-  //  CANCELLATION PATH: RSM-001 → RSM-009 → RSM-003 → RSM-009
+  //  CANCELLATION PATH: RSM-001 → RSM-001 → RSM-024 → RSM-001
   // ══════════════════════════════════════════════════════════════
 
-  it('renders cancellation path: RSM-001 + RSM-003 outbound, two RSM-009 inbound', async () => {
+  it('renders cancellation path: RSM-001 + RSM-024 outbound, two RSM-001 inbound', async () => {
     api.getConversation.mockResolvedValue({
       correlationId: 'corr-003',
       outbound: [
         makeOutbound({ id: 'out-1', processType: 'RSM-001', sentAt: '2025-06-01T10:00:00Z' }),
-        makeOutbound({ id: 'out-2', processType: 'RSM-003', sentAt: '2025-06-02T10:00:00Z' }),
+        makeOutbound({ id: 'out-2', processType: 'RSM-024', sentAt: '2025-06-02T10:00:00Z' }),
       ],
       inbound: [
-        makeInbound({ id: 'in-1', messageType: 'RSM-009', receivedAt: '2025-06-01T10:10:00Z' }),
-        makeInbound({ id: 'in-2', messageType: 'RSM-009', receivedAt: '2025-06-02T10:10:00Z' }),
+        makeInbound({ id: 'in-1', messageType: 'RSM-001', receivedAt: '2025-06-01T10:10:00Z' }),
+        makeInbound({ id: 'in-2', messageType: 'RSM-001', receivedAt: '2025-06-02T10:10:00Z' }),
       ],
     });
 
     renderTimeline('corr-003');
 
     await waitFor(() => {
-      expect(screen.getByText('RSM-001')).toBeInTheDocument();
+      expect(screen.getAllByText('RSM-001')[0]).toBeInTheDocument();
     });
-    expect(screen.getByText('RSM-003')).toBeInTheDocument();
-    // Two RSM-009 acknowledgements
+    expect(screen.getByText('RSM-024')).toBeInTheDocument();
+    // Two RSM-001 acknowledgements
     const ackTexts = screen.getAllByText('Acknowledgement received');
     expect(ackTexts).toHaveLength(2);
     // Two "sent to DataHub" labels
@@ -145,34 +145,34 @@ describe('ConversationTimeline', () => {
         makeOutbound({ id: 'out-1', processType: 'RSM-001', sentAt: '2025-06-01T10:00:00Z' }),
       ],
       inbound: [
-        makeInbound({ id: 'in-1', messageType: 'RSM-009', receivedAt: '2025-06-01T10:10:00Z' }),
-        makeInbound({ id: 'in-2', messageType: 'RSM-007', receivedAt: '2025-06-02T09:00:00Z' }),
+        makeInbound({ id: 'in-1', messageType: 'RSM-001', receivedAt: '2025-06-01T10:10:00Z' }),
+        makeInbound({ id: 'in-2', messageType: 'RSM-022', receivedAt: '2025-06-02T09:00:00Z' }),
       ],
     });
 
     renderTimeline('corr-004');
 
     await waitFor(() => {
-      expect(screen.getByText('RSM-001')).toBeInTheDocument();
+      expect(screen.getAllByText('RSM-001')[0]).toBeInTheDocument();
     });
 
-    // Verify order: RSM-001 before RSM-009 before RSM-007
-    const labels = screen.getAllByText(/RSM-00[179]/);
+    // Verify order: RSM-001 before RSM-001 before RSM-022
+    const labels = screen.getAllByText(/RSM-001|RSM-022/);
     expect(labels[0].textContent).toBe('RSM-001');
-    expect(labels[1].textContent).toBe('RSM-009');
-    expect(labels[2].textContent).toBe('RSM-007');
+    expect(labels[1].textContent).toBe('RSM-001');
+    expect(labels[2].textContent).toBe('RSM-022');
   });
 
   // ══════════════════════════════════════════════════════════════
   //  RSM-012 and other inbound types use generic "received" text
   // ══════════════════════════════════════════════════════════════
 
-  it('renders generic "received" text for non-RSM-007/009 inbound types', async () => {
+  it('renders generic "received" text for non-RSM-022/001 inbound types', async () => {
     api.getConversation.mockResolvedValue({
       correlationId: 'corr-005',
       outbound: [makeOutbound()],
       inbound: [
-        makeInbound({ id: 'in-1', messageType: 'RSM-009', receivedAt: '2025-06-01T10:10:00Z' }),
+        makeInbound({ id: 'in-1', messageType: 'RSM-001', receivedAt: '2025-06-01T10:10:00Z' }),
         makeInbound({ id: 'in-2', messageType: 'RSM-012', receivedAt: '2025-06-03T02:00:00Z' }),
       ],
     });
@@ -199,7 +199,7 @@ describe('ConversationTimeline', () => {
     renderTimeline('corr-006');
 
     await waitFor(() => {
-      expect(screen.getByText('RSM-001')).toBeInTheDocument();
+      expect(screen.getAllByText('RSM-001')[0]).toBeInTheDocument();
     });
     expect(screen.getByText('sent to DataHub')).toBeInTheDocument();
     expect(screen.queryByText('Acknowledgement received')).not.toBeInTheDocument();
@@ -241,7 +241,7 @@ describe('ConversationTimeline', () => {
       correlationId: 'corr-007',
       outbound: [makeOutbound({ processType: 'RSM-005' })],
       inbound: [
-        makeInbound({ messageType: 'RSM-009' }),
+        makeInbound({ messageType: 'RSM-001' }),
       ],
     });
 
@@ -275,7 +275,7 @@ describe('ConversationTimeline', () => {
   });
 
   // ══════════════════════════════════════════════════════════════
-  //  INBOUND ONLY: no outbound messages (e.g. unsolicited RSM-007)
+  //  INBOUND ONLY: no outbound messages (e.g. unsolicited RSM-022)
   // ══════════════════════════════════════════════════════════════
 
   it('renders inbound-only conversation without outbound events', async () => {
@@ -283,14 +283,14 @@ describe('ConversationTimeline', () => {
       correlationId: 'corr-inbound-only',
       outbound: [],
       inbound: [
-        makeInbound({ id: 'in-1', messageType: 'RSM-007', receivedAt: '2025-06-02T09:00:00Z' }),
+        makeInbound({ id: 'in-1', messageType: 'RSM-022', receivedAt: '2025-06-02T09:00:00Z' }),
       ],
     });
 
     renderTimeline('corr-inbound-only');
 
     await waitFor(() => {
-      expect(screen.getByText('RSM-007')).toBeInTheDocument();
+      expect(screen.getByText('RSM-022')).toBeInTheDocument();
     });
     expect(screen.getByText('Activation confirmed')).toBeInTheDocument();
     expect(screen.queryByText('sent to DataHub')).not.toBeInTheDocument();
@@ -305,20 +305,21 @@ describe('ConversationTimeline', () => {
       correlationId: 'corr-links',
       outbound: [makeOutbound({ id: 'out-abc' })],
       inbound: [
-        makeInbound({ id: 'in-xyz', messageType: 'RSM-009' }),
+        makeInbound({ id: 'in-xyz', messageType: 'RSM-001' }),
       ],
     });
 
     renderTimeline('corr-links');
 
     await waitFor(() => {
-      expect(screen.getByText('RSM-001')).toBeInTheDocument();
+      expect(screen.getAllByText('RSM-001')[0]).toBeInTheDocument();
     });
 
-    const outboundLink = screen.getByText('RSM-001').closest('a');
+    const rsm001Links = screen.getAllByText('RSM-001').map(el => el.closest('a'));
+    const outboundLink = rsm001Links.find(a => a?.getAttribute('href')?.includes('/outbound/'));
     expect(outboundLink).toHaveAttribute('href', '/messages/outbound/out-abc');
 
-    const inboundLink = screen.getByText('RSM-009').closest('a');
+    const inboundLink = rsm001Links.find(a => a?.getAttribute('href')?.includes('/inbound/'));
     expect(inboundLink).toHaveAttribute('href', '/messages/inbound/in-xyz');
   });
 
@@ -331,7 +332,7 @@ describe('ConversationTimeline', () => {
       correlationId: 'corr-ok',
       outbound: [
         makeOutbound({ id: 'out-1', status: 'acknowledged_ok', sentAt: '2025-06-01T10:00:00Z' }),
-        makeOutbound({ id: 'out-2', status: 'pending', processType: 'RSM-003', sentAt: '2025-06-02T10:00:00Z' }),
+        makeOutbound({ id: 'out-2', status: 'pending', processType: 'RSM-024', sentAt: '2025-06-02T10:00:00Z' }),
       ],
       inbound: [],
     });
@@ -339,7 +340,7 @@ describe('ConversationTimeline', () => {
     renderTimeline('corr-ok');
 
     await waitFor(() => {
-      expect(screen.getByText('RSM-001')).toBeInTheDocument();
+      expect(screen.getAllByText('RSM-001')[0]).toBeInTheDocument();
     });
     expect(screen.queryByText('(error)')).not.toBeInTheDocument();
   });
@@ -389,7 +390,7 @@ describe('ConversationTimeline', () => {
   });
 
   // ══════════════════════════════════════════════════════════════
-  //  FULL CANCELLATION FLOW: RSM-001 → RSM-009 → RSM-003 → RSM-009 → RSM-007 skipped
+  //  FULL CANCELLATION FLOW: RSM-001 → RSM-001 → RSM-024 → RSM-001 → RSM-022 skipped
   // ══════════════════════════════════════════════════════════════
 
   it('renders full cancellation flow with interleaved outbound and inbound', async () => {
@@ -397,27 +398,27 @@ describe('ConversationTimeline', () => {
       correlationId: 'corr-full-cancel',
       outbound: [
         makeOutbound({ id: 'out-1', processType: 'RSM-001', sentAt: '2025-06-01T10:00:00Z' }),
-        makeOutbound({ id: 'out-2', processType: 'RSM-003', sentAt: '2025-06-01T11:00:00Z' }),
+        makeOutbound({ id: 'out-2', processType: 'RSM-024', sentAt: '2025-06-01T11:00:00Z' }),
       ],
       inbound: [
-        makeInbound({ id: 'in-1', messageType: 'RSM-009', receivedAt: '2025-06-01T10:30:00Z' }),
-        makeInbound({ id: 'in-2', messageType: 'RSM-009', receivedAt: '2025-06-01T11:30:00Z' }),
+        makeInbound({ id: 'in-1', messageType: 'RSM-001', receivedAt: '2025-06-01T10:30:00Z' }),
+        makeInbound({ id: 'in-2', messageType: 'RSM-001', receivedAt: '2025-06-01T11:30:00Z' }),
       ],
     });
 
     renderTimeline('corr-full-cancel');
 
     await waitFor(() => {
-      expect(screen.getByText('RSM-001')).toBeInTheDocument();
+      expect(screen.getAllByText('RSM-001')[0]).toBeInTheDocument();
     });
 
-    // Verify chronological order: RSM-001 → RSM-009 → RSM-003 → RSM-009
-    const allLabels = screen.getAllByText(/RSM-00[139]/);
+    // Verify chronological order: RSM-001 → RSM-001 → RSM-024 → RSM-001
+    const allLabels = screen.getAllByText(/RSM-001|RSM-024/);
     expect(allLabels).toHaveLength(4);
     expect(allLabels[0].textContent).toBe('RSM-001');
-    expect(allLabels[1].textContent).toBe('RSM-009');
-    expect(allLabels[2].textContent).toBe('RSM-003');
-    expect(allLabels[3].textContent).toBe('RSM-009');
+    expect(allLabels[1].textContent).toBe('RSM-001');
+    expect(allLabels[2].textContent).toBe('RSM-024');
+    expect(allLabels[3].textContent).toBe('RSM-001');
   });
 
   // ══════════════════════════════════════════════════════════════
@@ -431,41 +432,41 @@ describe('ConversationTimeline', () => {
         makeOutbound({ id: 'out-1', processType: 'RSM-001', sentAt: '2025-06-01T12:00:00Z' }),
       ],
       inbound: [
-        makeInbound({ id: 'in-1', messageType: 'RSM-007', receivedAt: '2025-06-01T08:00:00Z' }),
+        makeInbound({ id: 'in-1', messageType: 'RSM-022', receivedAt: '2025-06-01T08:00:00Z' }),
       ],
     });
 
     renderTimeline('corr-order');
 
     await waitFor(() => {
-      expect(screen.getByText('RSM-001')).toBeInTheDocument();
+      expect(screen.getAllByText('RSM-001')[0]).toBeInTheDocument();
     });
 
-    // RSM-007 (08:00) should appear before RSM-001 (12:00)
-    const labels = screen.getAllByText(/RSM-00[17]/);
-    expect(labels[0].textContent).toBe('RSM-007');
+    // RSM-022 (08:00) should appear before RSM-001 (12:00)
+    const labels = screen.getAllByText(/RSM-001|RSM-022/);
+    expect(labels[0].textContent).toBe('RSM-022');
     expect(labels[1].textContent).toBe('RSM-001');
   });
 
   // ══════════════════════════════════════════════════════════════
-  //  MULTIPLE RSM-007: duplicate activations render correctly
+  //  MULTIPLE RSM-022: duplicate activations render correctly
   // ══════════════════════════════════════════════════════════════
 
-  it('renders multiple RSM-007 activation messages', async () => {
+  it('renders multiple RSM-022 activation messages', async () => {
     api.getConversation.mockResolvedValue({
       correlationId: 'corr-dup-007',
       outbound: [makeOutbound()],
       inbound: [
-        makeInbound({ id: 'in-1', messageType: 'RSM-009', receivedAt: '2025-06-01T10:10:00Z' }),
-        makeInbound({ id: 'in-2', messageType: 'RSM-007', receivedAt: '2025-06-02T09:00:00Z' }),
-        makeInbound({ id: 'in-3', messageType: 'RSM-007', receivedAt: '2025-06-02T09:05:00Z' }),
+        makeInbound({ id: 'in-1', messageType: 'RSM-001', receivedAt: '2025-06-01T10:10:00Z' }),
+        makeInbound({ id: 'in-2', messageType: 'RSM-022', receivedAt: '2025-06-02T09:00:00Z' }),
+        makeInbound({ id: 'in-3', messageType: 'RSM-022', receivedAt: '2025-06-02T09:05:00Z' }),
       ],
     });
 
     renderTimeline('corr-dup-007');
 
     await waitFor(() => {
-      expect(screen.getByText('RSM-001')).toBeInTheDocument();
+      expect(screen.getAllByText('RSM-001')[0]).toBeInTheDocument();
     });
 
     const activations = screen.getAllByText('Activation confirmed');
@@ -486,7 +487,7 @@ describe('ConversationTimeline', () => {
     renderTimeline('corr-null-time');
 
     await waitFor(() => {
-      expect(screen.getByText('RSM-001')).toBeInTheDocument();
+      expect(screen.getAllByText('RSM-001')[0]).toBeInTheDocument();
     });
     expect(screen.getByText('-')).toBeInTheDocument();
   });
@@ -531,15 +532,15 @@ describe('ConversationTimeline', () => {
   it('renders all events in a large conversation', async () => {
     const outbound = [
       makeOutbound({ id: 'out-1', processType: 'RSM-001', sentAt: '2025-06-01T10:00:00Z' }),
-      makeOutbound({ id: 'out-2', processType: 'RSM-003', sentAt: '2025-06-03T10:00:00Z' }),
+      makeOutbound({ id: 'out-2', processType: 'RSM-024', sentAt: '2025-06-03T10:00:00Z' }),
       makeOutbound({ id: 'out-3', processType: 'RSM-005', sentAt: '2025-06-05T10:00:00Z' }),
     ];
     const inbound = [
-      makeInbound({ id: 'in-1', messageType: 'RSM-009', receivedAt: '2025-06-01T10:10:00Z' }),
-      makeInbound({ id: 'in-2', messageType: 'RSM-007', receivedAt: '2025-06-02T09:00:00Z' }),
-      makeInbound({ id: 'in-3', messageType: 'RSM-009', receivedAt: '2025-06-03T10:10:00Z' }),
+      makeInbound({ id: 'in-1', messageType: 'RSM-001', receivedAt: '2025-06-01T10:10:00Z' }),
+      makeInbound({ id: 'in-2', messageType: 'RSM-022', receivedAt: '2025-06-02T09:00:00Z' }),
+      makeInbound({ id: 'in-3', messageType: 'RSM-001', receivedAt: '2025-06-03T10:10:00Z' }),
       makeInbound({ id: 'in-4', messageType: 'RSM-012', receivedAt: '2025-06-04T02:00:00Z' }),
-      makeInbound({ id: 'in-5', messageType: 'RSM-009', receivedAt: '2025-06-05T10:10:00Z' }),
+      makeInbound({ id: 'in-5', messageType: 'RSM-001', receivedAt: '2025-06-05T10:10:00Z' }),
     ];
 
     api.getConversation.mockResolvedValue({
@@ -551,7 +552,7 @@ describe('ConversationTimeline', () => {
     renderTimeline('corr-large');
 
     await waitFor(() => {
-      expect(screen.getByText('RSM-001')).toBeInTheDocument();
+      expect(screen.getAllByText('RSM-001').length).toBeGreaterThan(0);
     });
 
     // 3 outbound "sent to DataHub" + various inbound labels
@@ -566,7 +567,7 @@ describe('ConversationTimeline', () => {
   });
 
   // ══════════════════════════════════════════════════════════════
-  //  MIXED INBOUND TYPES: RSM-007, RSM-009, RSM-012, RSM-004
+  //  MIXED INBOUND TYPES: RSM-022, RSM-001, RSM-012, RSM-004
   //  all render with correct labels and colors
   // ══════════════════════════════════════════════════════════════
 
@@ -575,8 +576,8 @@ describe('ConversationTimeline', () => {
       correlationId: 'corr-mixed',
       outbound: [],
       inbound: [
-        makeInbound({ id: 'in-1', messageType: 'RSM-009', receivedAt: '2025-06-01T10:00:00Z' }),
-        makeInbound({ id: 'in-2', messageType: 'RSM-007', receivedAt: '2025-06-02T10:00:00Z' }),
+        makeInbound({ id: 'in-1', messageType: 'RSM-001', receivedAt: '2025-06-01T10:00:00Z' }),
+        makeInbound({ id: 'in-2', messageType: 'RSM-022', receivedAt: '2025-06-02T10:00:00Z' }),
         makeInbound({ id: 'in-3', messageType: 'RSM-012', receivedAt: '2025-06-03T10:00:00Z' }),
         makeInbound({ id: 'in-4', messageType: 'RSM-004', receivedAt: '2025-06-04T10:00:00Z' }),
       ],
@@ -585,7 +586,7 @@ describe('ConversationTimeline', () => {
     renderTimeline('corr-mixed');
 
     await waitFor(() => {
-      expect(screen.getByText('RSM-009')).toBeInTheDocument();
+      expect(screen.getAllByText('RSM-001')[0]).toBeInTheDocument();
     });
 
     expect(screen.getByText('Acknowledgement received')).toBeInTheDocument();
@@ -603,7 +604,7 @@ describe('ConversationTimeline', () => {
       correlationId: 'corr-multi-err',
       outbound: [
         makeOutbound({ id: 'out-1', processType: 'RSM-001', status: 'acknowledged_error', sentAt: '2025-06-01T10:00:00Z' }),
-        makeOutbound({ id: 'out-2', processType: 'RSM-003', status: 'acknowledged_error', sentAt: '2025-06-02T10:00:00Z' }),
+        makeOutbound({ id: 'out-2', processType: 'RSM-024', status: 'acknowledged_error', sentAt: '2025-06-02T10:00:00Z' }),
       ],
       inbound: [],
     });
@@ -611,7 +612,7 @@ describe('ConversationTimeline', () => {
     renderTimeline('corr-multi-err');
 
     await waitFor(() => {
-      expect(screen.getByText('RSM-001')).toBeInTheDocument();
+      expect(screen.getAllByText('RSM-001')[0]).toBeInTheDocument();
     });
 
     const errorSuffixes = screen.getAllByText('(error)');
@@ -627,22 +628,22 @@ describe('ConversationTimeline', () => {
       correlationId: 'corr-same-time',
       outbound: [makeOutbound({ sentAt: '2025-06-01T10:00:00Z' })],
       inbound: [
-        makeInbound({ messageType: 'RSM-009', receivedAt: '2025-06-01T10:00:00Z' }),
+        makeInbound({ messageType: 'RSM-001', receivedAt: '2025-06-01T10:00:00Z' }),
       ],
     });
 
     renderTimeline('corr-same-time');
 
     await waitFor(() => {
-      expect(screen.getByText('RSM-001')).toBeInTheDocument();
+      expect(screen.getAllByText('RSM-001').length).toBeGreaterThan(0);
     });
-    expect(screen.getByText('RSM-009')).toBeInTheDocument();
+    expect(screen.getAllByText('RSM-001')).toHaveLength(2);
     expect(screen.getByText('sent to DataHub')).toBeInTheDocument();
     expect(screen.getByText('Acknowledgement received')).toBeInTheDocument();
   });
 
   // ══════════════════════════════════════════════════════════════
-  //  CANCELLATION BEFORE ACK: RSM-001 → RSM-003 (no RSM-009 yet)
+  //  CANCELLATION BEFORE ACK: RSM-001 → RSM-024 (no RSM-001 yet)
   // ══════════════════════════════════════════════════════════════
 
   it('renders cancellation sent before acknowledgement arrives', async () => {
@@ -650,7 +651,7 @@ describe('ConversationTimeline', () => {
       correlationId: 'corr-cancel-early',
       outbound: [
         makeOutbound({ id: 'out-1', processType: 'RSM-001', sentAt: '2025-06-01T10:00:00Z' }),
-        makeOutbound({ id: 'out-2', processType: 'RSM-003', sentAt: '2025-06-01T10:02:00Z' }),
+        makeOutbound({ id: 'out-2', processType: 'RSM-024', sentAt: '2025-06-01T10:02:00Z' }),
       ],
       inbound: [],
     });
@@ -658,9 +659,9 @@ describe('ConversationTimeline', () => {
     renderTimeline('corr-cancel-early');
 
     await waitFor(() => {
-      expect(screen.getByText('RSM-001')).toBeInTheDocument();
+      expect(screen.getAllByText('RSM-001')[0]).toBeInTheDocument();
     });
-    expect(screen.getByText('RSM-003')).toBeInTheDocument();
+    expect(screen.getByText('RSM-024')).toBeInTheDocument();
     const sentTexts = screen.getAllByText('sent to DataHub');
     expect(sentTexts).toHaveLength(2);
     expect(screen.queryByText('Acknowledgement received')).not.toBeInTheDocument();
@@ -694,14 +695,14 @@ describe('ConversationTimeline', () => {
       correlationId: 'corr-icons',
       outbound: [makeOutbound()],
       inbound: [
-        makeInbound({ messageType: 'RSM-009' }),
+        makeInbound({ messageType: 'RSM-001' }),
       ],
     });
 
     renderTimeline('corr-icons');
 
     await waitFor(() => {
-      expect(screen.getByText('RSM-001')).toBeInTheDocument();
+      expect(screen.getAllByText('RSM-001').length).toBeGreaterThan(0);
     });
 
     expect(screen.getByText('>')).toBeInTheDocument();

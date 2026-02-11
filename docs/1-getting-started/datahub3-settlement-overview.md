@@ -155,7 +155,7 @@ Settlement is only one part of the system. We also need to handle the customer's
 | Phase | What happens | Key process |
 |------|-----------|-------------|
 | **Onboarding** | Customer chooses us as supplier | BRS-001 (supplier switch / leverandørskifte) |
-| **Activation** | We receive master data + first metering data | RSM-007 + RSM-012 |
+| **Activation** | We receive master data + first metering data | RSM-022 + RSM-012 |
 | **Operation** | Daily data reception, monthly billing | RSM-012 + settlement |
 | **Offboarding** | Customer switches supplier or moves out | BRS-002 / BRS-010 |
 | **Termination** | Final settlement + aconto settlement (acontoopgørelse) | Final invoice |
@@ -182,7 +182,7 @@ Four queues with different message types:
 |----|---------|-------------------|
 | **Timeseries** | Metering data (RSM-012) + aggregations (RSM-014) | Settlement + reconciliation |
 | **Charges** | Tariff rates from grid company | Updating price tables |
-| **MasterData** | Master data for metering points (RSM-007) | Portfolio management |
+| **MasterData** | Master data for metering points (RSM-022) | Portfolio management |
 | **Aggregations** | Aggregated wholesale data (RSM-014) | Wholesale settlement (engrosopgørelse) |
 
 Authentication: OAuth2 Client Credentials (Azure AD). Token expires after 1 hour.

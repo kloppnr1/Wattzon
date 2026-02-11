@@ -61,7 +61,7 @@ public sealed class ProcessSchedulerService : BackgroundService
     internal async Task RunTickAsync(CancellationToken ct)
     {
         // ProcessScheduler only sends pending processes to DataHub
-        // Activation (marking processes as "completed") is handled by RSM-007 receipt
+        // Activation (marking processes as "completed") is handled by RSM-022 receipt
         await SendPendingRequestsAsync(ct);
     }
 
@@ -134,7 +134,7 @@ public sealed class ProcessSchedulerService : BackgroundService
         }
     }
 
-    // REMOVED: Effectuation is now handled exclusively by RSM-007 receipt
+    // REMOVED: Effectuation is now handled exclusively by RSM-022 receipt
     // ProcessScheduler only sends pending processes to DataHub
-    // RSM-007 is the authoritative signal that supply has started
+    // RSM-022 is the authoritative signal that supply has started
 }

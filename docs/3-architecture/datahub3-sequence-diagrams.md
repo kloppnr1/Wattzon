@@ -30,7 +30,7 @@ sequenceDiagram
 
     Salg->>DDQ: Create customer record + GSRN
     DDQ->>DH: BRS-001 (RSM-001)<br/>GSRN + effective date + CPR/CVR
-    DH-->>DDQ: Receipt (RSM-009): accepted/rejected
+    DH-->>DDQ: Receipt (RSM-001): accepted/rejected
 
     alt Rejected
         DH-->>DDQ: Rejection reason (incorrect GSRN, CPR mismatch, conflict)
@@ -40,7 +40,7 @@ sequenceDiagram
     DH->>GmlDDQ: Notification: metering point changing supplier
     Note over DH: Waiting until effective date
 
-    DH->>DDQ: RSM-007 (MasterData queue)<br/>Master data snapshot: type, settlement method,<br/>grid area, GLN, connection status
+    DH->>DDQ: RSM-022 (MasterData queue)<br/>Master data snapshot: type, settlement method,<br/>grid area, GLN, connection status
     DH->>DDQ: RSM-012 (Timeseries queue)<br/>First meter data (possibly historical)
 
     DDQ->>DDQ: Assign tariffs (based on grid area)<br/>Activate metering point in portfolio<br/>Set up billing plan + aconto
@@ -140,7 +140,7 @@ sequenceDiagram
     Note over DDQ: Decision: end of supply<br/>(customer cancellation / non-payment / move-out)
 
     DDQ->>DH: BRS-002 (RSM-005)<br/>GSRN + effective date + reason
-    DH-->>DDQ: Receipt (RSM-009)
+    DH-->>DDQ: Receipt (RSM-001)
 
     alt Customer withdraws / pays
         DDQ->>DH: BRS-044: Cancel end of supply
@@ -296,7 +296,7 @@ flowchart LR
 
     AG --> RSM014b[RSM-014: Aggregated data<br/>E31]
 
-    MD --> RSM007[RSM-007: Master data snapshot]
+    MD --> RSM022[RSM-022: Master data snapshot]
     MD --> RSM004[RSM-004: Master data change]
 
     CH --> Tarif[Tariff/price updates]

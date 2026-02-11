@@ -269,27 +269,27 @@ public sealed class MarketRulesScenarioTests : IClassFixture<WebApplicationFacto
     // ── Scenario 6: Enqueue + queue processing + DB ─────────────────
 
     [Fact]
-    public async Task Enqueue_rsm007_and_rsm012_processes_messages_into_database()
+    public async Task Enqueue_rsm022_and_rsm012_processes_messages_into_database()
     {
         var ct = CancellationToken.None;
         const string gsrn = "571313100000080006";
         await ResetSimulator();
 
-        // Build RSM-007 and RSM-012 payloads with our unique GSRN
-        var rsm007 = BuildRsm007(gsrn);
+        // Build RSM-022 and RSM-012 payloads with our unique GSRN
+        var rsm022 = BuildRsm022(gsrn);
         var rsm012 = BuildRsm012(gsrn, 744);
 
         // Enqueue messages via admin endpoint
-        await EnqueueMessage("MasterData", "RSM-007", "corr-scenario-006", rsm007);
+        await EnqueueMessage("MasterData", "RSM-022", "corr-scenario-006", rsm022);
         await EnqueueMessage("Timeseries", "RSM-012", null, rsm012);
 
-        // Peek the MasterData queue — should have RSM-007
+        // Peek the MasterData queue — should have RSM-022
         var msg = await _datahub.PeekAsync(QueueName.MasterData, ct);
         msg.Should().NotBeNull();
-        msg!.MessageType.Should().Be("RSM-007");
+        msg!.MessageType.Should().Be("RSM-022");
         msg.RawPayload.Should().Contain(gsrn);
 
-        // Parse RSM-007 and store in DB
+        // Parse RSM-022 and store in DB
         await _portfolio.EnsureGridAreaAsync("344", "5790000392261", "N1 A/S", "DK1", ct);
         await using (var conn = new NpgsqlConnection(Conn))
         {
@@ -302,7 +302,7 @@ public sealed class MarketRulesScenarioTests : IClassFixture<WebApplicationFacto
         }
 
         var parser = new CimJsonParser();
-        var masterData = parser.ParseRsm007(msg.RawPayload);
+        var masterData = parser.ParseRsm022(msg.RawPayload);
         masterData.MeteringPointId.Should().Be(gsrn);
 
         await _portfolio.ActivateMeteringPointAsync(gsrn, masterData.SupplyStart.UtcDateTime, ct);
@@ -385,10 +385,10 @@ public sealed class MarketRulesScenarioTests : IClassFixture<WebApplicationFacto
         response.EnsureSuccessStatusCode();
     }
 
-    private static string BuildRsm007(string gsrn) => $$"""
+    private static string BuildRsm022(string gsrn) => $$"""
         {
           "MarketDocument": {
-            "mRID": "msg-rsm007-{{Guid.NewGuid():N}}",
+            "mRID": "msg-rsm022-{{Guid.NewGuid():N}}",
             "type": "E44",
             "MktActivityRecord": {
               "MarketEvaluationPoint": {

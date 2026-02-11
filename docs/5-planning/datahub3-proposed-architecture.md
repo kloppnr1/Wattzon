@@ -79,7 +79,7 @@ All communication with the DataHub 3 B2B API.
 |-------|----------|----------|--------------------|
 | Timeseries | `GET /cim/Timeseries` | RSM-012, RSM-014 | BRS-020, BRS-021, BRS-027 |
 | Aggregations | `GET /cim/Aggregations` | RSM-014 | BRS-027, BRS-028, BRS-029, BRS-030 |
-| MasterData | `GET /cim/MasterData` | RSM-004, RSM-007 | BRS-001, BRS-006, BRS-009, BRS-010 |
+| MasterData | `GET /cim/MasterData` | RSM-004, RSM-022 | BRS-001, BRS-006, BRS-009, BRS-010 |
 | Charges | `GET /cim/Charges` | Price/tariff lists | Tariff/charge updates |
 
 **Outbound requests:**
@@ -141,7 +141,7 @@ Manages the supplier's customer portfolio, metering point associations, and life
 **Responsibilities:**
 - Maintain metering point registry (GSRN, type, settlement method, grid area, connection status)
 - Track supply periods per metering point (start/end dates, active supplier)
-- Process master data updates from DataHub (RSM-004, RSM-007)
+- Process master data updates from DataHub (RSM-004, RSM-022)
 - Manage customer records (CPR/CVR, name, contact)
 - Orchestrate supplier switch workflows (state machine per metering point)
 - Coordinate move-in/move-out flows (til-/fraflytning)
@@ -539,7 +539,7 @@ The system is built in **MVPs** (minimum viable products), each delivering a wor
 
 | MVP | Scope | Business Processes |
 |-----|-------|--------------------|
-| 1 | Sunshine scenario: one customer, one correct invoice | Auth, BRS-001, RSM-009/007/012, Queue Poller, time series store, settlement engine, Charges, state machine, portfolio |
+| 1 | Sunshine scenario: one customer, one correct invoice | Auth, BRS-001, RSM-001/022/012, Queue Poller, time series store, settlement engine, Charges, state machine, portfolio |
 | 2 | Full customer lifecycle (offboarding, aconto, rejections) | RSM-004, BRS-002/003/005/009/010/043/044, aconto, final settlement |
 | 3 | DataHub integration + edge cases | Actor Test validation, parser hardening, corrections, BRS-042/011, RSM-014/015/016, reconciliation, elvarme, solar |
 | 4 | Production | ERP, payment services, e-Boks, customer portal, pilot + full migration, performance |

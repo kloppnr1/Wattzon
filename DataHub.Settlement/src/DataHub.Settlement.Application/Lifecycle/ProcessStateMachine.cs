@@ -44,7 +44,7 @@ public sealed class ProcessStateMachine
 
     public async Task MarkCompletedAsync(Guid requestId, CancellationToken ct)
     {
-        // RSM-007 is the authoritative signal from DataHub that supply has started
+        // RSM-022 is the authoritative signal from DataHub that supply has started
         // No temporal guard - we trust DataHub's activation signal
         await TransitionAsync(requestId, "completed", null, "completed", ct);
     }

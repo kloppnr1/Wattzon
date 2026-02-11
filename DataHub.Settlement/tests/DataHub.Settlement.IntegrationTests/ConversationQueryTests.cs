@@ -41,26 +41,26 @@ public class ConversationQueryTests
         await _messageRepo.RecordOutboundRequestAsync(
             "supplier_switch", "571313100000099999", "corr-conv-test-001", "acknowledged_ok", ct);
 
-        // 3. Record outbound for RSM-003 cancel (same correlation ID)
+        // 3. Record outbound for RSM-024 cancel (same correlation ID)
         await _messageRepo.RecordOutboundRequestAsync(
             "cancel_switch", "571313100000099999", "corr-conv-test-001", "sent", ct);
 
-        // 4. Record inbound RSM-009 ack for original
+        // 4. Record inbound RSM-001 ack for original
         await _messageLog.RecordInboundAsync(
-            "msg-rsm009-orig", "RSM-009", "corr-conv-test-001", "MasterData", 100, ct);
-        await _messageLog.MarkProcessedAsync("msg-rsm009-orig", ct);
+            "msg-rsm001-orig", "RSM-001", "corr-conv-test-001", "MasterData", 100, ct);
+        await _messageLog.MarkProcessedAsync("msg-rsm001-orig", ct);
 
-        // 5. Record inbound RSM-009 cancel ack (same correlation ID)
+        // 5. Record inbound RSM-001 cancel ack (same correlation ID)
         await _messageLog.RecordInboundAsync(
-            "msg-rsm009-cancel", "RSM-009", "corr-conv-test-001", "MasterData", 100, ct);
-        await _messageLog.MarkProcessedAsync("msg-rsm009-cancel", ct);
+            "msg-rsm001-cancel", "RSM-001", "corr-conv-test-001", "MasterData", 100, ct);
+        await _messageLog.MarkProcessedAsync("msg-rsm001-cancel", ct);
 
         // 6. Query conversation — should include all messages
         var conversation = await _messageRepo.GetConversationAsync("corr-conv-test-001", ct);
 
         conversation.Should().NotBeNull();
-        conversation!.Outbound.Should().HaveCount(2, "should include both RSM-001 and RSM-003 outbound");
-        conversation.Inbound.Should().HaveCount(2, "should include both original and cancel RSM-009 inbound");
+        conversation!.Outbound.Should().HaveCount(2, "should include both RSM-001 and RSM-024 outbound");
+        conversation.Inbound.Should().HaveCount(2, "should include both original and cancel RSM-001 inbound");
 
         conversation.Outbound.Should().OnlyContain(o => o.CorrelationId == "corr-conv-test-001");
         conversation.Inbound.Should().OnlyContain(i => i.CorrelationId == "corr-conv-test-001");
@@ -87,9 +87,9 @@ public class ConversationQueryTests
 
         // Record inbound for both (same correlation ID)
         await _messageLog.RecordInboundAsync(
-            "msg-summary-orig", "RSM-009", "corr-conv-summary-001", "MasterData", 100, ct);
+            "msg-summary-orig", "RSM-001", "corr-conv-summary-001", "MasterData", 100, ct);
         await _messageLog.RecordInboundAsync(
-            "msg-summary-cancel", "RSM-009", "corr-conv-summary-001", "MasterData", 100, ct);
+            "msg-summary-cancel", "RSM-001", "corr-conv-summary-001", "MasterData", 100, ct);
 
         // Query conversations list
         var result = await _messageRepo.GetConversationsAsync(1, 50, ct);

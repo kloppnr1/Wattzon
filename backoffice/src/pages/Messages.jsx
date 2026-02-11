@@ -103,9 +103,9 @@ export function ConversationTimeline({ correlationId }) {
             );
           } else {
             const i = e.data;
-            const color = i.messageType === 'RSM-007' ? 'emerald' : i.messageType === 'RSM-009' ? 'sky' : 'slate';
-            const desc = i.messageType === 'RSM-007' ? t('messages.activationConfirmed')
-              : i.messageType === 'RSM-009' ? t('messages.acknowledgementReceived')
+            const color = i.messageType === 'RSM-022' ? 'emerald' : i.messageType === 'RSM-001' ? 'sky' : 'slate';
+            const desc = i.messageType === 'RSM-022' ? t('messages.activationConfirmed')
+              : i.messageType === 'RSM-001' ? t('messages.acknowledgementReceived')
               : t('messages.received', { type: i.messageType });
             return (
               <TimelineEvent
@@ -311,10 +311,10 @@ export default function Messages() {
                             <span className="text-xs font-medium text-slate-500">{conv.outboundCount + conv.inboundCount}</span>
                             <div className="flex gap-0.5">
                               {conv.hasAcknowledgement && (
-                                <span className="w-2 h-2 rounded-full bg-sky-400" title="Acknowledged (RSM-009)" />
+                                <span className="w-2 h-2 rounded-full bg-sky-400" title="Acknowledged (RSM-001)" />
                               )}
                               {conv.hasActivation && (
-                                <span className="w-2 h-2 rounded-full bg-emerald-400" title="Activated (RSM-007)" />
+                                <span className="w-2 h-2 rounded-full bg-emerald-400" title="Activated (RSM-022)" />
                               )}
                             </div>
                           </div>

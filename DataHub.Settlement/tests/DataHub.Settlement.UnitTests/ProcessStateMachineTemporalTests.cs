@@ -12,8 +12,8 @@ public class ProcessStateMachineTemporalTests
     private ProcessStateMachine CreateSut() => new(_repo, _clock);
 
     // NOTE: Temporal guard on MarkCompletedAsync was intentionally removed.
-    // RSM-007 is the ONLY signal that marks processes "completed", and we trust
-    // DataHub to only send RSM-007 when appropriate. See V022 architecture decision.
+    // RSM-022 is the ONLY signal that marks processes "completed", and we trust
+    // DataHub to only send RSM-022 when appropriate. See V022 architecture decision.
 
     [Fact]
     public async Task Can_effectuate_on_effective_date()

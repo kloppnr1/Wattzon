@@ -196,7 +196,7 @@ Customers with electrical heating as their primary heat source are eligible for 
 
 | Step | Source | Detail |
 |------|--------|--------|
-| 1 | RSM-007 (master data) | Contains a heating indicator or tax reduction flag for the metering point (WARNING: VERIFY exact field name in CIM format) |
+| 1 | RSM-022 (master data) | Contains a heating indicator or tax reduction flag for the metering point (WARNING: VERIFY exact field name in CIM format) |
 | 2 | Our system | Stores the heating flag on `metering_point` |
 | 3 | Settlement engine | Tracks cumulative annual kWh for the metering point |
 | 4 | Settlement engine | Once the threshold is exceeded, applies the reduced rate to the remaining consumption |
@@ -214,7 +214,7 @@ Customers with electrical heating as their primary heat source are eligible for 
 
 | Attribute | Values | Source |
 |-----------|--------|--------|
-| Heating type | Standard / Electrical heating (elvarme) | RSM-007 master data |
+| Heating type | Standard / Electrical heating (elvarme) | RSM-022 master data |
 | Standard elafgift rate | ~0.008 DKK/kWh (2025) | Legislation |
 | Reduced elafgift rate | ~0.005 DKK/kWh (2025) (WARNING: VERIFY) | Legislation |
 | Yearly threshold | 4,000 kWh (WARNING: VERIFY) | Legislation |
@@ -242,7 +242,7 @@ Denmark has several net settlement schemes, depending on when the installation w
 | **Annual net settlement** (årsafregning) | Legacy installations (WARNING: VERIFY cutoff date) | Production is accumulated and netted against consumption over a full year. Far more favorable for the customer. |
 | **Instant net settlement** | Very small installations (WARNING: VERIFY) | Production offsets consumption instantly — effectively the meter "runs backwards" |
 
-The net settlement group is indicated in DataHub master data (WARNING: VERIFY exact field in RSM-007 or CIM format).
+The net settlement group is indicated in DataHub master data (WARNING: VERIFY exact field in RSM-022 or CIM format).
 
 ### Impact on settlement
 
@@ -278,7 +278,7 @@ Over the full year:
 
 - **Paired metering points:** The system must link the E17 (consumption) and E18 (production) metering points for the same customer. Consider a `parent_gsrn` or `linked_gsrn` column on `portfolio.metering_point`
 - **RSM-012 for E18:** Production data arrives via the same Timeseries queue as consumption data. The `MeteringPointType` field in the message distinguishes them. The metering data ingestion pipeline must handle both types
-- **Net settlement group:** Store the customer's net settlement group (from RSM-007) to determine the correct settlement logic
+- **Net settlement group:** Store the customer's net settlement group (from RSM-022) to determine the correct settlement logic
 - **Settlement engine branching:** The settlement engine must check for linked production metering points and apply the correct netting scheme before calculating invoice lines
 - **Spot price credit:** Excess production is typically credited at the **spot price only** (no margin, no tariffs). This creates a new invoice line type
 - **Grid tariff exemption:** Excess production fed into the grid is typically exempt from grid tariffs and electricity tax — only the net consumption is subject to these charges (WARNING: VERIFY)

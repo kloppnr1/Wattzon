@@ -12,10 +12,10 @@ MVP 1 uses an **in-process fake** (`FakeDataHubClient`) behind the same `IDataHu
 
 The fake supports:
 - Timeseries queue (RSM-012 from fixture files)
-- MasterData queue (RSM-007 from fixture files)
+- MasterData queue (RSM-022 from fixture files)
 - Charges queue (tariff rate fixtures)
 - Peek / dequeue semantics matching the real DataHub API
-- Outbound BRS-001 acceptance (returns RSM-009 accepted)
+- Outbound BRS-001 acceptance (returns RSM-001 accepted)
 - Fake token endpoint (returns a hardcoded JWT)
 - State reset between tests
 
@@ -73,7 +73,7 @@ flowchart TD
 
     B --> M["13. Portfolio\nmanagement"]
     C --> N["14. BRS-001 request\nbuilder"]
-    C --> O["15. RSM-007/009\nparsers"]
+    C --> O["15. RSM-022/001\nparsers"]
     M --> P["16. Process\nstate machine"]
     N --> P
     O --> P
@@ -107,9 +107,9 @@ flowchart TD
 |---|-----------|---------------|
 | 13 | **Portfolio management** | Customer, metering point, contract, supply period CRUD |
 | 14 | **BRS-001 request builder** | Valid CIM JSON produced, sent via IDataHubClient |
-| 15 | **RSM-009 + RSM-007 parsers** | Acknowledgement and master data extraction |
+| 15 | **RSM-001 + RSM-022 parsers** | Acknowledgement and master data extraction |
 | 16 | **Process state machine** | BRS-001 lifecycle: Pending → Sent → Acknowledged → Completed |
-| 17 | **Sunshine scenario E2E test** | Full chain using FakeDataHubClient: signup → BRS-001 → RSM-007 → RSM-012 → settlement → golden master |
+| 17 | **Sunshine scenario E2E test** | Full chain using FakeDataHubClient: signup → BRS-001 → RSM-022 → RSM-012 → settlement → golden master |
 
 **Parallel tracks:**
 - Track A (settlement): 1 → 2 → 5 → 9 → 10 → 11
@@ -126,7 +126,7 @@ All fixtures are version-controlled. Values chosen for hand-calculability.
 |---------|---------|
 | `rsm012-single-day.json` | 1 GSRN, 1 day, 24 hours, PT1H, quality A01 |
 | `rsm012-multi-day/` (31 files) | Same GSRN, full January |
-| `rsm007-activation.json` | GSRN activation, grid area 344, flex settlement |
+| `rsm022-activation.json` | GSRN activation, grid area 344, flex settlement |
 | `charges-grid-tariff.json` | Grid area 344: day/night/peak rates, subscription 49 DKK/month |
 | `charges-system-tariff.json` | System 0.054, transmission 0.049 DKK/kWh |
 | `spot-prices-january.json` | 744 hours with time-differentiated prices |
@@ -190,14 +190,14 @@ A second golden master covers a partial period (16 days, mid-month start) to ver
 
 - [ ] `docker compose up` starts TimescaleDB and Aspire Dashboard
 - [ ] Aspire Dashboard accessible at `http://localhost:18888` with logs, traces, and metrics
-- [ ] FakeDataHubClient delivers RSM-012, RSM-007, Charges fixtures
+- [ ] FakeDataHubClient delivers RSM-012, RSM-022, Charges fixtures
 - [ ] CIM parser handles all fixture files correctly
 - [ ] Ingestion pipeline: 31 days ingested, all messages dequeued, no dead letters
 - [ ] Duplicate MessageId skipped (idempotency)
 - [ ] Tariff rates parsed and queryable by grid area + hour
 - [ ] Portfolio: customer + metering point + contract + supply period created
-- [ ] BRS-001 sent → RSM-009 accepted (via FakeDataHubClient)
-- [ ] RSM-007 → metering point activated, supply period created
+- [ ] BRS-001 sent → RSM-001 accepted (via FakeDataHubClient)
+- [ ] RSM-022 → metering point activated, supply period created
 - [ ] State machine: Pending → Sent → Acknowledged → Completed
 - [ ] Settlement golden master #1 (full month) passes
 - [ ] Settlement golden master #2 (partial period) passes
@@ -211,7 +211,7 @@ A second golden master covers a partial period (16 days, mid-month start) to ver
 | Feature | Deferred to |
 |---------|-------------|
 | Offboarding (BRS-002, BRS-010) | MVP 2 |
-| Cancellations / rejections (RSM-002 cancel, RSM-009 rejected) | MVP 2 |
+| Cancellations / rejections (RSM-002 cancel, RSM-001 rejected) | MVP 2 |
 | Aconto calculation and settlement | MVP 2 |
 | Standalone HTTP DataHub simulator | MVP 2 |
 | Invoice generation (PDF/document) | MVP 2 |

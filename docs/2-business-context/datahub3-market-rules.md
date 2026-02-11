@@ -90,7 +90,7 @@ The Simulator maintains an in-memory `ConcurrentDictionary<string, string>` trac
 
 - **Activate**: On successful BRS-001 (change of supplier) or via `/admin/activate/{gsrn}`
 - **Deactivate**: On successful BRS-002 (end of supply) or via `/admin/deactivate/{gsrn}`
-- **Scenario load**: Scenarios with RSM-007 (`sunshine`, `full_lifecycle`, `cancellation`) auto-register the default GSRN
+- **Scenario load**: Scenarios with RSM-022 (`sunshine`, `full_lifecycle`, `cancellation`) auto-register the default GSRN
 - **Reset**: `/admin/reset` clears all GSRN tracking
 
 ---

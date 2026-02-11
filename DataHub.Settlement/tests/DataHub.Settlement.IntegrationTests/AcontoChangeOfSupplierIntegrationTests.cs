@@ -35,7 +35,7 @@ public sealed class AcontoChangeOfSupplierIntegrationTests
         ctx.IsAcknowledged.Should().BeTrue();
         ctx.IsAcontoEstimated.Should().BeTrue();
         ctx.IsInvoiceSent.Should().BeTrue();
-        ctx.IsRsm007Received.Should().BeTrue();
+        ctx.IsRsm022Received.Should().BeTrue();
         ctx.IsEffectuated.Should().BeTrue();
         ctx.IsAcontoPaid.Should().BeTrue();
         ctx.IsAcontoSettled.Should().BeTrue();
@@ -46,7 +46,7 @@ public sealed class AcontoChangeOfSupplierIntegrationTests
         stepNames.Should().StartWith(new[]
         {
             "Seed Data", "Submit BRS-001", "DataHub Acknowledges",
-            "Estimate Aconto", "Send Invoice", "Receive RSM-007", "Effectuation"
+            "Estimate Aconto", "Send Invoice", "Receive RSM-022", "Effectuation"
         });
         // RSM-012 deliveries happen between effectuation and payment
         stepNames.Should().Contain("Receive RSM-012");

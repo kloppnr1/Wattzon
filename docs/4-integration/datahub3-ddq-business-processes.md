@@ -73,7 +73,7 @@ Source: CIM Webservice Interface (Dok. 22/03077-1); GitHub Energinet-DataHub/ARC
 |----------|---------------|
 | `GET /v1.0/cim/Timeseries` | RSM-012 (NotifyValidatedMeasureData) + RSM-014 (NotifyAggregatedMeasureData) |
 | `GET /v1.0/cim/Aggregations` | RSM-014 (NotifyAggregatedMeasureData) — ⚠ VERIFY: may overlap with Timeseries |
-| `GET /v1.0/cim/MasterData` | RSM-007 (GenericNotification for master data changes), RSM-004 ⚠ VERIFY |
+| `GET /v1.0/cim/MasterData` | RSM-022 (GenericNotification for master data changes), RSM-004 ⚠ VERIFY |
 | `GET /v1.0/cim/Charges` | Charge/tariff price list notifications ⚠ VERIFY exact RSM |
 | `GET /v1.0/cim/all` | Peeks across all queues (returns first available message from any queue) |
 
@@ -211,7 +211,7 @@ These processes handle the flow of validated and aggregated metering data betwee
 **Key facts for DDQ:**
 - Returned when a data request fails validation (e.g., metering point not found, period out of range, unauthorized)
 - Contains rejection reason codes
-- ⚠ VERIFY: May be called RSM-019 or may use RSM-009 (generic acknowledgement) with rejection codes
+- ⚠ VERIFY: May be called RSM-019 or may use RSM-001 (generic acknowledgement) with rejection codes
 
 ---
 
@@ -232,7 +232,7 @@ These processes govern how supply obligations are created, transferred, and term
 2. DataHub validates (metering point exists, no conflicting processes, customer data matches)
 3. DataHub sends confirmation to new DDQ and notification to old DDQ
 4. On effective date, supply transfers in DataHub
-5. DataHub sends RSM-012 (metering data) and RSM-007 (master data) to new DDQ
+5. DataHub sends RSM-012 (metering data) and RSM-022 (master data) to new DDQ
 
 **DDQ receives:**
 - Confirmation/rejection of the switch request
@@ -409,15 +409,15 @@ These processes handle metering point master data and customer information.
 - Connection status (connected/disconnected)
 - Network operator assignment
 
-### 6.2 RSM-007: InformMasterData ⚠ VERIFY
+### 6.2 RSM-022: InformMasterData ⚠ VERIFY
 
 - **Direction:** DataHub → DDQ
 - **Queue:** `MasterData`
 - **Purpose:** Full master data snapshot sent after supplier switch or move-in
 
-⚠ VERIFY: RSM-004 and RSM-007 naming. In CIM DataHub 3, these may use different names or be consolidated.
+⚠ VERIFY: RSM-004 and RSM-022 naming. In CIM DataHub 3, these may use different names or be consolidated.
 
-### 6.3 RSM-009: Acknowledgement / Rejection
+### 6.3 RSM-001: Acknowledgement / Rejection
 
 - **Direction:** DataHub → DDQ
 - **Queue:** Varies (delivered to the queue corresponding to the original request)
@@ -592,7 +592,7 @@ Source: CIM EDI Guide page 256
 
 - DataHub validates all incoming messages against CIM schema before processing
 - Business validation (e.g., metering point exists, actor is authorized) happens after schema validation
-- Rejection is communicated via acknowledgement message (RSM-009 or inline rejection) ⚠ VERIFY
+- Rejection is communicated via acknowledgement message (RSM-001 or inline rejection) ⚠ VERIFY
 
 ### Settlement Method Impact
 

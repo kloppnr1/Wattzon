@@ -24,7 +24,7 @@ Billing:      Create customer record, select product/tariff plan
 PHASE 2: ACTIVATION                                              ~1 day
 ─────────────────────────────────────────────────────────────────────────────
 Trigger:      Effective date reached — we are now the supplier on the metering point
-DataHub:      ← RSM-007 (master data: settlement method, grid area, GLN, type)
+DataHub:      ← RSM-022 (master data: settlement method, grid area, GLN, type)
               ← RSM-012 (first metering data, possibly historical for the transition)
 Billing:      Assign grid tariffs based on grid area + grid company GLN
               Load Nordpool spot price feed
@@ -102,7 +102,7 @@ SPECIAL CASES (can occur in any phase)
 | BRS-015 (customer master data / kundestamdata) | 1 - Onboarding | We submit | No direct consequence |
 | RSM-002 cancel (within BRS-001) | 1 - Onboarding | We initiate (if customer cancels before effective date) | Cancel created billing plan |
 | BRS-003 (erroneous switch / fejlagtigt leverandørskift) | 1 - Onboarding | Old DDQ initiates (after effective date, via RSM-003) | Rollback supplier switch |
-| RSM-007 (master data snapshot) | 2 - Activation | We receive | Assign tariffs and product plan |
+| RSM-022 (master data snapshot) | 2 - Activation | We receive | Assign tariffs and product plan |
 | RSM-012 (metering data / måledata) | 2-6 | We receive (ongoing) | Calculation basis for settlement |
 | RSM-014 (aggregated data) | 3-4 | We receive (periodic) | Reconciliation against wholesale settlement |
 | BRS-027 (wholesale settlement / engrosopgørelse) | 4 - Operations | We receive | Reconcile own settlement against DataHub |
@@ -155,7 +155,7 @@ Grid tariff per hour = kWh × tariff_rate_for_the_hour
 
 - Rates stored per hour (hours 1-24) with validity dates
 - Tariff type determines which rate applies (grid tariff, system tariff, transmission tariff)
-- Grid area (from RSM-007) determines which grid company's tariffs apply
+- Grid area (from RSM-022) determines which grid company's tariffs apply
 
 ### Product Margin
 
@@ -273,19 +273,19 @@ After the cancellation deadline has passed, use **BRS-003** (Håndtering af fejl
 
 ## Phase 2: Activation (Switch Takes Effect)
 
-**Trigger:** RSM-007 is received from DataHub — the grid operator confirms the metering point is activated.
+**Trigger:** RSM-022 is received from DataHub — the grid operator confirms the metering point is activated.
 
-**Important:** The effective date is our *requested* start date, but activation happens when we receive RSM-007. This is the authoritative signal that supply has actually started.
+**Important:** The effective date is our *requested* start date, but activation happens when we receive RSM-022. This is the authoritative signal that supply has actually started.
 
 ### DataHub Communication
 
 | Step | Direction | BRS/RSM | What happens |
 |------|-----------|---------|--------------|
-| 1 | DataHub -> DDQ | **RSM-007** (MasterData queue) | Complete master data snapshot for the metering point: type, settlement method, grid area, connection status, grid company. **This triggers activation.** |
+| 1 | DataHub -> DDQ | **RSM-022** (MasterData queue) | Complete master data snapshot for the metering point: type, settlement method, grid area, connection status, grid company. **This triggers activation.** |
 | 2 | DataHub -> DDQ | **BRS-015** response | Confirmation of customer master data. VERIFY |
 | 3 | DataHub -> DDQ | **RSM-012** (Timeseries queue) | First metering data delivery — may include historical data for the transition period |
 
-### Internal Steps (triggered by RSM-007)
+### Internal Steps (triggered by RSM-022)
 
 1. **Process marked "completed"** — supply has officially started
 2. **Customer entity created** (or linked if multi-metering point scenario)
@@ -301,11 +301,11 @@ After the cancellation deadline has passed, use **BRS-003** (Håndtering af fejl
 
 | Data | Source | Used for |
 |------|--------|----------|
-| Metering point type (E17 consumption, E18 production) | RSM-007 | Determines settlement method |
-| Settlement method (flex / profile) | RSM-007 | Determines how metering data is received and settlement is calculated |
-| Grid area (netområde) | RSM-007 | Maps to the grid company's tariff plan |
-| Estimated annual consumption | RSM-007. VERIFY | Calculation basis for aconto |
-| Grid company GLN | RSM-007 | Identifies which tariffs apply |
+| Metering point type (E17 consumption, E18 production) | RSM-022 | Determines settlement method |
+| Settlement method (flex / profile) | RSM-022 | Determines how metering data is received and settlement is calculated |
+| Grid area (netområde) | RSM-022 | Maps to the grid company's tariff plan |
+| Estimated annual consumption | RSM-022. VERIFY | Calculation basis for aconto |
+| Grid company GLN | RSM-022 | Identifies which tariffs apply |
 
 ---
 

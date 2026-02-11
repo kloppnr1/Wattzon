@@ -184,11 +184,11 @@ public class ProcessTimelineTests
     }
 
     // ══════════════════════════════════════════════════════════════
-    //  QUEUE POLLER: RSM-009 acceptance triggers acknowledge + awaiting_effectuation
+    //  QUEUE POLLER: RSM-001 acceptance triggers acknowledge + awaiting_effectuation
     // ══════════════════════════════════════════════════════════════
 
     [Fact]
-    public async Task QueuePoller_RSM009_accepted_transitions_to_effectuation_pending()
+    public async Task QueuePoller_RSM001_accepted_transitions_to_effectuation_pending()
     {
         var ct = CancellationToken.None;
         var sm = CreateStateMachine();
@@ -196,11 +196,11 @@ public class ProcessTimelineTests
         var request = await sm.CreateRequestAsync("571313100000012345", "supplier_switch", new DateOnly(2025, 2, 1), ct);
         await sm.MarkSentAsync(request.Id, "corr-poller-001", ct);
 
-        var parser = new StubCimParser(new Rsm009Result("corr-poller-001", true, null, null));
+        var parser = new StubCimParser(new Rsm001ResponseResult("corr-poller-001", true, null, null));
         var poller = CreatePoller(parser);
 
         _dataHubClient.Enqueue(QueueName.MasterData,
-            new DataHubMessage("msg-rsm009-001", "RSM-009", "corr-poller-001", "{}"));
+            new DataHubMessage("msg-rsm001-001", "RSM-001", "corr-poller-001", "{}"));
 
         await poller.PollQueueAsync(QueueName.MasterData, ct);
 
@@ -213,11 +213,11 @@ public class ProcessTimelineTests
     }
 
     // ══════════════════════════════════════════════════════════════
-    //  QUEUE POLLER: RSM-009 rejection triggers rejected + rejection_reason
+    //  QUEUE POLLER: RSM-001 rejection triggers rejected + rejection_reason
     // ══════════════════════════════════════════════════════════════
 
     [Fact]
-    public async Task QueuePoller_RSM009_rejected_transitions_to_rejected()
+    public async Task QueuePoller_RSM001_rejected_transitions_to_rejected()
     {
         var ct = CancellationToken.None;
         var sm = CreateStateMachine();
@@ -225,11 +225,11 @@ public class ProcessTimelineTests
         var request = await sm.CreateRequestAsync("571313100000012345", "supplier_switch", new DateOnly(2025, 2, 1), ct);
         await sm.MarkSentAsync(request.Id, "corr-poller-002", ct);
 
-        var parser = new StubCimParser(new Rsm009Result("corr-poller-002", false, "E16: Invalid GSRN", "E16"));
+        var parser = new StubCimParser(new Rsm001ResponseResult("corr-poller-002", false, "E16: Invalid GSRN", "E16"));
         var poller = CreatePoller(parser);
 
         _dataHubClient.Enqueue(QueueName.MasterData,
-            new DataHubMessage("msg-rsm009-002", "RSM-009", "corr-poller-002", "{}"));
+            new DataHubMessage("msg-rsm001-002", "RSM-001", "corr-poller-002", "{}"));
 
         await poller.PollQueueAsync(QueueName.MasterData, ct);
 
@@ -241,11 +241,11 @@ public class ProcessTimelineTests
     }
 
     // ══════════════════════════════════════════════════════════════
-    //  QUEUE POLLER: RSM-009 for cancellation ack via cancel_correlation_id
+    //  QUEUE POLLER: RSM-001 for cancellation ack via cancel_correlation_id
     // ══════════════════════════════════════════════════════════════
 
     [Fact]
-    public async Task QueuePoller_RSM009_cancellation_ack_transitions_to_cancelled()
+    public async Task QueuePoller_RSM001_cancellation_ack_transitions_to_cancelled()
     {
         var ct = CancellationToken.None;
         var sm = CreateStateMachine();
@@ -258,12 +258,12 @@ public class ProcessTimelineTests
         var processBefore = await _processRepo.GetAsync(request.Id, ct);
         processBefore!.Status.Should().Be("cancellation_pending");
 
-        // RSM-009 arrives with the same original correlation ID (status-based disambiguation)
-        var parser = new StubCimParser(new Rsm009Result("corr-poller-003", true, null, null));
+        // RSM-001 arrives with the same original correlation ID (status-based disambiguation)
+        var parser = new StubCimParser(new Rsm001ResponseResult("corr-poller-003", true, null, null));
         var poller = CreatePoller(parser);
 
         _dataHubClient.Enqueue(QueueName.MasterData,
-            new DataHubMessage("msg-rsm009-cancel", "RSM-009", "corr-poller-003", "{}"));
+            new DataHubMessage("msg-rsm001-cancel", "RSM-001", "corr-poller-003", "{}"));
 
         await poller.PollQueueAsync(QueueName.MasterData, ct);
 
@@ -307,11 +307,11 @@ public class ProcessTimelineTests
     }
 
     // ══════════════════════════════════════════════════════════════
-    //  QUEUE POLLER: RSM-009 cancellation rejection via cancel_correlation_id
+    //  QUEUE POLLER: RSM-001 cancellation rejection via cancel_correlation_id
     // ══════════════════════════════════════════════════════════════
 
     [Fact]
-    public async Task QueuePoller_RSM009_cancellation_rejected_reverts_to_effectuation_pending()
+    public async Task QueuePoller_RSM001_cancellation_rejected_reverts_to_effectuation_pending()
     {
         var ct = CancellationToken.None;
         var sm = CreateStateMachine();
@@ -324,12 +324,12 @@ public class ProcessTimelineTests
         var processBefore = await _processRepo.GetAsync(request.Id, ct);
         processBefore!.Status.Should().Be("cancellation_pending");
 
-        // RSM-009 arrives with same original correlation ID but Accepted=false (status-based disambiguation)
-        var parser = new StubCimParser(new Rsm009Result("corr-poller-004", false, "E47: Cancellation deadline exceeded", "E47"));
+        // RSM-001 arrives with same original correlation ID but Accepted=false (status-based disambiguation)
+        var parser = new StubCimParser(new Rsm001ResponseResult("corr-poller-004", false, "E47: Cancellation deadline exceeded", "E47"));
         var poller = CreatePoller(parser);
 
         _dataHubClient.Enqueue(QueueName.MasterData,
-            new DataHubMessage("msg-rsm009-cancel-reject", "RSM-009", "corr-poller-004", "{}"));
+            new DataHubMessage("msg-rsm001-cancel-reject", "RSM-001", "corr-poller-004", "{}"));
 
         await poller.PollQueueAsync(QueueName.MasterData, ct);
 
@@ -357,12 +357,12 @@ public class ProcessTimelineTests
             new NullMessageLog(),
             NullLogger<QueuePollerService>.Instance);
 
-    /// <summary>Stub parser that returns a preconfigured RSM-009 result.</summary>
-    private sealed class StubCimParser(Rsm009Result rsm009Result) : ICimParser
+    /// <summary>Stub parser that returns a preconfigured RSM-001 result.</summary>
+    private sealed class StubCimParser(Rsm001ResponseResult rsm001ResponseResult) : ICimParser
     {
-        public Rsm009Result ParseRsm009(string json) => rsm009Result;
+        public Rsm001ResponseResult ParseRsm001Response(string json) => rsm001ResponseResult;
         public IReadOnlyList<ParsedTimeSeries> ParseRsm012(string json) => throw new NotImplementedException();
-        public Domain.MasterData.ParsedMasterData ParseRsm007(string json) => throw new NotImplementedException();
+        public Domain.MasterData.ParsedMasterData ParseRsm022(string json) => throw new NotImplementedException();
         public Rsm004Result ParseRsm004(string json) => throw new NotImplementedException();
         public Rsm014Aggregation ParseRsm014(string json) => throw new NotImplementedException();
     }
@@ -377,7 +377,7 @@ public class ProcessTimelineTests
         public Task DeadLetterAsync(string messageId, string queueName, string errorReason, string rawPayload, CancellationToken ct) => Task.CompletedTask;
     }
 
-    /// <summary>Throws on all methods — QueuePoller RSM-009 path never touches metering.</summary>
+    /// <summary>Throws on all methods — QueuePoller RSM-001 path never touches metering.</summary>
     private sealed class ThrowMeteringRepo : IMeteringDataRepository
     {
         public Task StoreTimeSeriesAsync(string gsrn, IReadOnlyList<MeteringDataRow> rows, CancellationToken ct) => throw new NotImplementedException();
@@ -386,7 +386,7 @@ public class ProcessTimelineTests
         public Task<IReadOnlyList<MeteringDataChange>> GetChangesAsync(string gsrn, DateTime from, DateTime to, CancellationToken ct) => throw new NotImplementedException();
     }
 
-    /// <summary>Throws on all methods — QueuePoller RSM-009 path never touches portfolio.</summary>
+    /// <summary>Throws on all methods — QueuePoller RSM-001 path never touches portfolio.</summary>
     private sealed class ThrowPortfolioRepo : IPortfolioRepository
     {
         public Task<Customer> CreateCustomerAsync(string name, string cprCvr, string contactType, Address? billingAddress, CancellationToken ct) => throw new NotImplementedException();
@@ -417,7 +417,7 @@ public class ProcessTimelineTests
         public Task UpdateCustomerBillingAddressAsync(Guid customerId, Address address, CancellationToken ct) => throw new NotImplementedException();
     }
 
-    /// <summary>Throws on all methods — QueuePoller RSM-009 path never touches signup (directly).</summary>
+    /// <summary>Throws on all methods — QueuePoller RSM-001 path never touches signup (directly).</summary>
     private sealed class ThrowSignupRepo : ISignupRepository
     {
         public Task<Signup> CreateAsync(string signupNumber, string darId, string gsrn, string customerName, string customerCprCvr, string customerContactType, Guid productId, Guid processRequestId, string type, DateOnly effectiveDate, Guid? correctedFromId, SignupAddressInfo? addressInfo, CancellationToken ct) => throw new NotImplementedException();

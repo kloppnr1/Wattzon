@@ -202,7 +202,7 @@ DataHub identifies actors via **GLN** (Global Location Number, 13 digits). The a
 
 As an electricity supplier (DDQ) we can only:
 - **Read** metering data (RSM-012) for metering points where we are the active supplier
-- **Read** master data (RSM-007) for our own metering points
+- **Read** master data (RSM-022) for our own metering points
 - **Send** supplier switch requests (BRS-001) and terminations (BRS-002)
 - **Read** aggregated wholesale data (RSM-014) for our own grid areas
 
@@ -231,8 +231,8 @@ The following data from DataHub contains personal information:
 |------|------|--------|
 | **CPR number** (civil registration number) | Directly personally identifiable | BRS-001 (supplier switch) |
 | **CVR number** (business registration number) | Business identification | BRS-001 |
-| **Customer name** | Personal data | RSM-007 (master data / stamdata) |
-| **Address** | Personal data | RSM-007 |
+| **Customer name** | Personal data | RSM-022 (master data / stamdata) |
+| **Address** | Personal data | RSM-022 |
 | **Consumption data** (forbrugsdata) | Indirectly personally identifiable | RSM-012 (can reveal behavioral patterns) |
 
 ### Handling Requirements (krav til håndtering)

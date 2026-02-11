@@ -281,22 +281,22 @@ public sealed class SimulationService
             "Process acknowledged and moved to effectuation_pending"));
         await Task.Delay(2000, ct);
 
-        // ── Step 6: Receive RSM-007 ──
+        // ── Step 6: Receive RSM-022 ──
         await using (var msgConn = new NpgsqlConnection(_connectionString))
         {
             await msgConn.OpenAsync(ct);
             await msgConn.ExecuteAsync("""
                 INSERT INTO datahub.inbound_message (datahub_message_id, message_type, correlation_id, queue_name, status, raw_payload_size)
-                VALUES ('msg-rsm007-sim', 'RSM-007', 'corr-sim-001', 'MasterData', 'processed', 1024)
+                VALUES ('msg-rsm022-sim', 'RSM-022', 'corr-sim-001', 'MasterData', 'processed', 1024)
                 """);
             await msgConn.ExecuteAsync("""
-                INSERT INTO datahub.processed_message_id (message_id) VALUES ('msg-rsm007-sim')
+                INSERT INTO datahub.processed_message_id (message_id) VALUES ('msg-rsm022-sim')
                 """);
         }
         await setup.Portfolio.ActivateMeteringPointAsync(Gsrn, new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc), ct);
 
-        await onStepCompleted(new SimulationStep(6, "Receive RSM-007",
-            "Inbound RSM-007 recorded, metering point activated"));
+        await onStepCompleted(new SimulationStep(6, "Receive RSM-022",
+            "Inbound RSM-022 recorded, metering point activated"));
         await Task.Delay(1000, ct);
 
         // ── Step 7: Complete Process ──
@@ -637,23 +637,23 @@ public sealed class SimulationService
             "Process acknowledged and moved to effectuation_pending"));
         await Task.Delay(2000, ct);
 
-        // ── Step 6: Receive RSM-007 ──
+        // ── Step 6: Receive RSM-022 ──
         await using (var msgConn = new NpgsqlConnection(_connectionString))
         {
             await msgConn.OpenAsync(ct);
             await msgConn.ExecuteAsync("""
                 INSERT INTO datahub.inbound_message (datahub_message_id, message_type, correlation_id, queue_name, status, raw_payload_size)
-                VALUES ('msg-rsm007-movein', 'RSM-007', 'corr-movein-001', 'MasterData', 'processed', 1024)
+                VALUES ('msg-rsm022-movein', 'RSM-022', 'corr-movein-001', 'MasterData', 'processed', 1024)
                 """);
             await msgConn.ExecuteAsync("""
-                INSERT INTO datahub.processed_message_id (message_id) VALUES ('msg-rsm007-movein')
+                INSERT INTO datahub.processed_message_id (message_id) VALUES ('msg-rsm022-movein')
                 """);
         }
         await setup.Portfolio.CreateSupplyPeriodAsync(Gsrn, new DateOnly(2025, 1, 1), ct);
         await setup.Portfolio.ActivateMeteringPointAsync(Gsrn, start, ct);
 
-        await onStepCompleted(new SimulationStep(6, "Receive RSM-007",
-            "Inbound RSM-007 recorded, supply period created, metering point activated"));
+        await onStepCompleted(new SimulationStep(6, "Receive RSM-022",
+            "Inbound RSM-022 recorded, supply period created, metering point activated"));
         await Task.Delay(1000, ct);
 
         // ── Step 7: Complete Process ──
@@ -917,22 +917,22 @@ public sealed class SimulationService
             "Process acknowledged → effectuation_pending"));
         await Task.Delay(1200, ct);
 
-        // ── Step 5: Receive RSM-007 ──
-        var msgId007 = $"msg-rsm007-ops-{uid}";
+        // ── Step 5: Receive RSM-022 ──
+        var msgId022 = $"msg-rsm022-ops-{uid}";
         await using (var msgConn = new NpgsqlConnection(_connectionString))
         {
             await msgConn.OpenAsync(ct);
             await msgConn.ExecuteAsync("""
                 INSERT INTO datahub.inbound_message (datahub_message_id, message_type, correlation_id, queue_name, status, raw_payload_size)
-                VALUES (@MsgId, 'RSM-007', @CorrId, 'MasterData', 'processed', 1024)
-                """, new { MsgId = msgId007, CorrId = corrId });
+                VALUES (@MsgId, 'RSM-022', @CorrId, 'MasterData', 'processed', 1024)
+                """, new { MsgId = msgId022, CorrId = corrId });
             await msgConn.ExecuteAsync("""
                 INSERT INTO datahub.processed_message_id (message_id) VALUES (@MsgId)
-                """, new { MsgId = msgId007 });
+                """, new { MsgId = msgId022 });
         }
         await portfolio.ActivateMeteringPointAsync(gsrn, new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc), ct);
 
-        await onStepCompleted(new SimulationStep(5, "Receive RSM-007",
+        await onStepCompleted(new SimulationStep(5, "Receive RSM-022",
             "Metering point activated"));
         await Task.Delay(1000, ct);
 
@@ -1569,18 +1569,18 @@ public sealed class SimulationService
             "Process acknowledged → effectuation_pending"));
         await Task.Delay(1200, ct);
 
-        // ── Step 5: Receive RSM-007 + Create Supply ──
-        var msgId007 = $"msg-rsm007-movein-{uid}";
+        // ── Step 5: Receive RSM-022 + Create Supply ──
+        var msgId022 = $"msg-rsm022-movein-{uid}";
         await using (var msgConn = new NpgsqlConnection(_connectionString))
         {
             await msgConn.OpenAsync(ct);
             await msgConn.ExecuteAsync("""
                 INSERT INTO datahub.inbound_message (datahub_message_id, message_type, correlation_id, queue_name, status, raw_payload_size)
-                VALUES (@MsgId, 'RSM-007', @CorrId, 'MasterData', 'processed', 1024)
-                """, new { MsgId = msgId007, CorrId = corrId });
+                VALUES (@MsgId, 'RSM-022', @CorrId, 'MasterData', 'processed', 1024)
+                """, new { MsgId = msgId022, CorrId = corrId });
             await msgConn.ExecuteAsync("""
                 INSERT INTO datahub.processed_message_id (message_id) VALUES (@MsgId)
-                """, new { MsgId = msgId007 });
+                """, new { MsgId = msgId022 });
         }
 
         await using (var supplyConn = new NpgsqlConnection(_connectionString))
@@ -1594,7 +1594,7 @@ public sealed class SimulationService
         }
         await portfolio.ActivateMeteringPointAsync(gsrn, new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc), ct);
 
-        await onStepCompleted(new SimulationStep(5, "Receive RSM-007",
+        await onStepCompleted(new SimulationStep(5, "Receive RSM-022",
             "Supply period created, metering point activated"));
         await Task.Delay(1000, ct);
 
@@ -2019,31 +2019,31 @@ public sealed class SimulationService
                 "Process acknowledged", currentDate));
         }
 
-        // Step 4: Receive RSM-007
-        if (ctx.IsAcknowledged && !ctx.IsRsm007Received && currentDate >= timeline.GetDate("Receive RSM-007"))
+        // Step 4: Receive RSM-022
+        if (ctx.IsAcknowledged && !ctx.IsRsm022Received && currentDate >= timeline.GetDate("Receive RSM-022"))
         {
             var portfolio = new PortfolioRepository(_connectionString);
             var uid = Guid.NewGuid().ToString("N")[..8];
-            var msgId007 = $"msg-rsm007-ops-{uid}";
+            var msgId022 = $"msg-rsm022-ops-{uid}";
             await using (var msgConn = new NpgsqlConnection(_connectionString))
             {
                 await msgConn.OpenAsync(ct);
                 await msgConn.ExecuteAsync("""
                     INSERT INTO datahub.inbound_message (datahub_message_id, message_type, correlation_id, queue_name, status, raw_payload_size)
-                    VALUES (@MsgId, 'RSM-007', @CorrId, 'MasterData', 'processed', 1024)
-                    """, new { MsgId = msgId007, CorrId = $"corr-ops-{uid}" });
+                    VALUES (@MsgId, 'RSM-022', @CorrId, 'MasterData', 'processed', 1024)
+                    """, new { MsgId = msgId022, CorrId = $"corr-ops-{uid}" });
                 await msgConn.ExecuteAsync("""
                     INSERT INTO datahub.processed_message_id (message_id) VALUES (@MsgId)
-                    """, new { MsgId = msgId007 });
+                    """, new { MsgId = msgId022 });
             }
             await portfolio.ActivateMeteringPointAsync(ctx.Gsrn, effectiveStart, ct);
-            ctx.IsRsm007Received = true;
-            executed.Add(new SimulationStep(4, "Receive RSM-007",
+            ctx.IsRsm022Received = true;
+            executed.Add(new SimulationStep(4, "Receive RSM-022",
                 "Metering point activated", currentDate));
         }
 
         // Step 5: Effectuation + Complete
-        if (ctx.IsRsm007Received && !ctx.IsEffectuated && currentDate >= timeline.GetDate("Effectuation"))
+        if (ctx.IsRsm022Received && !ctx.IsEffectuated && currentDate >= timeline.GetDate("Effectuation"))
         {
             var processRepo = new ProcessRepository(_connectionString);
             var stateMachine = new ProcessStateMachine(processRepo, _clock);
@@ -2242,22 +2242,22 @@ public sealed class SimulationService
                 "Process acknowledged", currentDate));
         }
 
-        // Step 4: Receive RSM-007 + Create Supply
-        if (ctx.IsAcknowledged && !ctx.IsRsm007Received && currentDate >= timeline.GetDate("Receive RSM-007"))
+        // Step 4: Receive RSM-022 + Create Supply
+        if (ctx.IsAcknowledged && !ctx.IsRsm022Received && currentDate >= timeline.GetDate("Receive RSM-022"))
         {
             var portfolio = new PortfolioRepository(_connectionString);
             var uid = Guid.NewGuid().ToString("N")[..8];
-            var msgId007 = $"msg-rsm007-movein-{uid}";
+            var msgId022 = $"msg-rsm022-movein-{uid}";
             await using (var msgConn = new NpgsqlConnection(_connectionString))
             {
                 await msgConn.OpenAsync(ct);
                 await msgConn.ExecuteAsync("""
                     INSERT INTO datahub.inbound_message (datahub_message_id, message_type, correlation_id, queue_name, status, raw_payload_size)
-                    VALUES (@MsgId, 'RSM-007', @CorrId, 'MasterData', 'processed', 1024)
-                    """, new { MsgId = msgId007, CorrId = $"corr-movein-{uid}" });
+                    VALUES (@MsgId, 'RSM-022', @CorrId, 'MasterData', 'processed', 1024)
+                    """, new { MsgId = msgId022, CorrId = $"corr-movein-{uid}" });
                 await msgConn.ExecuteAsync("""
                     INSERT INTO datahub.processed_message_id (message_id) VALUES (@MsgId)
-                    """, new { MsgId = msgId007 });
+                    """, new { MsgId = msgId022 });
             }
 
             await using (var supplyConn = new NpgsqlConnection(_connectionString))
@@ -2270,13 +2270,13 @@ public sealed class SimulationService
                     """, new { Gsrn = ctx.Gsrn, StartDate = ed });
             }
             await portfolio.ActivateMeteringPointAsync(ctx.Gsrn, effectiveStart, ct);
-            ctx.IsRsm007Received = true;
-            executed.Add(new SimulationStep(4, "Receive RSM-007",
+            ctx.IsRsm022Received = true;
+            executed.Add(new SimulationStep(4, "Receive RSM-022",
                 "Supply period created, metering point activated", currentDate));
         }
 
         // Step 5: Effectuation + Complete
-        if (ctx.IsRsm007Received && !ctx.IsEffectuated && currentDate >= timeline.GetDate("Effectuation"))
+        if (ctx.IsRsm022Received && !ctx.IsEffectuated && currentDate >= timeline.GetDate("Effectuation"))
         {
             var processRepo = new ProcessRepository(_connectionString);
             var stateMachine = new ProcessStateMachine(processRepo, _clock);
@@ -2503,31 +2503,31 @@ public sealed class SimulationService
                 $"Aconto invoice of {ctx.AcontoEstimate:N2} DKK sent to customer", currentDate));
         }
 
-        // Step 6: Receive RSM-007
-        if (ctx.IsInvoiceSent && !ctx.IsRsm007Received && currentDate >= timeline.GetDate("Receive RSM-007"))
+        // Step 6: Receive RSM-022
+        if (ctx.IsInvoiceSent && !ctx.IsRsm022Received && currentDate >= timeline.GetDate("Receive RSM-022"))
         {
             var portfolio = new PortfolioRepository(_connectionString);
             var uid = Guid.NewGuid().ToString("N")[..8];
-            var msgId007 = $"msg-rsm007-aconto-{uid}";
+            var msgId022 = $"msg-rsm022-aconto-{uid}";
             await using (var msgConn = new NpgsqlConnection(_connectionString))
             {
                 await msgConn.OpenAsync(ct);
                 await msgConn.ExecuteAsync("""
                     INSERT INTO datahub.inbound_message (datahub_message_id, message_type, correlation_id, queue_name, status, raw_payload_size)
-                    VALUES (@MsgId, 'RSM-007', @CorrId, 'MasterData', 'processed', 1024)
-                    """, new { MsgId = msgId007, CorrId = $"corr-aconto-{uid}" });
+                    VALUES (@MsgId, 'RSM-022', @CorrId, 'MasterData', 'processed', 1024)
+                    """, new { MsgId = msgId022, CorrId = $"corr-aconto-{uid}" });
                 await msgConn.ExecuteAsync("""
                     INSERT INTO datahub.processed_message_id (message_id) VALUES (@MsgId)
-                    """, new { MsgId = msgId007 });
+                    """, new { MsgId = msgId022 });
             }
             await portfolio.ActivateMeteringPointAsync(ctx.Gsrn, effectiveStart, ct);
-            ctx.IsRsm007Received = true;
-            executed.Add(new SimulationStep(6, "Receive RSM-007",
+            ctx.IsRsm022Received = true;
+            executed.Add(new SimulationStep(6, "Receive RSM-022",
                 "Metering point activated", currentDate));
         }
 
         // Step 7: Effectuation + Complete
-        if (ctx.IsRsm007Received && !ctx.IsEffectuated && currentDate >= timeline.GetDate("Effectuation"))
+        if (ctx.IsRsm022Received && !ctx.IsEffectuated && currentDate >= timeline.GetDate("Effectuation"))
         {
             var processRepo = new ProcessRepository(_connectionString);
             var stateMachine = new ProcessStateMachine(processRepo, _clock);

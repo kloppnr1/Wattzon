@@ -33,8 +33,8 @@ public class QueuePollerTests
     private static string LoadSingleDayFixture() =>
         File.ReadAllText(Path.Combine("..", "..", "..", "..", "..", "fixtures", "rsm012-single-day.json"));
 
-    private static string LoadRsm007Fixture() =>
-        File.ReadAllText(Path.Combine("..", "..", "..", "..", "..", "fixtures", "rsm007-activation.json"));
+    private static string LoadRsm022Fixture() =>
+        File.ReadAllText(Path.Combine("..", "..", "..", "..", "..", "fixtures", "rsm022-activation.json"));
 
     [Fact]
     public async Task Processes_rsm012_message_end_to_end()
@@ -121,14 +121,14 @@ public class QueuePollerTests
     [Fact]
     public async Task RSM007_creates_customer_and_activates_portfolio()
     {
-        // This test verifies the complete RSM-007 activation flow:
+        // This test verifies the complete RSM-022 activation flow:
         // 1. Signup created with customer info (customer_id = NULL)
         // 2. Process advances to effectuation_pending
-        // 3. RSM-007 received (via QueuePoller)
+        // 3. RSM-022 received (via QueuePoller)
         // 4. Customer created, Contract created, Process marked "completed"
 
         var ct = CancellationToken.None;
-        const string gsrn = "571313100000012345"; // Must match RSM-007 fixture
+        const string gsrn = "571313100000012345"; // Must match RSM-022 fixture
         const string cprCvr = "9999999999"; // Unique CPR/CVR for this test
 
         // ──── ARRANGE ────
@@ -151,7 +151,7 @@ public class QueuePollerTests
             onboardingService, clock, _messageLog,
             NullLogger<QueuePollerService>.Instance);
 
-        // 2. Ensure grid area exists (required for RSM-007)
+        // 2. Ensure grid area exists (required for RSM-022)
         await _portfolioRepo.EnsureGridAreaAsync("344", "5790000392261", "N1 A/S", "DK1", ct);
 
         // 3. Create product
@@ -160,11 +160,11 @@ public class QueuePollerTests
 
         // 4. Create signup via OnboardingService
         var signupRequest = new SignupRequest(
-            DarId: "test-dar-rsm007",
-            CustomerName: "RSM-007 Test Customer",
+            DarId: "test-dar-rsm022",
+            CustomerName: "RSM-022 Test Customer",
             CprCvr: cprCvr,
             ContactType: "person",
-            Email: "rsm007@test.com",
+            Email: "rsm022@test.com",
             Phone: "+4512345678",
             ProductId: product.Id,
             Type: "switch",
@@ -177,11 +177,11 @@ public class QueuePollerTests
 
         // Verify initial state: customer_id is NULL
         signup.Should().NotBeNull();
-        signup!.CustomerId.Should().BeNull("customer should not exist before RSM-007");
+        signup!.CustomerId.Should().BeNull("customer should not exist before RSM-022");
 
         // 5. Advance process to effectuation_pending
         var stateMachine = new ProcessStateMachine(processRepo, clock);
-        await stateMachine.MarkSentAsync(signup.ProcessRequestId!.Value, "corr-rsm007-test", ct);
+        await stateMachine.MarkSentAsync(signup.ProcessRequestId!.Value, "corr-rsm022-test", ct);
         await stateMachine.MarkAcknowledgedAsync(signup.ProcessRequestId.Value, ct);
 
         var processBefore = await processRepo.GetAsync(signup.ProcessRequestId.Value, ct);
@@ -189,28 +189,28 @@ public class QueuePollerTests
 
         // Verify no customer exists for this CPR/CVR yet
         var customerBefore = await _portfolioRepo.GetCustomerByCprCvrAsync(cprCvr, ct);
-        customerBefore.Should().BeNull("customer should not exist for this CPR/CVR before RSM-007");
+        customerBefore.Should().BeNull("customer should not exist for this CPR/CVR before RSM-022");
 
         // ──── ACT ────
 
-        // 6. Enqueue RSM-007 message and process it
+        // 6. Enqueue RSM-022 message and process it
         client.Enqueue(QueueName.MasterData,
-            new DataHubMessage("msg-rsm007-test", "RSM-007", "corr-rsm007-test", LoadRsm007Fixture()));
+            new DataHubMessage("msg-rsm022-test", "RSM-022", "corr-rsm022-test", LoadRsm022Fixture()));
 
         var processed = await poller.PollQueueAsync(QueueName.MasterData, ct);
 
         // ──── ASSERT ────
 
-        processed.Should().BeTrue("RSM-007 should be processed successfully");
+        processed.Should().BeTrue("RSM-022 should be processed successfully");
 
         // 7. Verify process marked as "completed"
         var processAfter = await processRepo.GetAsync(signup.ProcessRequestId.Value, ct);
-        processAfter!.Status.Should().Be("completed", "RSM-007 should mark process as completed");
+        processAfter!.Status.Should().Be("completed", "RSM-022 should mark process as completed");
 
         // 8. Verify Customer created for this CPR/CVR
         var customer = await _portfolioRepo.GetCustomerByCprCvrAsync(cprCvr, ct);
-        customer.Should().NotBeNull("RSM-007 should create customer");
-        customer!.Name.Should().Be("RSM-007 Test Customer");
+        customer.Should().NotBeNull("RSM-022 should create customer");
+        customer!.Name.Should().Be("RSM-022 Test Customer");
         customer.CprCvr.Should().Be(cprCvr);
         customer.ContactType.Should().Be("private", "signup contact_type 'person' maps to customer contact_type 'private'");
 
@@ -218,11 +218,11 @@ public class QueuePollerTests
         var signupAfter = await signupRepo.GetByIdAsync(signup.Id, ct);
         signupAfter.Should().NotBeNull();
         signupAfter!.CustomerId.Should().Be(customer.Id, "signup should be linked to customer");
-        signupAfter.Status.Should().Be("active", "signup should be active after RSM-007");
+        signupAfter.Status.Should().Be("active", "signup should be active after RSM-022");
 
         // 10. Verify Contract created
         var contracts = await _portfolioRepo.GetContractsForCustomerAsync(customer.Id, ct);
-        contracts.Should().HaveCount(1, "RSM-007 should create contract");
+        contracts.Should().HaveCount(1, "RSM-022 should create contract");
         var contract = contracts[0];
         contract.Gsrn.Should().Be(gsrn);
         contract.ProductId.Should().Be(product.Id);
@@ -231,7 +231,7 @@ public class QueuePollerTests
 
         // 11. Verify SupplyPeriod created
         var supplyPeriods = await _portfolioRepo.GetSupplyPeriodsAsync(gsrn, ct);
-        supplyPeriods.Should().HaveCount(1, "RSM-007 should create supply period");
+        supplyPeriods.Should().HaveCount(1, "RSM-022 should create supply period");
         var supplyPeriod = supplyPeriods[0];
         supplyPeriod.StartDate.Should().Be(new DateOnly(2025, 1, 1));
         supplyPeriod.EndDate.Should().BeNull("supply period should be open-ended");
@@ -242,7 +242,7 @@ public class QueuePollerTests
     }
 
     /// <summary>
-    /// Stub address lookup that returns the GSRN used in RSM-007 fixture
+    /// Stub address lookup that returns the GSRN used in RSM-022 fixture
     /// </summary>
     private sealed class StubAddressLookupClient : IAddressLookupClient
     {

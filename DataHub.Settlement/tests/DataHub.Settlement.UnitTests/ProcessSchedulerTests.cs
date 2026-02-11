@@ -35,7 +35,7 @@ public class ProcessSchedulerTests
     public async Task Does_not_effectuate_processes()
     {
         // ProcessScheduler only sends pending processes to DataHub
-        // Effectuation (marking completed) is handled exclusively by RSM-007 receipt
+        // Effectuation (marking completed) is handled exclusively by RSM-022 receipt
         _clock.Today = new DateOnly(2025, 2, 1);
         var sm = new ProcessStateMachine(_processRepo, _clock);
 
@@ -54,7 +54,7 @@ public class ProcessSchedulerTests
         // Process should STILL be in effectuation_pending (not completed)
         var after = await _processRepo.GetAsync(request.Id, CancellationToken.None);
         after!.Status.Should().Be("effectuation_pending",
-            "ProcessScheduler no longer effectuates - only RSM-007 marks processes completed");
+            "ProcessScheduler no longer effectuates - only RSM-022 marks processes completed");
     }
 
     // ── Test stubs ──

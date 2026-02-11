@@ -33,7 +33,7 @@ public class DataHubTimelineTests
     public void ChangeOfSupplier_RSM007_is_D_minus_2()
     {
         var timeline = DataHubTimeline.BuildChangeOfSupplierTimeline(Jan1);
-        timeline.GetDate("Receive RSM-007").Should().Be(new DateOnly(2024, 12, 30));
+        timeline.GetDate("Receive RSM-022").Should().Be(new DateOnly(2024, 12, 30));
     }
 
     [Fact]

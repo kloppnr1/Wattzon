@@ -161,9 +161,9 @@ public sealed class QueuePollerService : BackgroundService
 
     private async Task ProcessMasterDataAsync(DataHubMessage message, CancellationToken ct)
     {
-        if (message.MessageType is "RSM-007" or "rsm-007" or "RSM007")
+        if (message.MessageType is "RSM-022" or "rsm-022" or "RSM022")
         {
-            var masterData = _parser.ParseRsm007(message.RawPayload);
+            var masterData = _parser.ParseRsm022(message.RawPayload);
 
             await _portfolioRepo.EnsureGridAreaAsync(
                 masterData.GridAreaCode, masterData.GridOperatorGln,
@@ -185,7 +185,7 @@ public sealed class QueuePollerService : BackgroundService
             await _portfolioRepo.ActivateMeteringPointAsync(
                 masterData.MeteringPointId, masterData.SupplyStart.UtcDateTime, ct);
 
-            // RSM-007 is the authoritative activation signal from DataHub
+            // RSM-022 is the authoritative activation signal from DataHub
             // This is the ONLY place where processes are marked "completed"
             var signup = await _signupRepo.GetActiveByGsrnAsync(masterData.MeteringPointId, ct);
             if (signup is not null && signup.ProcessRequestId.HasValue)
@@ -194,7 +194,7 @@ public sealed class QueuePollerService : BackgroundService
                 if (process is not null && process.Status is "cancellation_pending" or "cancelled")
                 {
                     _logger.LogInformation(
-                        "RSM-007: Skipping activation for process {ProcessId} — process is {Status}",
+                        "RSM-022: Skipping activation for process {ProcessId} — process is {Status}",
                         process.Id, process.Status);
                 }
                 else
@@ -222,13 +222,13 @@ public sealed class QueuePollerService : BackgroundService
                         await _portfolioRepo.CreateSupplyPeriodAsync(masterData.MeteringPointId, effectiveDate, ct);
 
                         _logger.LogInformation(
-                            "RSM-007: Activated portfolio for signup {SignupNumber}, GSRN {Gsrn}, supply from {Start}",
+                            "RSM-022: Activated portfolio for signup {SignupNumber}, GSRN {Gsrn}, supply from {Start}",
                             signup.SignupNumber, masterData.MeteringPointId, masterData.SupplyStart);
                     }
                     else
                     {
                         _logger.LogWarning(
-                            "RSM-007: Signup {SignupNumber} for GSRN {Gsrn} has no customer after activation — portfolio not created",
+                            "RSM-022: Signup {SignupNumber} for GSRN {Gsrn} has no customer after activation — portfolio not created",
                             signup?.SignupNumber ?? "unknown", masterData.MeteringPointId);
                     }
                 }
@@ -239,44 +239,44 @@ public sealed class QueuePollerService : BackgroundService
                 await _portfolioRepo.CreateSupplyPeriodAsync(
                     masterData.MeteringPointId, DateOnly.FromDateTime(masterData.SupplyStart.UtcDateTime), ct);
 
-                _logger.LogInformation("RSM-007: Activated metering point {Gsrn}, supply from {Start} (no signup)",
+                _logger.LogInformation("RSM-022: Activated metering point {Gsrn}, supply from {Start} (no signup)",
                     masterData.MeteringPointId, masterData.SupplyStart);
             }
             else
             {
                 _logger.LogWarning(
-                    "RSM-007: Signup {SignupNumber} for GSRN {Gsrn} has no process request — portfolio not created",
+                    "RSM-022: Signup {SignupNumber} for GSRN {Gsrn} has no process request — portfolio not created",
                     signup.SignupNumber, masterData.MeteringPointId);
             }
         }
-        else if (message.MessageType is "RSM-009" or "rsm-009" or "RSM009")
+        else if (message.MessageType is "RSM-001" or "rsm-001" or "RSM001")
         {
-            var receipt = _parser.ParseRsm009(message.RawPayload);
+            var receipt = _parser.ParseRsm001Response(message.RawPayload);
 
             var process = await _processRepo.GetByCorrelationIdAsync(receipt.CorrelationId, ct);
             if (process is null)
             {
-                _logger.LogWarning("RSM-009: No process found for correlation {CorrelationId}", receipt.CorrelationId);
+                _logger.LogWarning("RSM-001: No process found for correlation {CorrelationId}", receipt.CorrelationId);
                 return;
             }
 
             var stateMachine = new ProcessStateMachine(_processRepo, _clock);
 
-            // Status-based disambiguation: same correlation ID is used for both original and cancel RSM-009
+            // Status-based disambiguation: same correlation ID is used for both original and cancel RSM-001 response
             if (process.Status == "cancellation_pending")
             {
                 if (receipt.Accepted)
                 {
                     await stateMachine.MarkCancelledAsync(process.Id, "Cancellation acknowledged by DataHub", ct);
                     await _onboardingService.SyncFromProcessAsync(process.Id, "cancelled", null, ct);
-                    _logger.LogInformation("RSM-009: Cancellation acknowledged for process {ProcessId}", process.Id);
+                    _logger.LogInformation("RSM-001: Cancellation acknowledged for process {ProcessId}", process.Id);
                 }
                 else
                 {
                     var reason = receipt.RejectionReason ?? receipt.RejectionCode ?? "Cancellation rejected";
                     await stateMachine.RevertCancellationAsync(process.Id, reason, ct);
                     await _onboardingService.SyncFromProcessAsync(process.Id, "effectuation_pending", null, ct);
-                    _logger.LogWarning("RSM-009: Cancellation rejected for process {ProcessId}: {Reason}", process.Id, reason);
+                    _logger.LogWarning("RSM-001: Cancellation rejected for process {ProcessId}: {Reason}", process.Id, reason);
                 }
             }
             else if (receipt.Accepted)
@@ -284,7 +284,7 @@ public sealed class QueuePollerService : BackgroundService
                 await stateMachine.MarkAcknowledgedAsync(process.Id, ct);
                 await _onboardingService.SyncFromProcessAsync(process.Id, "effectuation_pending", null, ct);
 
-                _logger.LogInformation("RSM-009: Process {ProcessId} accepted for GSRN {Gsrn}",
+                _logger.LogInformation("RSM-001: Process {ProcessId} accepted for GSRN {Gsrn}",
                     process.Id, process.Gsrn);
             }
             else
@@ -293,7 +293,7 @@ public sealed class QueuePollerService : BackgroundService
                 await stateMachine.MarkRejectedAsync(process.Id, reason, ct);
                 await _onboardingService.SyncFromProcessAsync(process.Id, "rejected", reason, ct);
 
-                _logger.LogWarning("RSM-009: Process {ProcessId} rejected for GSRN {Gsrn}: {Reason}",
+                _logger.LogWarning("RSM-001: Process {ProcessId} rejected for GSRN {Gsrn}: {Reason}",
                     process.Id, process.Gsrn, reason);
             }
         }

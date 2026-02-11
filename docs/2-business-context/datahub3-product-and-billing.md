@@ -118,7 +118,7 @@ For the fixed price model, it is simpler: `total kWh × agreed price`.
 
 ## Grid tariffs (nettariffer) — what depends on the customer's address
 
-The grid tariff (nettarif) is determined by **which grid company (netvirksomhed)** covers the customer's address. When we receive master data (RSM-007) at activation, we get a **grid area** and a **grid company GLN** — this tells us which tariffs apply.
+The grid tariff (nettarif) is determined by **which grid company (netvirksomhed)** covers the customer's address. When we receive master data (RSM-022) at activation, we get a **grid area** and a **grid company GLN** — this tells us which tariffs apply.
 
 Denmark has ~40 grid companies, and they have different rates:
 
@@ -360,7 +360,7 @@ This means:
 | Grid subscription (netabonnement) | Charges queue (grid company) | 1-2x yearly | Subscription line |
 | Supplier subscription | Product plan | At contract change | Subscription line |
 | VAT (moms) | Legislation | Rarely | VAT line |
-| Grid area (netområde) | RSM-007 (at activation) | At relocation | Determines which tariffs apply |
+| Grid area (netområde) | RSM-022 (at activation) | At relocation | Determines which tariffs apply |
 | Billing frequency (faktureringsfrekvens) | Contract | At contract change | Period segmentation |
 | Payment model (aconto/actual) | Contract | At contract change | Payment flow |
 | Aconto amount | Calculated by us | At aconto settlement (adjustable) | Quarterly payment |

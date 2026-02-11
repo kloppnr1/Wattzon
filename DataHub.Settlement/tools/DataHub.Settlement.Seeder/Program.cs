@@ -417,22 +417,22 @@ foreach (var s in signupDefs.Where(s => s.Status == "active"))
         new { Id = Guid.NewGuid(), Type = rsmType, Gsrn = s.Gsrn, CorrId = corrId, Sent = sentAt, Resp = sentAt.AddMinutes(rng.Next(1, 15)) });
     outboundCount++;
 
-    // 2. RSM-009 acknowledgement inbound
+    // 2. RSM-001 acknowledgement inbound
     var rsm009At = sentAt.AddMinutes(rng.Next(2, 30));
     await conn.ExecuteAsync(
-        "INSERT INTO datahub.inbound_message (id, datahub_message_id, message_type, correlation_id, queue_name, status, raw_payload_size, received_at, processed_at) VALUES (@Id, @DhId, 'RSM-009', @CorrId, 'cim-001', 'processed', @Size, @Recv, @Proc)",
+        "INSERT INTO datahub.inbound_message (id, datahub_message_id, message_type, correlation_id, queue_name, status, raw_payload_size, received_at, processed_at) VALUES (@Id, @DhId, 'RSM-001', @CorrId, 'cim-001', 'processed', @Size, @Recv, @Proc)",
         new { Id = Guid.NewGuid(), DhId = $"DH-{Guid.NewGuid():N}", CorrId = corrId, Size = rng.Next(800, 1500), Recv = rsm009At, Proc = rsm009At.AddSeconds(rng.Next(1, 10)) });
     inboundCount++;
 
-    // 3. RSM-007 activation inbound
+    // 3. RSM-022 activation inbound
     var rsm007At = rsm009At.AddHours(rng.Next(1, 48));
     await conn.ExecuteAsync(
-        "INSERT INTO datahub.inbound_message (id, datahub_message_id, message_type, correlation_id, queue_name, status, raw_payload_size, received_at, processed_at) VALUES (@Id, @DhId, 'RSM-007', @CorrId, 'cim-001', 'processed', @Size, @Recv, @Proc)",
+        "INSERT INTO datahub.inbound_message (id, datahub_message_id, message_type, correlation_id, queue_name, status, raw_payload_size, received_at, processed_at) VALUES (@Id, @DhId, 'RSM-022', @CorrId, 'cim-001', 'processed', @Size, @Recv, @Proc)",
         new { Id = Guid.NewGuid(), DhId = $"DH-{Guid.NewGuid():N}", CorrId = corrId, Size = rng.Next(800, 1500), Recv = rsm007At, Proc = rsm007At.AddSeconds(rng.Next(1, 10)) });
     inboundCount++;
 }
 
-// Processing signups: RSM outbound + RSM-009 (waiting for RSM-007)
+// Processing signups: RSM outbound + RSM-001 (waiting for RSM-022)
 foreach (var s in signupDefs.Where(s => s.Status == "processing"))
 {
     var corrId = $"CORR-SEED-{s.Index:D4}";
@@ -446,12 +446,12 @@ foreach (var s in signupDefs.Where(s => s.Status == "processing"))
 
     var rsm009At = sentAt.AddMinutes(rng.Next(5, 60));
     await conn.ExecuteAsync(
-        "INSERT INTO datahub.inbound_message (id, datahub_message_id, message_type, correlation_id, queue_name, status, raw_payload_size, received_at, processed_at) VALUES (@Id, @DhId, 'RSM-009', @CorrId, 'cim-001', 'processed', @Size, @Recv, @Proc)",
+        "INSERT INTO datahub.inbound_message (id, datahub_message_id, message_type, correlation_id, queue_name, status, raw_payload_size, received_at, processed_at) VALUES (@Id, @DhId, 'RSM-001', @CorrId, 'cim-001', 'processed', @Size, @Recv, @Proc)",
         new { Id = Guid.NewGuid(), DhId = $"DH-{Guid.NewGuid():N}", CorrId = corrId, Size = rng.Next(800, 1500), Recv = rsm009At, Proc = rsm009At.AddSeconds(rng.Next(1, 10)) });
     inboundCount++;
 }
 
-// Rejected signups: RSM outbound + RSM-009 rejection
+// Rejected signups: RSM outbound + RSM-001 rejection
 foreach (var s in signupDefs.Where(s => s.Status == "rejected"))
 {
     var corrId = $"CORR-SEED-{s.Index:D4}";
@@ -464,12 +464,12 @@ foreach (var s in signupDefs.Where(s => s.Status == "rejected"))
 
     var rsm009At = sentAt.AddMinutes(rng.Next(5, 60));
     await conn.ExecuteAsync(
-        "INSERT INTO datahub.inbound_message (id, datahub_message_id, message_type, correlation_id, queue_name, status, raw_payload_size, received_at, processed_at) VALUES (@Id, @DhId, 'RSM-009', @CorrId, 'cim-001', 'processed', @Size, @Recv, @Proc)",
+        "INSERT INTO datahub.inbound_message (id, datahub_message_id, message_type, correlation_id, queue_name, status, raw_payload_size, received_at, processed_at) VALUES (@Id, @DhId, 'RSM-001', @CorrId, 'cim-001', 'processed', @Size, @Recv, @Proc)",
         new { Id = Guid.NewGuid(), DhId = $"DH-{Guid.NewGuid():N}", CorrId = corrId, Size = rng.Next(800, 1500), Recv = rsm009At, Proc = rsm009At.AddSeconds(rng.Next(1, 10)) });
     inboundCount++;
 }
 
-// Cancelled signups: RSM outbound + RSM-003/044 cancel outbound
+// Cancelled signups: RSM outbound + RSM-024/044 cancel outbound
 foreach (var s in signupDefs.Where(s => s.Status == "cancelled"))
 {
     var corrId = $"CORR-SEED-{s.Index:D4}";
@@ -481,9 +481,9 @@ foreach (var s in signupDefs.Where(s => s.Status == "cancelled"))
         new { Id = Guid.NewGuid(), Gsrn = s.Gsrn, CorrId = corrId, Sent = sentAt, Resp = sentAt.AddMinutes(rng.Next(1, 10)) });
     outboundCount++;
 
-    // Cancel RSM-003/044
+    // Cancel RSM-024/044
     var cancelAt = sentAt.AddHours(rng.Next(2, 48));
-    var cancelType = rng.Next(2) == 0 ? "RSM-003" : "RSM-044";
+    var cancelType = rng.Next(2) == 0 ? "RSM-024" : "RSM-044";
     await conn.ExecuteAsync(
         "INSERT INTO datahub.outbound_request (id, process_type, gsrn, status, correlation_id, sent_at, response_at) VALUES (@Id, @Type, @Gsrn, 'acknowledged_ok', @CorrId, @Sent, @Resp)",
         new { Id = Guid.NewGuid(), Type = cancelType, Gsrn = s.Gsrn, CorrId = corrId, Sent = cancelAt, Resp = cancelAt.AddMinutes(rng.Next(1, 10)) });
@@ -561,7 +561,7 @@ for (int i = 0; i < 15; i++)
 {
     var receivedAt = DateTime.UtcNow.AddDays(-rng.Next(1, 45)).AddHours(rng.Next(0, 24));
     var msgId = Guid.NewGuid();
-    var messageType = new[] { "RSM-007", "RSM-009", "RSM-012", "RSM-004" }[rng.Next(4)];
+    var messageType = new[] { "RSM-022", "RSM-001", "RSM-012", "RSM-004" }[rng.Next(4)];
 
     await conn.ExecuteAsync(
         "INSERT INTO datahub.inbound_message (id, datahub_message_id, message_type, queue_name, status, raw_payload_size, received_at) VALUES (@Id, @DhId, @Type, 'cim-001', 'dead_lettered', @Size, @Recv)",

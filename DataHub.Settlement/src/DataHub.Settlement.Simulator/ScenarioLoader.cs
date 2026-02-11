@@ -35,8 +35,8 @@ public static class ScenarioLoader
 
     private static void LoadSunshine(SimulatorState state)
     {
-        // RSM-007: Master data confirmation
-        state.EnqueueMessage("MasterData", "RSM-007", "corr-sim-001", BuildRsm007Json());
+        // RSM-022: Master data confirmation
+        state.EnqueueMessage("MasterData", "RSM-022", "corr-sim-001", BuildRsm022Json());
 
         // RSM-012: Metering data for January (744 hours)
         state.EnqueueMessage("Timeseries", "RSM-012", null, BuildRsm012Json(
@@ -48,19 +48,19 @@ public static class ScenarioLoader
     private static void LoadRejection(SimulatorState state)
     {
         // BRS-001 rejection receipt
-        state.EnqueueMessage("MasterData", "RSM-007-REJECT", "corr-sim-reject", BuildRejectionJson("E16", "Invalid GSRN checksum"));
+        state.EnqueueMessage("MasterData", "RSM-022-REJECT", "corr-sim-reject", BuildRejectionJson("E16", "Invalid GSRN checksum"));
     }
 
     private static void LoadCancellation(SimulatorState state)
     {
-        // RSM-007: confirmation
-        state.EnqueueMessage("MasterData", "RSM-007", "corr-sim-cancel", BuildRsm007Json());
+        // RSM-022: confirmation
+        state.EnqueueMessage("MasterData", "RSM-022", "corr-sim-cancel", BuildRsm022Json());
     }
 
     private static void LoadFullLifecycle(SimulatorState state)
     {
         // Phase 1: Onboarding
-        state.EnqueueMessage("MasterData", "RSM-007", "corr-sim-lifecycle", BuildRsm007Json());
+        state.EnqueueMessage("MasterData", "RSM-022", "corr-sim-lifecycle", BuildRsm022Json());
         state.EnqueueMessage("Timeseries", "RSM-012", null, BuildRsm012Json(
             new DateTimeOffset(2025, 1, 1, 0, 0, 0, TimeSpan.Zero),
             new DateTimeOffset(2025, 2, 1, 0, 0, 0, TimeSpan.Zero),
@@ -78,8 +78,8 @@ public static class ScenarioLoader
 
     private static void LoadMoveIn(SimulatorState state)
     {
-        // RSM-007: Master data confirmation
-        state.EnqueueMessage("MasterData", "RSM-007", "corr-sim-movein", BuildRsm007Json());
+        // RSM-022: Master data confirmation
+        state.EnqueueMessage("MasterData", "RSM-022", "corr-sim-movein", BuildRsm022Json());
 
         // RSM-012: Metering data for January (744 hours)
         state.EnqueueMessage("Timeseries", "RSM-012", null, BuildRsm012Json(
@@ -90,8 +90,8 @@ public static class ScenarioLoader
 
     private static void LoadMoveOut(SimulatorState state)
     {
-        // Phase 1: RSM-007 confirmation for initial supply
-        state.EnqueueMessage("MasterData", "RSM-007", "corr-sim-moveout", BuildRsm007Json());
+        // Phase 1: RSM-022 confirmation for initial supply
+        state.EnqueueMessage("MasterData", "RSM-022", "corr-sim-moveout", BuildRsm022Json());
 
         // Phase 2: January metering data
         state.EnqueueMessage("Timeseries", "RSM-012", null, BuildRsm012Json(
@@ -106,16 +106,16 @@ public static class ScenarioLoader
             360));
     }
 
-    private static string BuildRsm007Json()
-        => BuildRsm007Json("571313100000012345", "2025-01-01T00:00:00Z");
+    private static string BuildRsm022Json()
+        => BuildRsm022Json("571313100000012345", "2025-01-01T00:00:00Z");
 
-    internal static string BuildRsm007Json(string gsrn, string effectiveDate)
+    internal static string BuildRsm022Json(string gsrn, string effectiveDate)
     {
         var doc = new
         {
             MarketDocument = new
             {
-                mRID = $"msg-rsm007-{Guid.NewGuid():N}",
+                mRID = $"msg-rsm022-{Guid.NewGuid():N}",
                 type = "E44",
                 MktActivityRecord = new
                 {

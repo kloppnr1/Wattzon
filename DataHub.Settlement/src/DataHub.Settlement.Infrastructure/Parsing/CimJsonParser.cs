@@ -82,7 +82,7 @@ public sealed class CimJsonParser : ICimParser
         ["860"] = "DK2",
     };
 
-    public ParsedMasterData ParseRsm007(string json)
+    public ParsedMasterData ParseRsm022(string json)
     {
         using var doc = JsonDocument.Parse(json);
         var root = doc.RootElement.GetProperty("MarketDocument");
@@ -179,7 +179,7 @@ public sealed class CimJsonParser : ICimParser
             points);
     }
 
-    public Rsm009Result ParseRsm009(string json)
+    public Rsm001ResponseResult ParseRsm001Response(string json)
     {
         using var doc = JsonDocument.Parse(json);
         var root = doc.RootElement.GetProperty("MarketDocument");
@@ -200,7 +200,7 @@ public sealed class CimJsonParser : ICimParser
             rejectionReason = reason.TryGetProperty("text", out var text) ? text.GetString() : null;
         }
 
-        return new Rsm009Result(correlationId, accepted, rejectionReason, rejectionCode);
+        return new Rsm001ResponseResult(correlationId, accepted, rejectionReason, rejectionCode);
     }
 
     private static TimeSpan GetStep(string resolution, DateTimeOffset periodStart, DateTimeOffset periodEnd)

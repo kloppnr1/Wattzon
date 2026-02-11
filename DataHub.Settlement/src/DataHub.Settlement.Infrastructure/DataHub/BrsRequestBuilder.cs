@@ -10,42 +10,42 @@ public sealed class BrsRequestBuilder : IBrsRequestBuilder
 
     public string BuildBrs001(string gsrn, string cprCvr, DateOnly effectiveDate)
     {
-        return BuildChangeOfSupplier(gsrn, cprCvr, effectiveDate, "E65");
+        return BuildChangeOfSupplier(gsrn, cprCvr, effectiveDate, BusinessReasonCodes.SupplierSwitch);
     }
 
     public string BuildBrs002(string gsrn, DateOnly effectiveDate)
     {
-        return BuildEndOfSupply(gsrn, effectiveDate, "E03");
+        return BuildEndOfSupply(gsrn, effectiveDate, BusinessReasonCodes.EndOfSupply);
     }
 
     public string BuildBrs003(string gsrn, string originalCorrelationId)
     {
-        return BuildCancelRequest(gsrn, originalCorrelationId, "E65");
+        return BuildCancelRequest(gsrn, originalCorrelationId, BusinessReasonCodes.SupplierSwitch);
     }
 
     public string BuildBrs009(string gsrn, string cprCvr, DateOnly effectiveDate)
     {
-        return BuildChangeOfSupplier(gsrn, cprCvr, effectiveDate, "E01");
+        return BuildChangeOfSupplier(gsrn, cprCvr, effectiveDate, BusinessReasonCodes.MoveIn);
     }
 
     public string BuildBrs010(string gsrn, DateOnly effectiveDate)
     {
-        return BuildEndOfSupply(gsrn, effectiveDate, "E01");
+        return BuildEndOfSupply(gsrn, effectiveDate, BusinessReasonCodes.MoveOut);
     }
 
     public string BuildBrs043(string gsrn, string cprCvr, DateOnly effectiveDate)
     {
-        return BuildChangeOfSupplier(gsrn, cprCvr, effectiveDate, "E66");
+        return BuildChangeOfSupplier(gsrn, cprCvr, effectiveDate, BusinessReasonCodes.SupplierSwitch);
     }
 
     public string BuildBrs044(string gsrn, string originalCorrelationId)
     {
-        return BuildCancelRequest(gsrn, originalCorrelationId, "E03");
+        return BuildCancelRequest(gsrn, originalCorrelationId, BusinessReasonCodes.EndOfSupply);
     }
 
     public string BuildBrs042(string gsrn, DateOnly effectiveDate)
     {
-        return BuildEndOfSupply(gsrn, effectiveDate, "E34");
+        return BuildEndOfSupply(gsrn, effectiveDate, BusinessReasonCodes.ForcedSwitch);
     }
 
     private static string BuildChangeOfSupplier(string gsrn, string cprCvr, DateOnly effectiveDate, string processType)

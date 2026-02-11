@@ -37,7 +37,7 @@ In the Danish electricity market, a DDQ's CIS typically handles:
 
 | External system | Direction | Our system | Data exchanged |
 |-----------------|-----------|------------|----------------|
-| **DataHub 3** (Energinet) | **→** we receive | DataHub Integration | RSM-012 (kWh), RSM-007/004 (master data), BRS responses, tariffs |
+| **DataHub 3** (Energinet) | **→** we receive | DataHub Integration | RSM-012 (kWh), RSM-022/004 (master data), BRS responses, tariffs |
 | **DataHub 3** (Energinet) | **←** we send | DataHub Integration | BRS-001/002/003/005/009/010/015/042/043/044 requests, RSM-015/016 data requests |
 | **Nord Pool** | **→** we receive | Settlement Engine | Hourly spot prices (DK1/DK2) |
 | **ERP / Accounting** | **←** we send | Settlement Engine | Settlement results, invoice lines |

@@ -73,8 +73,8 @@ public sealed class SimulatorState
         {
             if (pe.Enqueued || pe.EffectiveDate > today) continue;
             pe.Enqueued = true;
-            EnqueueMessage("MasterData", "RSM-007", pe.CorrelationId,
-                ScenarioLoader.BuildRsm007Json(pe.Gsrn, pe.EffectiveDate.ToString("yyyy-MM-dd") + "T00:00:00Z"));
+            EnqueueMessage("MasterData", "RSM-022", pe.CorrelationId,
+                ScenarioLoader.BuildRsm022Json(pe.Gsrn, pe.EffectiveDate.ToString("yyyy-MM-dd") + "T00:00:00Z"));
         }
     }
 

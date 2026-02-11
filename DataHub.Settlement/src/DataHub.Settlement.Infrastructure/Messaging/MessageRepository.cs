@@ -278,9 +278,9 @@ public sealed class MessageRepository : IMessageRepository
                    (SELECT MAX(i.received_at) FROM datahub.inbound_message i
                     WHERE i.correlation_id = pr.datahub_correlation_id) AS last_received_at,
                    EXISTS(SELECT 1 FROM datahub.inbound_message i
-                    WHERE i.correlation_id = pr.datahub_correlation_id AND i.message_type = 'RSM-009') AS has_acknowledgement,
+                    WHERE i.correlation_id = pr.datahub_correlation_id AND i.message_type = 'RSM-001') AS has_acknowledgement,
                    EXISTS(SELECT 1 FROM datahub.inbound_message i
-                    WHERE i.correlation_id = pr.datahub_correlation_id AND i.message_type = 'RSM-007') AS has_activation,
+                    WHERE i.correlation_id = pr.datahub_correlation_id AND i.message_type = 'RSM-022') AS has_activation,
                    COUNT(*) OVER() AS total_count
             FROM lifecycle.process_request pr
             LEFT JOIN portfolio.signup s ON s.process_request_id = pr.id

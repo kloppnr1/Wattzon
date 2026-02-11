@@ -592,10 +592,10 @@ classDiagram
 stateDiagram-v2
     [*] --> Pending : Create request
     Pending --> SentToDataHub : Send BRS-001
-    SentToDataHub --> Acknowledged : RSM-009 accepted
-    SentToDataHub --> Rejected : RSM-009 rejected
+    SentToDataHub --> Acknowledged : RSM-001 accepted
+    SentToDataHub --> Rejected : RSM-001 rejected
     Acknowledged --> EffectuationPending : Awaiting effectuation
-    EffectuationPending --> Completed : RSM-007 + RSM-012 received
+    EffectuationPending --> Completed : RSM-022 + RSM-012 received
     Pending --> Cancelled : Internal cancellation (before send)
     EffectuationPending --> CancellationPending : RSM-002 cancel sent
     CancellationPending --> Cancelled : RSM-002 accepted

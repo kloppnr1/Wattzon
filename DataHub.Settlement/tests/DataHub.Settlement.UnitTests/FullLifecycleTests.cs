@@ -77,7 +77,7 @@ public class FullLifecycleTests
         var state = await _processRepo.GetAsync(request.Id, CancellationToken.None);
         state!.Status.Should().Be("effectuation_pending");
 
-        // 3. Complete process (RSM-007 received)
+        // 3. Complete process (RSM-022 received)
         await sm.MarkCompletedAsync(request.Id, CancellationToken.None);
 
         // 4. Run January settlement
@@ -173,7 +173,7 @@ public class FullLifecycleTests
         var state = await _processRepo.GetAsync(request.Id, CancellationToken.None);
         state!.Status.Should().Be("effectuation_pending");
 
-        // 3. Complete process (RSM-007 received)
+        // 3. Complete process (RSM-022 received)
         await sm.MarkCompletedAsync(request.Id, CancellationToken.None);
 
         // 4. Run January settlement

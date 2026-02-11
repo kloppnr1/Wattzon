@@ -682,7 +682,7 @@ CREATE TABLE lifecycle.process_request (
                                 'effectuation_pending', 'completed', 'cancelled'
                             )),
     effective_date          DATE,                    -- requested effective date
-    datahub_correlation_id  TEXT,                     -- from RSM-009 acknowledgement
+    datahub_correlation_id  TEXT,                     -- from RSM-001 acknowledgement
     requested_at            TIMESTAMPTZ NOT NULL DEFAULT now(),
     completed_at            TIMESTAMPTZ,
     created_at              TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -721,7 +721,7 @@ CREATE INDEX idx_process_event_request ON lifecycle.process_event (process_reque
 CREATE TABLE datahub.inbound_message (
     id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     datahub_message_id  TEXT NOT NULL,               -- MessageId from peek header
-    message_type        TEXT NOT NULL,               -- e.g. 'RSM-012', 'RSM-007', 'RSM-014'
+    message_type        TEXT NOT NULL,               -- e.g. 'RSM-012', 'RSM-022', 'RSM-014'
     correlation_id      TEXT,                        -- CorrelationId from header (always store!)
     queue_name          TEXT NOT NULL,               -- 'timeseries', 'masterdata', 'aggregations', 'charges'
     status              TEXT NOT NULL DEFAULT 'received'
