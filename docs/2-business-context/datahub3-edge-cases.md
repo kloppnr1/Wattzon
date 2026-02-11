@@ -62,29 +62,7 @@ The most important edge case in the system. The grid company (netvirksomheden) c
 
 ## 2. Erroneous Processes
 
-### 2.1 Erroneous supplier switch (leverandørskifte) (BRS-042)
-
-A supplier switch has occurred by mistake — e.g., wrong metering point or the customer has not accepted.
-
-**Flow:**
-
-| Step | Direction | Action |
-|------|-----------|--------|
-| 1 | DDQ -> DataHub | **BRS-042** reversal request |
-| 2 | DataHub | Validates request, reverses the switch |
-| 3 | DataHub -> old DDQ | Old supplier is reinstated |
-| 4 | Internal | All metering data for the erroneous period is reversed |
-| 5 | Internal | Issued invoices for the period are credited |
-
-**Deadline:** Within 20 business days after the effective date (WARNING: VERIFY, cf. Regulation H1 (Forskrift H1))
-
-**Consequences for the system:**
-- Metering point switches back to old supplier -> supply_period must be corrected
-- All settlement results for the period must be marked as invalid
-- Credit notes are generated for any issued invoices
-- Received metering data for the period is deleted or marked as reversed
-
-### 2.2 Erroneous move (BRS-011)
+### 2.1 Erroneous move (BRS-011)
 
 A move-in or move-out date was incorrect.
 
@@ -324,10 +302,8 @@ DataHub                    Our system                  Settlement
 | Process | Deadline | Source |
 |---------|----------|--------|
 | BRS-001 supplier switch (notice period) | Min. 15 business days | Regulation H1 (Forskrift H1) |
-| BRS-043 short notice | 1 business day (WARNING: VERIFY) | Regulation H1 (Forskrift H1) |
 | RSM-002 cancel within BRS-001 | No later than the day before the effective date | Energinet BRS §4.1.9, Forskrift H1 |
 | BRS-003 erroneous switch (fejlagtigt leverandørskift) | Within 180 calendar days of the original switch | Energinet BRS §4.3, Forskrift H1 |
-| BRS-042 customer-initiated cancellation | Depends on DDQ response deadline | Energinet BRS §4.42, Forskrift H1 |
 | BRS-044 cancel termination | Before the effective date | Regulation H1 (Forskrift H1) |
 | Final invoice at offboarding | 4 weeks after customer departure | Electricity Supply Order section 17 (Elleveringsbekendtgørelsen §17) |
 | Customer data archiving | 5 years (WARNING: VERIFY) | GDPR / Danish Bookkeeping Act (bogføringsloven) |

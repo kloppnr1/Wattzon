@@ -276,7 +276,7 @@ public class GoldenMasterTests
     /// Golden Master #6: Erroneous switch reversal (2 months)
     ///
     /// Scenario: A supplier switch was made in error. Customer was with us for
-    /// January + February 2025. Both months were settled. Now BRS-042 reverses it.
+    /// January + February 2025. Both months were settled. Now BRS-003 reverses it (erroneous switch reversal).
     ///
     /// January: GM#1 = 793.14 DKK (31 days, 409.200 kWh)
     /// February: 28 days, 672 hours

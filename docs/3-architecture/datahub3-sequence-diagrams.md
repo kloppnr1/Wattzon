@@ -46,7 +46,7 @@ sequenceDiagram
     DDQ->>DDQ: Assign tariffs (based on grid area)<br/>Activate metering point in portfolio<br/>Set up billing plan + aconto
 ```
 
-**Deadlines:** Min. 15 business days notice (BRS-001) or 1 business day (BRS-043 short notice).
+**Deadlines:** Min. 15 business days notice (BRS-001).
 
 **Cancellation:** Customer withdraws before effective date → send **RSM-002** (Annuller start af leverance) within the same BRS-001 process, referencing the original RSM-001 transaction. DataHub responds with RSM-002 accept/reject. Same correlation ID throughout. Must be submitted no later than the day before the effective date. After the cancellation deadline, use BRS-003 (fejlagtigt leverandørskift) instead.
 

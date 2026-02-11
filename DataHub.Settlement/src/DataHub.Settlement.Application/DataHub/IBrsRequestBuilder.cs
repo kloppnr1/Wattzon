@@ -7,8 +7,6 @@ public interface IBrsRequestBuilder
     string BuildBrs003(string gsrn, string originalCorrelationId);
     string BuildBrs009(string gsrn, string cprCvr, DateOnly effectiveDate);
     string BuildBrs010(string gsrn, DateOnly effectiveDate);
-    string BuildBrs043(string gsrn, string cprCvr, DateOnly effectiveDate);
     string BuildBrs044(string gsrn, string originalCorrelationId);
-    string BuildBrs042(string gsrn, DateOnly effectiveDate);
     string BuildRsm027(string gsrn, string customerName, string cprCvr, string correlationId);
 }

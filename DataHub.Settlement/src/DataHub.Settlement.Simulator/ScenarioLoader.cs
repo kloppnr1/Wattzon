@@ -33,7 +33,7 @@ public static class ScenarioLoader
                 LoadAutoCancel(state);
                 break;
             case "forced_switch":
-                LoadForcedSwitch(state);
+                LoadForcedTransfer(state);
                 break;
             default:
                 throw new ArgumentException($"Unknown scenario: {scenarioName}");
@@ -412,7 +412,7 @@ public static class ScenarioLoader
         return JsonSerializer.Serialize(doc);
     }
 
-    private static void LoadForcedSwitch(SimulatorState state)
+    private static void LoadForcedTransfer(SimulatorState state)
     {
         var gsrn = "571313100000012345";
         var effectiveDate = "2025-01-15T00:00:00Z";

@@ -17,13 +17,11 @@ const STATUSES = [
 const processTypeBadge = (type) => {
   switch (type) {
     case 'supplier_switch':
-    case 'short_notice_switch':
       return 'bg-blue-50 text-blue-700';
     case 'move_in':
     case 'move_out':
       return 'bg-purple-50 text-purple-700';
     case 'end_of_supply':
-    case 'forced_end_of_supply':
       return 'bg-amber-50 text-amber-700';
     default:
       return 'bg-slate-100 text-slate-500';

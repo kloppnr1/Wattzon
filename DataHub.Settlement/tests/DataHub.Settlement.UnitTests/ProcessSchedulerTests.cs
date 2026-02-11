@@ -120,11 +120,7 @@ public class ProcessSchedulerTests
             => "{}";
         public string BuildBrs010(string gsrn, DateOnly effectiveDate)
             => throw new NotImplementedException();
-        public string BuildBrs043(string gsrn, string cprCvr, DateOnly effectiveDate)
-            => throw new NotImplementedException();
         public string BuildBrs044(string gsrn, string originalCorrelationId)
-            => throw new NotImplementedException();
-        public string BuildBrs042(string gsrn, DateOnly effectiveDate)
             => throw new NotImplementedException();
         public string BuildRsm027(string gsrn, string customerName, string cprCvr, string correlationId)
             => throw new NotImplementedException();

@@ -268,7 +268,7 @@ public static class DatabaseSeeder
         }
 
         // ── Phase 3b: Additional processes with operationally interesting statuses ──
-        var extraProcessTypes = new[] { "supplier_switch", "move_in", "short_notice_switch", "end_of_supply" };
+        var extraProcessTypes = new[] { "supplier_switch", "move_in", "end_of_supply" };
         var extraProcesses = new List<(Guid Id, string Status, string ProcessType, string Gsrn, DateTime Created)>();
 
         // 6 pending (just created, not yet sent)

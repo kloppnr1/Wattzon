@@ -87,9 +87,9 @@ Source: CIM Webservice Interface (Dok. 22/03077-1); GitHub Energinet-DataHub/ARC
 
 | Endpoint | Purpose |
 |----------|---------|
-| `POST /v1.0/cim/requestchangeofsupplier` | BRS-001 / BRS-043: Supplier switch |
+| `POST /v1.0/cim/requestchangeofsupplier` | BRS-001: Supplier switch |
 | `POST /v1.0/cim/requestendofsupply` | BRS-002 / BRS-005: End of supply |
-| `POST /v1.0/cim/requestcancelchangeofsupplier` | RSM-002: Cancel switch within BRS-001 (before effective date). Also used for BRS-003/BRS-042 (erroneous switch, after effective date) |
+| `POST /v1.0/cim/requestcancelchangeofsupplier` | RSM-002: Cancel switch within BRS-001 (before effective date). Also used for BRS-003 (erroneous switch, after effective date) |
 | `POST /v1.0/cim/requestcustomerdata` | BRS-015: Submit customer master data ⚠ VERIFY path |
 | `POST /v1.0/cim/requestvalidatedmeasuredata` | RSM-015: Request historical metering data |
 | `POST /v1.0/cim/requestaggregatedmeasuredata` | RSM-016: Request aggregated data |
@@ -225,7 +225,7 @@ These processes govern how supply obligations are created, transferred, and term
 - **Initiator:** New DDQ (the gaining supplier)
 - **Submit endpoint:** `POST /v1.0/cim/requestchangeofsupplier` ⚠ VERIFY
 - **Effective:** Start of a future day (midnight)
-- **Timeline:** Minimum 15 business days notice ⚠ VERIFY — may be reduced for BRS-043
+- **Timeline:** Minimum 15 business days notice ⚠ VERIFY
 
 **Flow:**
 1. New DDQ sends RSM-001 to DataHub with metering point ID + requested effective date
@@ -294,33 +294,7 @@ These processes govern how supply obligations are created, transferred, and term
 
 ⚠ VERIFY: BRS-005 may cover a different scenario. Cross-reference with latest BRS document.
 
-### 4.5 BRS-042: Customer-Initiated Cancellation (Kundens adgang til annullering)
-
-- **Initiator:** Customer via DataHub's customer portal (kundeportalen)
-- **Purpose:** Customer reports an erroneous supplier switch directly to DataHub
-
-**Key facts:**
-- Customer activates cancellation process by reporting to DataHub
-- DataHub notifies the current/future DDQ via webform
-- DDQ must respond within a deadline: accept or reject
-- **Before cancellation deadline:** DataHub cancels the switch immediately (within BRS-001)
-- **After cancellation deadline:** Continues with BRS-003 (fejlagtigt leverandørskift)
-
-> **Source:** [Energinet BRS-forretningsprocesser](https://energinet.dk/media/2nqdysv3/brs-forretningsprocesser-for-det-danske-elmarked.pdf), §4.42.
-
-### 4.6 BRS-043: Change of Supplier at Short Notice (Leverandørskifte med kort varsel)
-
-- **RSM message:** RSM-001 (same as BRS-001)
-- **Initiator:** New DDQ
-- **Timeline:** 1 business day notice ⚠ VERIFY
-- **Conditions:** Only available in specific circumstances (e.g., customer at risk of disconnection)
-
-**Key facts:**
-- Uses the same RSM-001 message as BRS-001 but with a shorter notice period
-- Cannot be used if end of supply has been reported and the time limit has been exceeded
-- ⚠ VERIFY: The business reason code may differ from BRS-001
-
-### 4.7 BRS-044: Cancel End of Supply (Annuller leveranceophør) ⚠ VERIFY
+### 4.5 BRS-044: Cancel End of Supply (Annuller leveranceophør) ⚠ VERIFY
 
 - **RSM message:** ⚠ VERIFY
 - **Initiator:** Current DDQ
@@ -526,7 +500,7 @@ These processes handle wholesale settlement calculations and provide aggregated 
 
 | Endpoint (POST) | BRS/RSM | Purpose |
 |-----------------|---------|---------|
-| `requestchangeofsupplier` ⚠ VERIFY | BRS-001/043, RSM-001 | Supplier switch |
+| `requestchangeofsupplier` ⚠ VERIFY | BRS-001, RSM-001 | Supplier switch |
 | `requestendofsupply` ⚠ VERIFY | BRS-002/005, RSM-005 | End of supply |
 | `requestcancelchangeofsupplier` ⚠ VERIFY | RSM-002 (BRS-001 cancel) / BRS-003 (erroneous switch) | Cancel switch before or after effective date |
 | `requestvalidatedmeasuredata` ⚠ VERIFY | RSM-015 | Request historical data |
@@ -575,8 +549,6 @@ These processes handle wholesale settlement calculations and provide aggregated 
 | Process | Deadline | Source |
 |---------|----------|--------|
 | BRS-001 supplier switch notice | 15 business days ⚠ VERIFY | Forskrift H1 |
-| BRS-043 short-notice switch | 1 business day ⚠ VERIFY | Forskrift H1 |
-| BRS-042 incorrect switch rollback | 20 business days ⚠ VERIFY | Forskrift H1 |
 | BRS-002 end of supply notice | ⚠ VERIFY | Forskrift H1 |
 | Correction window (BRS-021) | 3 years ⚠ VERIFY | Market regulation |
 
@@ -625,7 +597,7 @@ Source: CIM EDI Guide page 256
 
 ### Related Documentation
 
-- [Edge Cases and Error Handling](datahub3-edge-cases.md) — Edge cases for BRS-011, BRS-042, and other error scenarios
+- [Edge Cases and Error Handling](datahub3-edge-cases.md) — Edge cases for BRS-011 and other error scenarios
 
 ### GitHub
 

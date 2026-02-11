@@ -14,10 +14,8 @@ public sealed class HttpDataHubClient : IDataHubClient
     private static readonly Dictionary<string, string> ProcessTypeToEndpoint = new()
     {
         ["supplier_switch"] = "requestchangeofsupplier",
-        ["short_notice_switch"] = "requestchangeofsupplier",
         ["move_in"] = "requestchangeofsupplier",
         ["end_of_supply"] = "requestendofsupply",
-        ["forced_end_of_supply"] = "requestendofsupply",
         ["move_out"] = "requestendofsupply",
         ["cancel_switch"] = "requestcancelchangeofsupplier",
         ["cancel_end_of_supply"] = "requestcancelchangeofsupplier",

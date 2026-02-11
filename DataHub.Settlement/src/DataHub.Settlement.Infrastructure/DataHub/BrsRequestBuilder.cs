@@ -33,19 +33,9 @@ public sealed class BrsRequestBuilder : IBrsRequestBuilder
         return BuildEndOfSupply(gsrn, effectiveDate, BusinessReasonCodes.MoveOut);
     }
 
-    public string BuildBrs043(string gsrn, string cprCvr, DateOnly effectiveDate)
-    {
-        return BuildChangeOfSupplier(gsrn, cprCvr, effectiveDate, BusinessReasonCodes.SupplierSwitch);
-    }
-
     public string BuildBrs044(string gsrn, string originalCorrelationId)
     {
         return BuildCancelRequest(gsrn, originalCorrelationId, BusinessReasonCodes.EndOfSupply);
-    }
-
-    public string BuildBrs042(string gsrn, DateOnly effectiveDate)
-    {
-        return BuildEndOfSupply(gsrn, effectiveDate, BusinessReasonCodes.ForcedSwitch);
     }
 
     public string BuildRsm027(string gsrn, string customerName, string cprCvr, string correlationId)

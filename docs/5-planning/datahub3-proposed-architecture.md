@@ -86,10 +86,10 @@ All communication with the DataHub 3 B2B API.
 
 | Action | BRS/RSM |
 |--------|---------|
-| Supplier switch (leverandørskifte) | BRS-001, BRS-043 |
+| Supplier switch (leverandørskifte) | BRS-001 |
 | End of supply (leveranceophør) | BRS-002, BRS-005 |
 | Cancel switch before effective date | RSM-002 within BRS-001 |
-| Erroneous switch reversal (fejlagtigt leverandørskift) | BRS-003 (RSM-003), BRS-042 |
+| Erroneous switch reversal (fejlagtigt leverandørskift) | BRS-003 (RSM-003) |
 | Cancel end of supply | BRS-044 |
 | Request historical data | RSM-015 |
 | Request aggregated data | RSM-016 |
@@ -157,8 +157,6 @@ Manages the supplier's customer portfolio, metering point associations, and life
 - **BRS-010** — Move-out (fraflytning)
 - **BRS-011** — Erroneous move
 - **BRS-015** — Customer master data submission
-- **BRS-042** — Erroneous supplier switch (reversal)
-- **BRS-043** — Supplier switch with short notice
 - **BRS-044** — Cancel end of supply
 
 **Design decisions:**
@@ -540,8 +538,8 @@ The system is built in **MVPs** (minimum viable products), each delivering a wor
 | MVP | Scope | Business Processes |
 |-----|-------|--------------------|
 | 1 | Sunshine scenario: one customer, one correct invoice | Auth, BRS-001, RSM-001/022/012, Queue Poller, time series store, settlement engine, Charges, state machine, portfolio |
-| 2 | Full customer lifecycle (offboarding, aconto, rejections) | RSM-004, BRS-002/003/005/009/010/043/044, aconto, final settlement |
-| 3 | DataHub integration + edge cases | Actor Test validation, parser hardening, corrections, BRS-042/011, RSM-014/015/016, reconciliation, elvarme, solar |
+| 2 | Full customer lifecycle (offboarding, aconto, rejections) | RSM-004, BRS-002/003/005/009/010/044, aconto, final settlement |
+| 3 | DataHub integration + edge cases | Actor Test validation, parser hardening, corrections, BRS-011, RSM-014/015/016, reconciliation, elvarme, solar |
 | 4 | Production | ERP, payment services, e-Boks, customer portal, pilot + full migration, performance |
 
 > Details: [Implementation plan](datahub3-implementation-plan.md) — MVP details, DataHub simulator, testing strategy

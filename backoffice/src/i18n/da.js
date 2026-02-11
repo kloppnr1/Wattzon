@@ -61,10 +61,8 @@ export default {
 
   // ── Process types ──
   'processType.supplier_switch': 'Leverandørskift',
-  'processType.short_notice_switch': 'Hurtigskift',
   'processType.move_in': 'Tilflytning',
   'processType.end_of_supply': 'Ophør af levering',
-  'processType.forced_end_of_supply': 'Tvunget ophør',
   'processType.move_out': 'Fraflytning',
   'processType.cancel_switch': 'Annuller skift',
   'processType.cancel_end_of_supply': 'Annuller ophør',

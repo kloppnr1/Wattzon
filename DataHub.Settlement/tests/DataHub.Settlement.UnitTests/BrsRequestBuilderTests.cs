@@ -179,33 +179,6 @@ public class BrsRequestBuilderTests
         dateStr.Should().StartWith("2025-04-01");
     }
 
-    // ── BRS-043: Short-notice change of supplier ──
-
-    [Fact]
-    public void BuildBrs043_uses_E03_process_type()
-    {
-        var json = _sut.BuildBrs043("571313100000012345", "0101901234", new DateOnly(2025, 2, 1));
-
-        using var doc = JsonDocument.Parse(json);
-        var root = doc.RootElement.GetProperty("RequestChangeOfSupplier_MarketDocument");
-
-        root.GetProperty("process").GetProperty("processType").GetProperty("value").GetString()
-            .Should().Be("E03");
-    }
-
-    [Fact]
-    public void BuildBrs043_contains_customer()
-    {
-        var json = _sut.BuildBrs043("571313100000012345", "0101901234", new DateOnly(2025, 2, 1));
-
-        using var doc = JsonDocument.Parse(json);
-        var activity = doc.RootElement.GetProperty("RequestChangeOfSupplier_MarketDocument")
-            .GetProperty("MktActivityRecord");
-
-        activity.GetProperty("customer_MarketParticipant").GetProperty("mRID").GetProperty("value").GetString()
-            .Should().Be("0101901234");
-    }
-
     // ── BRS-044: Cancel end of supply ──
 
     [Fact]

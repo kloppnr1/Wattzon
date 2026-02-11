@@ -13,7 +13,7 @@ PHASE 1: ONBOARDING                                             ~15 business day
 ─────────────────────────────────────────────────────────────────────────────
 Trigger:      Contract signed — customer selects us as supplier
 DataHub:      → BRS-001 (supplier switch / leverandørskifte) with GSRN + desired date + CPR/CVR
-              → BRS-043 (short notice) or → BRS-009 (move-in / tilflytning)
+              → BRS-009 (move-in / tilflytning)
               → BRS-015 (submit customer master data / kundestamdata)
               → RSM-002 cancel within BRS-001 (if the customer withdraws before effective date)
 Billing:      Create customer record, select product/tariff plan
@@ -83,7 +83,6 @@ Billing:      Final settlement: energy + tariff + subscription (pro-rated)
 
 SPECIAL CASES (can occur in any phase)
 ─────────────────────────────────────────────────────────────────────────────
-              → BRS-042 (erroneous switch)    → credit all invoices
               → BRS-011 (erroneous move)      → recalculate + credit/debit
               → RSM-015 (historical data)     → verification in disputes
               → RSM-016 (aggregated data)     → reconciliation
@@ -97,7 +96,6 @@ SPECIAL CASES (can occur in any phase)
 | BRS/RSM | Phase | Role | Billing Consequence |
 |---------|-------|------|--------------------|
 | BRS-001 (supplier switch / leverandørskifte) | 1 - Onboarding | We initiate | Set up billing plan + aconto calculation |
-| BRS-043 (short-notice switch) | 1 - Onboarding | We initiate | Set up billing plan + aconto calculation |
 | BRS-009 (move-in / tilflytning) | 1 - Onboarding | We initiate | Set up billing plan + aconto calculation |
 | BRS-015 (customer master data / kundestamdata) | 1 - Onboarding | We submit | No direct consequence |
 | RSM-002 cancel (within BRS-001) | 1 - Onboarding | We initiate (if customer cancels before effective date) | Cancel created billing plan |
@@ -114,7 +112,6 @@ SPECIAL CASES (can occur in any phase)
 | BRS-010 (move-out / fraflytning) | 5 - Offboarding | We or DDM initiate (scenario C) | Final settlement + final invoice + aconto settlement (acontoopgørelse) |
 | BRS-044 (cancel supply termination) | 5 - Offboarding | We initiate (upon cancellation) | Cancel planned final settlement |
 | BRS-001 from another DDQ | 5 - Offboarding | We receive (scenario A) | Final settlement + final invoice + aconto settlement (acontoopgørelse) |
-| BRS-042 (erroneous switch) | Special case | We initiate | Credit all invoices for the erroneous period |
 | BRS-011 (erroneous move) | Special case | We initiate | Recalculate affected periods, credit/debit notes |
 | RSM-015 (request historical data) | Special case | We request (disputes, verification) | No direct consequence (verification) |
 | RSM-016 (request aggregated data) | Special case | We request (reconciliation) | No direct consequence (reconciliation) |
@@ -220,7 +217,7 @@ Invoice total  = sum of all lines + VAT
 4. Optionally, a separate **payer** is specified if someone other than the customer pays the bills (e.g., parent, employer, landlord)
 5. If DAR ID provided, the system looks up the GSRN(s) via the Energinet address lookup API
 6. The system determines the correct process:
-   - **New customer on existing metering point** -> supplier switch (leverandørskifte) (BRS-001 or BRS-043)
+   - **New customer on existing metering point** -> supplier switch (leverandørskifte) (BRS-001)
    - **Customer moving into a new address** -> move-in (tilflytning) (BRS-009)
 7. The system selects product/tariff plan based on contract terms
 8. For aconto customers: calculate initial aconto estimate based on static annual consumption (4,000 kWh/year for house, 2,500 kWh/year for apartment)
@@ -234,14 +231,11 @@ Invoice total  = sum of all lines + VAT
 | 2 | DataHub -> DDQ | Acknowledgement | DataHub validates: metering point exists, no conflicts, CPR/CVR matches |
 | 3 | DataHub -> old DDQ | Notification | Current supplier is notified that they are losing the metering point |
 
-**If short notice is needed** (e.g. urgent case), use **BRS-043** instead — same message, shorter notice period.
-
 **For move-in (tilflytning)** (no current supplier at the address), use **BRS-009** — similar flow but without the old supplier.
 
 ### Deadlines
 
 - BRS-001: minimum 15 business days' notice before effective date. VERIFY
-- BRS-043: 1 business day's notice. VERIFY
 - BRS-009: can take effect immediately or on a future date. VERIFY
 
 ### What Can Go Wrong

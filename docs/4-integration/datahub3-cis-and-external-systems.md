@@ -38,7 +38,7 @@ In the Danish electricity market, a DDQ's CIS typically handles:
 | External system | Direction | Our system | Data exchanged |
 |-----------------|-----------|------------|----------------|
 | **DataHub 3** (Energinet) | **→** we receive | DataHub Integration | RSM-012 (kWh), RSM-022/004 (master data), BRS responses, tariffs |
-| **DataHub 3** (Energinet) | **←** we send | DataHub Integration | BRS-001/002/003/005/009/010/015/042/043/044 requests, RSM-015/016 data requests |
+| **DataHub 3** (Energinet) | **←** we send | DataHub Integration | BRS-001/002/003/005/009/010/015/044 requests, RSM-015/016 data requests |
 | **Nord Pool** | **→** we receive | Settlement Engine | Hourly spot prices (DK1/DK2) |
 | **ERP / Accounting** | **←** we send | Settlement Engine | Settlement results, invoice lines |
 | **ERP / Accounting** | **→** we receive | Customer & Portfolio | Payment status |
@@ -229,7 +229,7 @@ CRM / Sales                         Our system
 | Endpoint | Method | Description |
 |----------|--------|-------------|
 | `/api/customers` | POST | Create a new customer + metering point association |
-| `/api/customers/{id}/switch` | POST | Initiate a supplier switch (BRS-001 / BRS-043) |
+| `/api/customers/{id}/switch` | POST | Initiate a supplier switch (BRS-001) |
 | `/api/customers/{id}/move-in` | POST | Initiate a move-in (BRS-009) |
 | `/api/processes/{id}` | GET | Check the status of a pending DataHub process |
 | `/api/processes/{id}/cancel` | POST | Cancel a pending process (RSM-002 within BRS-001) |

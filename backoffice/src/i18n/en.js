@@ -61,10 +61,8 @@ export default {
 
   // ── Process types ──
   'processType.supplier_switch': 'Switch',
-  'processType.short_notice_switch': 'Quick Switch',
   'processType.move_in': 'Move In',
   'processType.end_of_supply': 'End Supply',
-  'processType.forced_end_of_supply': 'Forced End',
   'processType.move_out': 'Move Out',
   'processType.cancel_switch': 'Cancel Switch',
   'processType.cancel_end_of_supply': 'Cancel End',

@@ -92,8 +92,8 @@ The simulator is a lightweight HTTP server that mimics the DataHub B2B API — j
 | MVP | Simulator capabilities |
 |-----|----------------------|
 | **MVP 1** | In-process `FakeDataHubClient` only. Supports: OAuth2 (mock), Timeseries queue (RSM-012), MasterData queue (RSM-022), Charges queue, BRS-001 `SendRequestAsync` (returns RSM-001 accepted), Dequeue. Loads CIM JSON fixture files from disk. No HTTP, no Docker dependency. |
-| **MVP 2** | + **Standalone HTTP simulator (Docker).** ASP.NET Minimal API mimicking DataHub B2B API. + RSM-004. + BRS-002/003/005/009/010/043/044 request endpoints. + Scenarios: "rejection", "offboarding", "cancellation", "full lifecycle" |
-| **MVP 3** | + **Real DataHub (Actor Test) in parallel.** + Correction scenarios (original → correction on same queue). + BRS-042/011 endpoints. + Aggregations queue (RSM-014). + RSM-015/016 response endpoints. + Error injection (401, 503, malformed messages). + Elvarme/solar fixtures |
+| **MVP 2** | + **Standalone HTTP simulator (Docker).** ASP.NET Minimal API mimicking DataHub B2B API. + RSM-004. + BRS-002/003/005/009/010/044 request endpoints. + Scenarios: "rejection", "offboarding", "cancellation", "full lifecycle" |
+| **MVP 3** | + **Real DataHub (Actor Test) in parallel.** + Correction scenarios (original → correction on same queue). + BRS-011 endpoints. + Aggregations queue (RSM-014). + RSM-015/016 response endpoints. + Error injection (401, 503, malformed messages). + Elvarme/solar fixtures |
 | **MVP 4** | + Performance scenarios (80K metering points). + Realistic timing. + Preprod validation |
 
 ### Test fixture library
@@ -283,11 +283,11 @@ Golden Master #2: Partial period (mid-month start)
 
 | Area | Task | Test approach |
 |------|------|---------------|
-| **Simulator** | + BRS-002/003/005/009/010/043/044 endpoints. + RSM-004 on MasterData queue. + Scenarios: rejection, offboarding, cancellation, full lifecycle | Integration: full lifecycle scenario |
+| **Simulator** | + BRS-002/003/005/009/010/044 endpoints. + RSM-004 on MasterData queue. + Scenarios: rejection, offboarding, cancellation, full lifecycle | Integration: full lifecycle scenario |
 | **Master data** | RSM-004 parser (grid area change, metering point updates). Tariff reassignment on grid area change | Unit: fixtures. Integration: simulator |
 | **Rejection handling** | RSM-001 rejected → update process, notify CRM. Retry with corrected data | Unit: state machine. Integration: simulator |
 | **Cancellation** | RSM-002 cancel within BRS-001 (before effective date, same correlation ID) | Unit: state machine. Integration: simulator |
-| **Offboarding** | BRS-002 (end of supply). BRS-010 (move-out). BRS-044 (cancel termination). Incoming BRS-001 (we lose customer). BRS-043 (short notice switch). BRS-009 (move-in). BRS-015 (customer master data) | Unit + integration: simulator |
+| **Offboarding** | BRS-002 (end of supply). BRS-010 (move-out). BRS-044 (cancel termination). Incoming BRS-001 (we lose customer). BRS-009 (move-in). BRS-015 (customer master data) | Unit + integration: simulator |
 | **Final settlement** | Partial period settlement. Aconto settlement at offboarding (actual vs. paid). Final invoice generation | Unit: golden master tests |
 | **Aconto** | Aconto estimation (static annual consumption estimate). Quarterly settlement cycle. Combined quarterly invoice | Unit: golden master tests |
 
@@ -366,7 +366,7 @@ Golden Master #4: Final settlement at offboarding (partial quarter)
 | Area | Task | Test approach |
 |------|------|---------------|
 | **Corrections** | Compare incoming RSM-012 against stored data. Calculate delta per interval. Generate credit/debit notes | Unit: stored + new → delta per interval. Golden master tests |
-| **Erroneous processes** | BRS-042 (erroneous switch — reverse supply period, credit all invoices). BRS-011 (erroneous move — adjust dates, recalculate) | Integration: full reversal flow against simulator |
+| **Erroneous processes** | BRS-011 (erroneous move — adjust dates, recalculate) | Integration: full reversal flow against simulator |
 | **Wholesale reconciliation** | RSM-014 parser. Compare own settlement vs. DataHub aggregation per grid area. Identify deviating metering points | Unit: matching + discrepancy scenarios |
 | **Historical data requests** | RSM-015 (request validated data for verification). RSM-016 (request detailed aggregated data) | Integration: simulator |
 | **Elvarme** | Electrical heating flag from RSM-022. Cumulative annual kWh tracking. Split rate at 4,000 kWh threshold. Year boundary reset | Unit: golden master. Edge: threshold crossed mid-period |
@@ -381,23 +381,19 @@ Golden Master #5: Correction (delta settlement)
   Input: original data + corrected data for same period
   Expected: credit/debit note with correct delta amounts
 
-Golden Master #6: Erroneous switch reversal
-  Input: 2 months of data for an erroneous period
-  Expected: all invoices credited, metering point reversed
-
-Golden Master #7: Elvarme customer crossing 4,000 kWh threshold
+Golden Master #6: Elvarme customer crossing 4,000 kWh threshold
   Input: cumulative consumption crossing threshold mid-period
   Expected: split rate (standard below, reduced above)
 
-Golden Master #8: Solar customer with E18 production
+Golden Master #7: Solar customer with E18 production
   Input: E17 consumption + E18 production per hour
   Expected: net settlement per hour, production credit at spot price
 
-Golden Master #9: Correction during active supply period overlap
+Golden Master #8: Correction during active supply period overlap
   Input: correction spanning period before and after our supply start
   Expected: only delta within our supply period is settled
 
-Golden Master #10: Tariff change mid-billing period
+Golden Master #9: Tariff change mid-billing period
   Input: old rate until 15th, new rate from 16th
   Expected: split calculation with correct rates per hour
 ```
@@ -412,15 +408,6 @@ Golden Master #10: Tariff change mid-billing period
 4. Simulator enqueues RSM-012 (correction: 2.0 kWh for hour 14:00)
 5. System detects delta (+0.5 kWh), calculates financial impact
 6. System generates credit/debit note
-```
-
-**Scenario: Erroneous switch reversal**
-```
-1. System has active metering point with 2 months of data and invoices
-2. System sends BRS-042 (erroneous switch reversal)
-3. Simulator confirms reversal
-4. System: reverse supply period, credit all issued invoices
-5. System: delete/mark metering data as reversed
 ```
 
 **Scenario: Wholesale reconciliation discrepancy**
@@ -467,12 +454,11 @@ Golden Master #10: Tariff change mid-billing period
 - Every real CIM JSON that broke the parser is now a fixture in the test suite
 - System recovers gracefully from all error scenarios (401, 503, malformed messages, missing data)
 - Correction detection works: original + correction → correct delta calculated and credit/debit note generated
-- Erroneous switch reversal credits all invoices and reverses supply period
 - Wholesale reconciliation detects discrepancies and resolves via RSM-015/016
 - Elvarme threshold tracking produces correct split rates (golden master passes)
 - Solar net settlement produces correct hourly netting with production credits (golden master passes)
 - Concurrent process scenarios handled correctly (correction during switch, mid-quarter move-out, mid-period tariff change)
-- All golden master tests (#5-#10) pass
+- All golden master tests (#5-#9) pass
 
 ---
 
@@ -610,8 +596,8 @@ Push to main
 | MVP | Focus | Key deliverable | Depends on |
 |-----|-------|----------------|------------|
 | **1** | One correct invoice | Happy path: DataHub connection → RSM-012 ingestion → settlement → verified result | — |
-| **2** | Full customer lifecycle | Happy path: all BRS processes. Onboarding → operation → offboarding → final settlement | MVP 1 |
-| **3** | DataHub integration + edge cases | Real DataHub validation (Actor Test). Then: corrections, erroneous processes, reconciliation, elvarme, solar, error handling | MVP 2 + Actor Test access |
+| **2** | Full customer lifecycle | Happy path: all BRS processes (BRS-001/002/003/005/009/010/044). Onboarding → operation → offboarding → final settlement | MVP 1 |
+| **3** | DataHub integration + edge cases | Real DataHub validation (Actor Test). Then: corrections, BRS-011, reconciliation, elvarme, solar, error handling | MVP 2 + Actor Test access |
 | **4** | Production | ERP + payment + portal. Pilot (10-50 customers) → full migration. Scale | MVP 3 |
 
 **Critical path:** Actor Test access. Apply during MVP 1. If access is delayed, MVP 2 proceeds against the simulator, and DataHub integration shifts to MVP 3 (as soon as access is granted).

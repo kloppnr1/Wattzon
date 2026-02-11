@@ -671,8 +671,8 @@ CREATE INDEX idx_invoice_line_invoice ON invoicing.invoice_line (invoice_id);
 CREATE TABLE lifecycle.process_request (
     id                      UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     process_type            TEXT NOT NULL CHECK (process_type IN (
-                                'supplier_switch', 'short_notice_switch', 'move_in',
-                                'end_of_supply', 'forced_end_of_supply', 'move_out',
+                                'supplier_switch', 'move_in',
+                                'end_of_supply', 'move_out',
                                 'cancel_switch', 'cancel_end_of_supply',
                                 'incorrect_switch', 'incorrect_move'
                             )),

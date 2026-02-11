@@ -6,7 +6,7 @@ namespace DataHub.Settlement.Application.DataHub;
 /// </summary>
 public static class BusinessReasonCodes
 {
-    /// <summary>E03 — Leverandørskift (Supplier switch). Used by BRS-001 and BRS-043.</summary>
+    /// <summary>E03 — Leverandørskift (Supplier switch). Used by BRS-001.</summary>
     public const string SupplierSwitch = "E03";
 
     /// <summary>E20 — Leveranceophør (End of supply). Used by BRS-002 and BRS-044.</summary>
@@ -17,9 +17,6 @@ public static class BusinessReasonCodes
 
     /// <summary>E66 — Fraflytning (Move-out). Used by BRS-010.</summary>
     public const string MoveOut = "E66";
-
-    /// <summary>E34 — Tvunget leverandørskift (Forced supplier switch). Used by BRS-042.</summary>
-    public const string ForcedSwitch = "E34";
 
     /// <summary>D07 — Fejlagtigt leverandørskift (Erroneous switch). Used by BRS-003.</summary>
     public const string ErroneousSwitch = "D07";

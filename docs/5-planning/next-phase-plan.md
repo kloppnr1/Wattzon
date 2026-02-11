@@ -15,7 +15,7 @@ This phase bridges the two: close out MVP 3 gaps, then lay the MVP 4 foundation.
 | Corrections & delta calculation | Complete | `CorrectionEngine.cs`, GM#5, GM#9 |
 | Elvarme split-rate threshold | Complete | `AnnualConsumptionTracker`, GM#7 |
 | Solar/E18 net settlement | Complete | Settlement engine branching, GM#8 |
-| Erroneous switch (BRS-042) | Complete | `ErroneousSwitchService.cs`, GM#6, `BrsRequestBuilder.BuildBrs042()` |
+| Erroneous switch (BRS-042) | Removed (deprecated) | BRS-042 and BRS-043 have been removed as deprecated processes |
 | Reconciliation (RSM-014 parser) | Complete | `CimJsonParser.ParseRsm014()`, `ReconciliationService.cs` |
 | Move-in/Move-out (BRS-009/010) | Complete | Builder methods, simulator scenarios, integration tests |
 | Tariff change mid-period | Complete | `PeriodSplitter`, GM#10 |
@@ -137,7 +137,7 @@ Track A has no dependencies on Track B. They can be developed in parallel.
 | Task | Detail |
 |------|--------|
 | `BrsRequestBuilder.BuildBrs011()` | CIM JSON for erroneous move request with corrected date |
-| State machine transition | New process type `BRS011`, similar lifecycle to BRS-042 |
+| State machine transition | New process type `BRS011` |
 | Supply period adjustment | On confirmation: update `supply_period.start_date` or `end_date` |
 | Recalculation trigger | After date adjustment, recalculate settlement for the affected period |
 | Pro-rata subscription adjustment | Subscriptions recalculated for the new period length |
