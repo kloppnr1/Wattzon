@@ -267,6 +267,158 @@ public static class DatabaseSeeder
             signupNumber++;
         }
 
+        // ── Phase 3b: Additional processes with operationally interesting statuses ──
+        var extraProcessTypes = new[] { "supplier_switch", "move_in", "short_notice_switch", "end_of_supply" };
+        var extraProcesses = new List<(Guid Id, string Status, string ProcessType, string Gsrn, DateTime Created)>();
+
+        // 6 pending (just created, not yet sent)
+        for (int i = 0; i < 6; i++)
+        {
+            var pid = Guid.NewGuid();
+            var gsrn = MakeGsrn(gsrnCounter++);
+            var created = DateTime.UtcNow.AddHours(-rng.Next(1, 12));
+            await conn.ExecuteAsync(
+                "INSERT INTO lifecycle.process_request (id, process_type, gsrn, status, effective_date, datahub_correlation_id, requested_at, created_at) VALUES (@Id, @ProcessType, @Gsrn, 'pending', @EffDate, @CorrId, @Created, @Created)",
+                new { Id = pid, ProcessType = extraProcessTypes[i % extraProcessTypes.Length], Gsrn = gsrn, EffDate = DateTime.UtcNow.Date.AddDays(14 + i), CorrId = $"CORR-PEND-{i:D4}", Created = created });
+            extraProcesses.Add((pid, "pending", extraProcessTypes[i % extraProcessTypes.Length], gsrn, created));
+        }
+
+        // 8 sent_to_datahub (awaiting acknowledgement — the most operationally relevant)
+        for (int i = 0; i < 8; i++)
+        {
+            var pid = Guid.NewGuid();
+            var gsrn = MakeGsrn(gsrnCounter++);
+            var created = DateTime.UtcNow.AddDays(-rng.Next(1, 5)).AddHours(-rng.Next(1, 12));
+            await conn.ExecuteAsync(
+                "INSERT INTO lifecycle.process_request (id, process_type, gsrn, status, effective_date, datahub_correlation_id, requested_at, created_at) VALUES (@Id, @ProcessType, @Gsrn, 'sent_to_datahub', @EffDate, @CorrId, @Created, @Created)",
+                new { Id = pid, ProcessType = extraProcessTypes[i % extraProcessTypes.Length], Gsrn = gsrn, EffDate = DateTime.UtcNow.Date.AddDays(10 + i), CorrId = $"CORR-SENT-{i:D4}", Created = created });
+            extraProcesses.Add((pid, "sent_to_datahub", extraProcessTypes[i % extraProcessTypes.Length], gsrn, created));
+        }
+
+        // 5 acknowledged (waiting for effectuation date)
+        for (int i = 0; i < 5; i++)
+        {
+            var pid = Guid.NewGuid();
+            var gsrn = MakeGsrn(gsrnCounter++);
+            var created = DateTime.UtcNow.AddDays(-rng.Next(5, 15));
+            await conn.ExecuteAsync(
+                "INSERT INTO lifecycle.process_request (id, process_type, gsrn, status, effective_date, datahub_correlation_id, requested_at, created_at) VALUES (@Id, @ProcessType, @Gsrn, 'acknowledged', @EffDate, @CorrId, @Created, @Created)",
+                new { Id = pid, ProcessType = extraProcessTypes[i % extraProcessTypes.Length], Gsrn = gsrn, EffDate = DateTime.UtcNow.Date.AddDays(5 + i * 3), CorrId = $"CORR-ACK-{i:D4}", Created = created });
+            extraProcesses.Add((pid, "acknowledged", extraProcessTypes[i % extraProcessTypes.Length], gsrn, created));
+        }
+
+        // 3 cancellation_pending (cancellation request sent, awaiting DataHub response)
+        for (int i = 0; i < 3; i++)
+        {
+            var pid = Guid.NewGuid();
+            var gsrn = MakeGsrn(gsrnCounter++);
+            var created = DateTime.UtcNow.AddDays(-rng.Next(10, 20));
+            await conn.ExecuteAsync(
+                "INSERT INTO lifecycle.process_request (id, process_type, gsrn, status, effective_date, datahub_correlation_id, requested_at, created_at) VALUES (@Id, @ProcessType, @Gsrn, 'cancellation_pending', @EffDate, @CorrId, @Created, @Created)",
+                new { Id = pid, ProcessType = "supplier_switch", Gsrn = gsrn, EffDate = DateTime.UtcNow.Date.AddDays(7 + i), CorrId = $"CORR-CANP-{i:D4}", Created = created });
+            extraProcesses.Add((pid, "cancellation_pending", "supplier_switch", gsrn, created));
+        }
+
+        // ── Phase 3c: Process events for all process requests ──────────
+        // Events for existing signup-linked processes
+        foreach (var s in signupDefs.Where(s => s.Status != "registered"))
+        {
+            var prId = processRequestIds[s.Index];
+            var processStatus = s.Status switch { "active" => "completed", "processing" => "effectuation_pending", "rejected" => "rejected", "cancelled" => "cancelled", _ => "pending" };
+            var baseTime = DateTime.UtcNow.AddDays(-rng.Next(20, 55));
+
+            // All processes start with 'created'
+            await conn.ExecuteAsync(
+                "INSERT INTO lifecycle.process_event (id, process_request_id, occurred_at, event_type, source) VALUES (@Id, @PrId, @At, 'created', 'system')",
+                new { Id = Guid.NewGuid(), PrId = prId, At = baseTime });
+
+            if (processStatus == "pending") continue;
+
+            // sent
+            var sentAt = baseTime.AddMinutes(rng.Next(5, 120));
+            await conn.ExecuteAsync(
+                "INSERT INTO lifecycle.process_event (id, process_request_id, occurred_at, event_type, source) VALUES (@Id, @PrId, @At, 'sent', 'system')",
+                new { Id = Guid.NewGuid(), PrId = prId, At = sentAt });
+
+            if (processStatus == "rejected")
+            {
+                var rejAt = sentAt.AddMinutes(rng.Next(5, 60));
+                await conn.ExecuteAsync(
+                    "INSERT INTO lifecycle.process_event (id, process_request_id, occurred_at, event_type, payload, source) VALUES (@Id, @PrId, @At, 'rejection_reason', @Payload::jsonb, 'datahub')",
+                    new { Id = Guid.NewGuid(), PrId = prId, At = rejAt, Payload = "{\"reason\": \"E86 - Invalid effective date or existing active supplier\"}" });
+                continue;
+            }
+
+            // acknowledged
+            var ackAt = sentAt.AddMinutes(rng.Next(2, 30));
+            await conn.ExecuteAsync(
+                "INSERT INTO lifecycle.process_event (id, process_request_id, occurred_at, event_type, source) VALUES (@Id, @PrId, @At, 'acknowledged', 'datahub')",
+                new { Id = Guid.NewGuid(), PrId = prId, At = ackAt });
+
+            if (processStatus == "cancelled")
+            {
+                var cancelSentAt = ackAt.AddHours(rng.Next(2, 48));
+                await conn.ExecuteAsync(
+                    "INSERT INTO lifecycle.process_event (id, process_request_id, occurred_at, event_type, source) VALUES (@Id, @PrId, @At, 'cancellation_sent', 'system')",
+                    new { Id = Guid.NewGuid(), PrId = prId, At = cancelSentAt });
+                var cancelledAt = cancelSentAt.AddMinutes(rng.Next(5, 60));
+                await conn.ExecuteAsync(
+                    "INSERT INTO lifecycle.process_event (id, process_request_id, occurred_at, event_type, source) VALUES (@Id, @PrId, @At, 'cancelled', 'datahub')",
+                    new { Id = Guid.NewGuid(), PrId = prId, At = cancelledAt });
+                continue;
+            }
+
+            // awaiting_effectuation
+            var awaitAt = ackAt.AddHours(rng.Next(1, 24));
+            await conn.ExecuteAsync(
+                "INSERT INTO lifecycle.process_event (id, process_request_id, occurred_at, event_type, source) VALUES (@Id, @PrId, @At, 'awaiting_effectuation', 'datahub')",
+                new { Id = Guid.NewGuid(), PrId = prId, At = awaitAt });
+
+            if (processStatus == "effectuation_pending") continue;
+
+            // completed
+            var completedAt = awaitAt.AddDays(rng.Next(1, 10));
+            await conn.ExecuteAsync(
+                "INSERT INTO lifecycle.process_event (id, process_request_id, occurred_at, event_type, source) VALUES (@Id, @PrId, @At, 'completed', 'datahub')",
+                new { Id = Guid.NewGuid(), PrId = prId, At = completedAt });
+        }
+
+        // Events for extra processes (new statuses)
+        foreach (var (pid, status, _, _, created) in extraProcesses)
+        {
+            await conn.ExecuteAsync(
+                "INSERT INTO lifecycle.process_event (id, process_request_id, occurred_at, event_type, source) VALUES (@Id, @PrId, @At, 'created', 'system')",
+                new { Id = Guid.NewGuid(), PrId = pid, At = created });
+
+            if (status == "pending") continue;
+
+            var sentAt = created.AddMinutes(rng.Next(5, 60));
+            await conn.ExecuteAsync(
+                "INSERT INTO lifecycle.process_event (id, process_request_id, occurred_at, event_type, source) VALUES (@Id, @PrId, @At, 'sent', 'system')",
+                new { Id = Guid.NewGuid(), PrId = pid, At = sentAt });
+
+            if (status == "sent_to_datahub") continue;
+
+            var ackAt = sentAt.AddMinutes(rng.Next(2, 15));
+            await conn.ExecuteAsync(
+                "INSERT INTO lifecycle.process_event (id, process_request_id, occurred_at, event_type, source) VALUES (@Id, @PrId, @At, 'acknowledged', 'datahub')",
+                new { Id = Guid.NewGuid(), PrId = pid, At = ackAt });
+
+            if (status == "acknowledged") continue;
+
+            if (status == "cancellation_pending")
+            {
+                var awaitAt = ackAt.AddHours(rng.Next(1, 12));
+                await conn.ExecuteAsync(
+                    "INSERT INTO lifecycle.process_event (id, process_request_id, occurred_at, event_type, source) VALUES (@Id, @PrId, @At, 'awaiting_effectuation', 'datahub')",
+                    new { Id = Guid.NewGuid(), PrId = pid, At = awaitAt });
+                var cancelSentAt = awaitAt.AddHours(rng.Next(1, 24));
+                await conn.ExecuteAsync(
+                    "INSERT INTO lifecycle.process_event (id, process_request_id, occurred_at, event_type, source) VALUES (@Id, @PrId, @At, 'cancellation_sent', 'system')",
+                    new { Id = Guid.NewGuid(), PrId = pid, At = cancelSentAt });
+            }
+        }
+
         // ── Phase 4: Portfolio ───────────────────────────────────────────
         var activeMeteringPoints = new List<string>();
 
@@ -607,8 +759,8 @@ public static class DatabaseSeeder
             var periodStart = new DateTime(2025, rng.Next(1, 11), 1);
             var periodEnd = periodStart.AddMonths(1).AddDays(-1);
             await conn.ExecuteAsync(
-                "INSERT INTO billing.aconto_payment (id, gsrn, period_start, period_end, amount, paid_at) VALUES (@Id, @Gsrn, @PeriodStart, @PeriodEnd, @Amount, @PaidAt)",
-                new { Id = Guid.NewGuid(), Gsrn = gsrn, PeriodStart = periodStart, PeriodEnd = periodEnd, Amount = 400m + rng.Next(0, 400), PaidAt = periodStart.AddDays(15) });
+                "INSERT INTO billing.aconto_payment (id, gsrn, period_start, period_end, amount, paid_at, currency) VALUES (@Id, @Gsrn, @PeriodStart, @PeriodEnd, @Amount, @PaidAt, @Currency)",
+                new { Id = Guid.NewGuid(), Gsrn = gsrn, PeriodStart = periodStart, PeriodEnd = periodEnd, Amount = 400m + rng.Next(0, 400), PaidAt = periodStart.AddDays(15), Currency = "DKK" });
         }
 
         // ── Phase 10: Metering data history (for correction testing) ──────
