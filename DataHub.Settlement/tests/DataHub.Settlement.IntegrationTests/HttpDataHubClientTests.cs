@@ -28,8 +28,8 @@ public class HttpDataHubClientTests : IClassFixture<WebApplicationFactory<Progra
         var msg = await _sut.PeekAsync(QueueName.MasterData, CancellationToken.None);
 
         msg.Should().NotBeNull();
-        msg!.MessageType.Should().Be("RSM-028");
-        msg.RawPayload.Should().Contain("571313100000012345");
+        msg!.MessageType.Should().Be("RSM-001");
+        msg.RawPayload.Should().Contain("corr-sim-001");
     }
 
     [Fact]

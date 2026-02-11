@@ -40,7 +40,7 @@ public class SimulatorTests : IClassFixture<WebApplicationFactory<Program>>
         peekResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var msg = await peekResponse.Content.ReadFromJsonAsync<PeekResponse>(JsonOptions);
-        msg!.MessageType.Should().Be("RSM-028");
+        msg!.MessageType.Should().Be("RSM-001");
     }
 
     [Fact]
@@ -49,7 +49,7 @@ public class SimulatorTests : IClassFixture<WebApplicationFactory<Program>>
         await _client.PostAsync("/admin/reset", null);
         await _client.PostAsync("/admin/scenario/sunshine", null);
 
-        // Peek to get message ID
+        // Peek to get message ID (first message is RSM-001)
         var peekResponse = await _client.GetAsync("/v1.0/cim/MasterData");
         var msg = await peekResponse.Content.ReadFromJsonAsync<PeekResponse>(JsonOptions);
 
@@ -57,11 +57,11 @@ public class SimulatorTests : IClassFixture<WebApplicationFactory<Program>>
         var dequeueResponse = await _client.DeleteAsync($"/v1.0/cim/dequeue/{msg!.MessageId}");
         dequeueResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        // Peek again — next message should be RSM-031 (sunshine has RSM-028, RSM-031, RSM-022)
+        // Peek again — next message should be RSM-028 (sunshine has RSM-001, RSM-028, RSM-031, RSM-022)
         var peekResponse2 = await _client.GetAsync("/v1.0/cim/MasterData");
         peekResponse2.StatusCode.Should().Be(HttpStatusCode.OK);
         var msg2 = await peekResponse2.Content.ReadFromJsonAsync<PeekResponse>(JsonOptions);
-        msg2!.MessageType.Should().Be("RSM-031");
+        msg2!.MessageType.Should().Be("RSM-028");
     }
 
     [Fact]

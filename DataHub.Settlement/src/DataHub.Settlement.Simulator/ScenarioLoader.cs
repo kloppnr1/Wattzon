@@ -31,6 +31,9 @@ public static class ScenarioLoader
             case "auto_cancel":
                 LoadAutoCancel(state);
                 break;
+            case "forced_switch":
+                LoadForcedSwitch(state);
+                break;
             default:
                 throw new ArgumentException($"Unknown scenario: {scenarioName}");
         }
@@ -38,6 +41,10 @@ public static class ScenarioLoader
 
     private static void LoadSunshine(SimulatorState state)
     {
+        // RSM-001: Acceptance
+        state.EnqueueMessage("MasterData", "RSM-001", "corr-sim-001",
+            BuildRsm001AcceptJson("corr-sim-001"));
+
         // RSM-028: Customer data
         state.EnqueueMessage("MasterData", "RSM-028", "corr-sim-001",
             BuildRsm028Json("571313100000012345", "Anders Hansen", "1234567890"));
@@ -158,7 +165,7 @@ public static class ScenarioLoader
         return JsonSerializer.Serialize(doc);
     }
 
-    private static string BuildRsm012Json(DateTimeOffset start, DateTimeOffset end, int hours)
+    internal static string BuildRsm012Json(DateTimeOffset start, DateTimeOffset end, int hours)
     {
         var points = new List<object>();
         for (var i = 1; i <= hours; i++)
@@ -212,8 +219,23 @@ public static class ScenarioLoader
         return JsonSerializer.Serialize(doc);
     }
 
-    internal static string BuildRsm028Json(string gsrn, string customerName, string cprCvr, string customerType = "person")
+    internal static string BuildRsm028Json(string gsrn, string customerName, string cprCvr, string customerType = "person", bool includeCpr = true)
     {
+        object customer = includeCpr
+            ? new
+            {
+                name = customerName,
+                mRID = cprCvr,
+                type = customerType,
+                phone = "+45 12345678",
+                email = $"{customerName.ToLower().Replace(" ", ".")}@example.dk",
+            }
+            : (object)new
+            {
+                name = customerName,
+                type = customerType,
+            };
+
         var doc = new
         {
             MarketDocument = new
@@ -223,14 +245,7 @@ public static class ScenarioLoader
                 MktActivityRecord = new
                 {
                     MarketEvaluationPoint = new { mRID = gsrn },
-                    Customer = new
-                    {
-                        name = customerName,
-                        mRID = cprCvr,
-                        type = customerType,
-                        phone = "+45 12345678",
-                        email = $"{customerName.ToLower().Replace(" ", ".")}@example.dk",
-                    },
+                    Customer = customer,
                 },
             },
         };
@@ -303,5 +318,72 @@ public static class ScenarioLoader
             },
         };
         return JsonSerializer.Serialize(doc);
+    }
+
+    internal static string BuildRsm001AcceptJson(string correlationId)
+    {
+        var doc = new
+        {
+            MarketDocument = new
+            {
+                mRID = correlationId,
+                MktActivityRecord = new
+                {
+                    status = new { value = "A01" },
+                },
+            },
+        };
+        return JsonSerializer.Serialize(doc);
+    }
+
+    internal static string BuildRsm004D31Json(string gsrn, string effectiveDate)
+    {
+        var doc = new
+        {
+            MarketDocument = new
+            {
+                mRID = $"msg-rsm004-d31-{Guid.NewGuid():N}",
+                type = "E44",
+                MktActivityRecord = new
+                {
+                    MarketEvaluationPoint = new
+                    {
+                        mRID = gsrn,
+                    },
+                    Reason = new { code = "D31", text = "Overdragelse af målepunkt" },
+                    Period = new { timeInterval = new { start = effectiveDate } },
+                },
+            },
+        };
+        return JsonSerializer.Serialize(doc);
+    }
+
+    private static void LoadForcedSwitch(SimulatorState state)
+    {
+        var gsrn = "571313100000012345";
+        var effectiveDate = "2025-01-15T00:00:00Z";
+        var correlationId = "corr-sim-forced";
+
+        // RSM-004/D31: Transfer notification
+        state.EnqueueMessage("MasterData", "RSM-004", correlationId,
+            BuildRsm004D31Json(gsrn, effectiveDate));
+
+        // RSM-022: Master data
+        state.EnqueueMessage("MasterData", "RSM-022", correlationId,
+            BuildRsm022Json(gsrn, effectiveDate));
+
+        // RSM-028: Customer data (no CPR)
+        state.EnqueueMessage("MasterData", "RSM-028", correlationId,
+            BuildRsm028Json(gsrn, "Simulated Customer", "0000000000", includeCpr: false));
+
+        // RSM-031: Price attachments
+        state.EnqueueMessage("MasterData", "RSM-031", correlationId,
+            BuildRsm031Json(gsrn, effectiveDate));
+
+        // RSM-012: Metering data (retroactive)
+        state.EnqueueMessage("Timeseries", "RSM-012", correlationId, BuildRsm012Json(
+            new DateTimeOffset(2025, 1, 15, 0, 0, 0, TimeSpan.Zero),
+            new DateTimeOffset(2025, 2, 1, 0, 0, 0, TimeSpan.Zero),
+            408));
     }
 }

@@ -99,12 +99,12 @@ app.MapPost("/v1.0/cim/requestchangeofsupplier", async (HttpRequest request) =>
             BuildRsm001ResponseJson(correlationId, true));
     });
 
-    // RSM-028 (customer data) after 16s delay
+    // RSM-028 (customer data, no CPR per BRS-001 spec) after 16s delay
     _ = Task.Run(async () =>
     {
         await Task.Delay(16_000);
         state.EnqueueMessage("MasterData", "RSM-028", correlationId,
-            ScenarioLoader.BuildRsm028Json(gsrn ?? "571313100000012345", "Simulated Customer", "0000000000"));
+            ScenarioLoader.BuildRsm028Json(gsrn ?? "571313100000012345", "Simulated Customer", "0000000000", includeCpr: false));
     });
 
     // RSM-031 (price attachments) after 17s delay
@@ -115,9 +115,13 @@ app.MapPost("/v1.0/cim/requestchangeofsupplier", async (HttpRequest request) =>
             ScenarioLoader.BuildRsm031Json(gsrn ?? "571313100000012345", effectiveDateStr));
     });
 
-    // RSM-022 (master data confirmation) — scheduled for the effective date
-    var effectiveDate = DateOnly.TryParse(effectiveDateStr.Split('T')[0], out var ed) ? ed : DateOnly.FromDateTime(DateTime.UtcNow);
-    state.ScheduleEffectuation(gsrn ?? "571313100000012345", correlationId, effectiveDate);
+    // RSM-022 (master data) after 18s delay — sent with stamdata bundle, not on effective date
+    _ = Task.Run(async () =>
+    {
+        await Task.Delay(18_000);
+        state.EnqueueMessage("MasterData", "RSM-022", correlationId,
+            ScenarioLoader.BuildRsm022Json(gsrn ?? "571313100000012345", effectiveDateStr));
+    });
 
     return Results.Ok(new
     {
@@ -197,6 +201,74 @@ app.MapPost("/v1.0/cim/requestcancelchangeofsupplier", async (HttpRequest reques
     });
 });
 
+// ── BRS-044: Forced supplier switch (admin-initiated) ──
+app.MapPost("/admin/brs044", async (HttpRequest request) =>
+{
+    var body = await JsonSerializer.DeserializeAsync<Brs044Request>(request.Body);
+    if (body is null)
+        return Results.BadRequest("Invalid request body");
+
+    var correlationId = Guid.NewGuid().ToString();
+    var gsrn = body.Gsrn;
+    var effectiveDateStr = body.EffectiveDate;
+    var customerName = body.CustomerName ?? "Simulated Customer";
+
+    state.ActivateGsrn(gsrn);
+
+    // RSM-004/D31 immediately (transfer notification)
+    state.EnqueueMessage("MasterData", "RSM-004", correlationId,
+        ScenarioLoader.BuildRsm004D31Json(gsrn, effectiveDateStr));
+
+    // RSM-022 after 1s (master data)
+    _ = Task.Run(async () =>
+    {
+        await Task.Delay(1_000);
+        state.EnqueueMessage("MasterData", "RSM-022", correlationId,
+            ScenarioLoader.BuildRsm022Json(gsrn, effectiveDateStr));
+    });
+
+    // RSM-028 after 2s (customer data, no CPR)
+    _ = Task.Run(async () =>
+    {
+        await Task.Delay(2_000);
+        state.EnqueueMessage("MasterData", "RSM-028", correlationId,
+            ScenarioLoader.BuildRsm028Json(gsrn, customerName, "0000000000", includeCpr: false));
+    });
+
+    // RSM-031 after 3s (price attachments)
+    _ = Task.Run(async () =>
+    {
+        await Task.Delay(3_000);
+        state.EnqueueMessage("MasterData", "RSM-031", correlationId,
+            ScenarioLoader.BuildRsm031Json(gsrn, effectiveDateStr));
+    });
+
+    // RSM-012 after 4s (metering data — only for retroactive switches)
+    if (DateOnly.TryParse(effectiveDateStr.Split('T')[0], out var ed) && ed < DateOnly.FromDateTime(DateTime.UtcNow))
+    {
+        _ = Task.Run(async () =>
+        {
+            await Task.Delay(4_000);
+            var start = new DateTimeOffset(ed.Year, ed.Month, ed.Day, 0, 0, 0, TimeSpan.Zero);
+            var end = DateTimeOffset.UtcNow.Date;
+            var hours = (int)(end - start).TotalHours;
+            if (hours > 0)
+            {
+                state.EnqueueMessage("Timeseries", "RSM-012", correlationId,
+                    ScenarioLoader.BuildRsm012Json(start, new DateTimeOffset(end, TimeSpan.Zero), hours));
+            }
+        });
+    }
+
+    return Results.Ok(new
+    {
+        CorrelationId = correlationId,
+        Gsrn = gsrn,
+        EffectiveDate = effectiveDateStr,
+        Status = "initiated",
+    });
+});
+
 // ── Admin endpoints ──
 app.MapPost("/admin/enqueue", async (HttpRequest request) =>
 {
@@ -214,7 +286,7 @@ app.MapPost("/admin/scenario/{name}", (string name) =>
     {
         ScenarioLoader.Load(state, name);
         // Auto-register the default GSRN as active for scenarios that include RSM-007
-        if (name is "sunshine" or "full_lifecycle" or "cancellation" or "move_in" or "move_out" or "auto_cancel")
+        if (name is "sunshine" or "full_lifecycle" or "cancellation" or "move_in" or "move_out" or "auto_cancel" or "forced_switch")
             state.ActivateGsrn("571313100000012345");
         return Results.Ok(new { Scenario = name, Status = "loaded" });
     }
@@ -414,6 +486,7 @@ static string? ExtractGsrn(string body)
 }
 
 record EnqueueRequest(string Queue, string MessageType, string? CorrelationId, string Payload);
+record Brs044Request(string Gsrn, string EffectiveDate, string? CustomerName);
 
 // Make Program accessible for integration tests via WebApplicationFactory
 public partial class Program;
