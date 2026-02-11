@@ -24,7 +24,7 @@ public sealed class ProcessRepository : IProcessRepository
         const string sql = """
             INSERT INTO lifecycle.process_request (process_type, gsrn, effective_date)
             VALUES (@ProcessType, @Gsrn, @EffectiveDate)
-            RETURNING id, process_type, gsrn, status, effective_date, datahub_correlation_id
+            RETURNING id, process_type, gsrn, status, effective_date, datahub_correlation_id, cancel_correlation_id
             """;
 
         await using var conn = new NpgsqlConnection(_connectionString);
@@ -38,7 +38,7 @@ public sealed class ProcessRepository : IProcessRepository
         const string insertProcess = """
             INSERT INTO lifecycle.process_request (process_type, gsrn, effective_date)
             VALUES (@ProcessType, @Gsrn, @EffectiveDate)
-            RETURNING id, process_type, gsrn, status, effective_date, datahub_correlation_id
+            RETURNING id, process_type, gsrn, status, effective_date, datahub_correlation_id, cancel_correlation_id
             """;
 
         const string insertEvent = """

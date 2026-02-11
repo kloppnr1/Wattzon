@@ -207,7 +207,7 @@ public sealed class OnboardingService : IOnboardingService
                         var cimPayload = _brsBuilder.BuildBrs003(process.Gsrn, process.DatahubCorrelationId);
                         var response = await _dataHubClient.SendRequestAsync("cancel_switch", cimPayload, ct);
                         await _messageRepo.RecordOutboundRequestAsync(
-                            "BRS-003", process.Gsrn, response.CorrelationId,
+                            "RSM-003", process.Gsrn, response.CorrelationId,
                             response.Accepted ? "acknowledged_ok" : "acknowledged_error", ct);
                         _logger.LogInformation(
                             "Sent BRS-003 cancel to DataHub for GSRN {Gsrn}, correlation={CorrelationId}",

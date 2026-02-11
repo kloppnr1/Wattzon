@@ -380,12 +380,12 @@ public static class DatabaseSeeder
         foreach (var s in signupDefs.Where(s => s.Status == "active"))
         {
             var corrId = $"CORR-SEED-{s.Index:D4}";
-            var brsType = s.Type == "move_in" ? "BRS-009" : "BRS-001";
+            var rsmType = s.Type == "move_in" ? "RSM-001" : "RSM-001";
             var sentAt = DateTime.UtcNow.AddDays(-rng.Next(15, 55));
 
             await conn.ExecuteAsync(
                 "INSERT INTO datahub.outbound_request (id, process_type, gsrn, status, correlation_id, sent_at, response_at) VALUES (@Id, @Type, @Gsrn, 'acknowledged_ok', @CorrId, @Sent, @Resp)",
-                new { Id = Guid.NewGuid(), Type = brsType, Gsrn = s.Gsrn, CorrId = corrId, Sent = sentAt, Resp = sentAt.AddMinutes(rng.Next(1, 15)) });
+                new { Id = Guid.NewGuid(), Type = rsmType, Gsrn = s.Gsrn, CorrId = corrId, Sent = sentAt, Resp = sentAt.AddMinutes(rng.Next(1, 15)) });
 
             var rsm009At = sentAt.AddMinutes(rng.Next(2, 30));
             await conn.ExecuteAsync(
@@ -403,7 +403,7 @@ public static class DatabaseSeeder
             var corrId = $"CORR-SEED-{s.Index:D4}";
             var sentAt = DateTime.UtcNow.AddDays(-rng.Next(3, 10));
             await conn.ExecuteAsync(
-                "INSERT INTO datahub.outbound_request (id, process_type, gsrn, status, correlation_id, sent_at, response_at) VALUES (@Id, 'BRS-001', @Gsrn, 'acknowledged_ok', @CorrId, @Sent, @Resp)",
+                "INSERT INTO datahub.outbound_request (id, process_type, gsrn, status, correlation_id, sent_at, response_at) VALUES (@Id, 'RSM-001', @Gsrn, 'acknowledged_ok', @CorrId, @Sent, @Resp)",
                 new { Id = Guid.NewGuid(), Gsrn = s.Gsrn, CorrId = corrId, Sent = sentAt, Resp = sentAt.AddMinutes(rng.Next(1, 15)) });
             var rsm009At = sentAt.AddMinutes(rng.Next(5, 60));
             await conn.ExecuteAsync(
@@ -416,7 +416,7 @@ public static class DatabaseSeeder
             var corrId = $"CORR-SEED-{s.Index:D4}";
             var sentAt = DateTime.UtcNow.AddDays(-rng.Next(10, 30));
             await conn.ExecuteAsync(
-                "INSERT INTO datahub.outbound_request (id, process_type, gsrn, status, correlation_id, sent_at, response_at, error_details) VALUES (@Id, 'BRS-001', @Gsrn, 'acknowledged_error', @CorrId, @Sent, @Resp, @Error)",
+                "INSERT INTO datahub.outbound_request (id, process_type, gsrn, status, correlation_id, sent_at, response_at, error_details) VALUES (@Id, 'RSM-001', @Gsrn, 'acknowledged_error', @CorrId, @Sent, @Resp, @Error)",
                 new { Id = Guid.NewGuid(), Gsrn = s.Gsrn, CorrId = corrId, Sent = sentAt, Resp = sentAt.AddMinutes(rng.Next(1, 10)), Error = "E86 - Invalid effective date or existing active supplier" });
             var rsm009At = sentAt.AddMinutes(rng.Next(5, 60));
             await conn.ExecuteAsync(
@@ -429,10 +429,10 @@ public static class DatabaseSeeder
             var corrId = $"CORR-SEED-{s.Index:D4}";
             var sentAt = DateTime.UtcNow.AddDays(-rng.Next(10, 30));
             await conn.ExecuteAsync(
-                "INSERT INTO datahub.outbound_request (id, process_type, gsrn, status, correlation_id, sent_at, response_at) VALUES (@Id, 'BRS-001', @Gsrn, 'acknowledged_ok', @CorrId, @Sent, @Resp)",
+                "INSERT INTO datahub.outbound_request (id, process_type, gsrn, status, correlation_id, sent_at, response_at) VALUES (@Id, 'RSM-001', @Gsrn, 'acknowledged_ok', @CorrId, @Sent, @Resp)",
                 new { Id = Guid.NewGuid(), Gsrn = s.Gsrn, CorrId = corrId, Sent = sentAt, Resp = sentAt.AddMinutes(rng.Next(1, 10)) });
             var cancelAt = sentAt.AddHours(rng.Next(2, 48));
-            var cancelType = rng.Next(2) == 0 ? "BRS-003" : "BRS-044";
+            var cancelType = rng.Next(2) == 0 ? "RSM-003" : "RSM-044";
             await conn.ExecuteAsync(
                 "INSERT INTO datahub.outbound_request (id, process_type, gsrn, status, correlation_id, sent_at, response_at) VALUES (@Id, @Type, @Gsrn, 'acknowledged_ok', @CorrId, @Sent, @Resp)",
                 new { Id = Guid.NewGuid(), Type = cancelType, Gsrn = s.Gsrn, CorrId = corrId, Sent = cancelAt, Resp = cancelAt.AddMinutes(rng.Next(1, 10)) });

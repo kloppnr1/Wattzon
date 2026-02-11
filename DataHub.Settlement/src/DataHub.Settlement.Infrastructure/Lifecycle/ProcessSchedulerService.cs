@@ -106,9 +106,15 @@ public sealed class ProcessSchedulerService : BackgroundService
                 var response = await _dataHubClient.SendRequestAsync(process.ProcessType, cimPayload, ct);
 
                 // Record outbound request for conversation timeline
-                var brsType = process.ProcessType == "supplier_switch" ? "BRS-001" : "BRS-009";
+                var rsmType = process.ProcessType switch
+                {
+                    "supplier_switch" => "RSM-001",
+                    "move_in" => "RSM-001",
+                    "end_of_supply" => "RSM-005",
+                    _ => process.ProcessType,
+                };
                 var outboundStatus = response.Accepted ? "acknowledged_ok" : "acknowledged_error";
-                await _messageRepo.RecordOutboundRequestAsync(brsType, process.Gsrn, response.CorrelationId, outboundStatus, ct);
+                await _messageRepo.RecordOutboundRequestAsync(rsmType, process.Gsrn, response.CorrelationId, outboundStatus, ct);
 
                 // Transition: pending → sent_to_datahub
                 var stateMachine = new ProcessStateMachine(_processRepo, _clock);

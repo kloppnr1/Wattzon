@@ -408,13 +408,13 @@ int inboundCount = 0;
 foreach (var s in signupDefs.Where(s => s.Status == "active"))
 {
     var corrId = $"CORR-SEED-{s.Index:D4}";
-    var brsType = s.Type == "move_in" ? "BRS-009" : "BRS-001";
+    var rsmType = s.Type == "move_in" ? "RSM-001" : "RSM-001";
     var sentAt = DateTime.UtcNow.AddDays(-rng.Next(15, 55));
 
-    // 1. BRS outbound request
+    // 1. RSM outbound request
     await conn.ExecuteAsync(
         "INSERT INTO datahub.outbound_request (id, process_type, gsrn, status, correlation_id, sent_at, response_at) VALUES (@Id, @Type, @Gsrn, 'acknowledged_ok', @CorrId, @Sent, @Resp)",
-        new { Id = Guid.NewGuid(), Type = brsType, Gsrn = s.Gsrn, CorrId = corrId, Sent = sentAt, Resp = sentAt.AddMinutes(rng.Next(1, 15)) });
+        new { Id = Guid.NewGuid(), Type = rsmType, Gsrn = s.Gsrn, CorrId = corrId, Sent = sentAt, Resp = sentAt.AddMinutes(rng.Next(1, 15)) });
     outboundCount++;
 
     // 2. RSM-009 acknowledgement inbound
@@ -432,16 +432,16 @@ foreach (var s in signupDefs.Where(s => s.Status == "active"))
     inboundCount++;
 }
 
-// Processing signups: BRS outbound + RSM-009 (waiting for RSM-007)
+// Processing signups: RSM outbound + RSM-009 (waiting for RSM-007)
 foreach (var s in signupDefs.Where(s => s.Status == "processing"))
 {
     var corrId = $"CORR-SEED-{s.Index:D4}";
-    var brsType = "BRS-001";
+    var rsmType = "RSM-001";
     var sentAt = DateTime.UtcNow.AddDays(-rng.Next(3, 10));
 
     await conn.ExecuteAsync(
         "INSERT INTO datahub.outbound_request (id, process_type, gsrn, status, correlation_id, sent_at, response_at) VALUES (@Id, @Type, @Gsrn, 'acknowledged_ok', @CorrId, @Sent, @Resp)",
-        new { Id = Guid.NewGuid(), Type = brsType, Gsrn = s.Gsrn, CorrId = corrId, Sent = sentAt, Resp = sentAt.AddMinutes(rng.Next(1, 15)) });
+        new { Id = Guid.NewGuid(), Type = rsmType, Gsrn = s.Gsrn, CorrId = corrId, Sent = sentAt, Resp = sentAt.AddMinutes(rng.Next(1, 15)) });
     outboundCount++;
 
     var rsm009At = sentAt.AddMinutes(rng.Next(5, 60));
@@ -451,14 +451,14 @@ foreach (var s in signupDefs.Where(s => s.Status == "processing"))
     inboundCount++;
 }
 
-// Rejected signups: BRS outbound + RSM-009 rejection
+// Rejected signups: RSM outbound + RSM-009 rejection
 foreach (var s in signupDefs.Where(s => s.Status == "rejected"))
 {
     var corrId = $"CORR-SEED-{s.Index:D4}";
     var sentAt = DateTime.UtcNow.AddDays(-rng.Next(10, 30));
 
     await conn.ExecuteAsync(
-        "INSERT INTO datahub.outbound_request (id, process_type, gsrn, status, correlation_id, sent_at, response_at, error_details) VALUES (@Id, 'BRS-001', @Gsrn, 'acknowledged_error', @CorrId, @Sent, @Resp, @Error)",
+        "INSERT INTO datahub.outbound_request (id, process_type, gsrn, status, correlation_id, sent_at, response_at, error_details) VALUES (@Id, 'RSM-001', @Gsrn, 'acknowledged_error', @CorrId, @Sent, @Resp, @Error)",
         new { Id = Guid.NewGuid(), Gsrn = s.Gsrn, CorrId = corrId, Sent = sentAt, Resp = sentAt.AddMinutes(rng.Next(1, 10)), Error = "E86 - Invalid effective date or existing active supplier" });
     outboundCount++;
 
@@ -469,21 +469,21 @@ foreach (var s in signupDefs.Where(s => s.Status == "rejected"))
     inboundCount++;
 }
 
-// Cancelled signups: BRS outbound + BRS-003/044 cancel outbound
+// Cancelled signups: RSM outbound + RSM-003/044 cancel outbound
 foreach (var s in signupDefs.Where(s => s.Status == "cancelled"))
 {
     var corrId = $"CORR-SEED-{s.Index:D4}";
     var sentAt = DateTime.UtcNow.AddDays(-rng.Next(10, 30));
 
-    // Original BRS-001
+    // Original RSM-001
     await conn.ExecuteAsync(
-        "INSERT INTO datahub.outbound_request (id, process_type, gsrn, status, correlation_id, sent_at, response_at) VALUES (@Id, 'BRS-001', @Gsrn, 'acknowledged_ok', @CorrId, @Sent, @Resp)",
+        "INSERT INTO datahub.outbound_request (id, process_type, gsrn, status, correlation_id, sent_at, response_at) VALUES (@Id, 'RSM-001', @Gsrn, 'acknowledged_ok', @CorrId, @Sent, @Resp)",
         new { Id = Guid.NewGuid(), Gsrn = s.Gsrn, CorrId = corrId, Sent = sentAt, Resp = sentAt.AddMinutes(rng.Next(1, 10)) });
     outboundCount++;
 
-    // Cancel BRS-003/044
+    // Cancel RSM-003/044
     var cancelAt = sentAt.AddHours(rng.Next(2, 48));
-    var cancelType = rng.Next(2) == 0 ? "BRS-003" : "BRS-044";
+    var cancelType = rng.Next(2) == 0 ? "RSM-003" : "RSM-044";
     await conn.ExecuteAsync(
         "INSERT INTO datahub.outbound_request (id, process_type, gsrn, status, correlation_id, sent_at, response_at) VALUES (@Id, @Type, @Gsrn, 'acknowledged_ok', @CorrId, @Sent, @Resp)",
         new { Id = Guid.NewGuid(), Type = cancelType, Gsrn = s.Gsrn, CorrId = corrId, Sent = cancelAt, Resp = cancelAt.AddMinutes(rng.Next(1, 10)) });
