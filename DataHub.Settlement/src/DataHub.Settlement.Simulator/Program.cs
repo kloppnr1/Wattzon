@@ -6,6 +6,14 @@ builder.Services.AddSingleton<SimulatorState>();
 
 var app = builder.Build();
 var state = app.Services.GetRequiredService<SimulatorState>();
+var logger = app.Services.GetRequiredService<ILogger<Program>>();
+
+// Log all incoming requests
+app.Use(async (context, next) =>
+{
+    logger.LogInformation("{Method} {Path}", context.Request.Method, context.Request.Path);
+    await next();
+});
 
 // Background timer: check pending effectuations every 5 seconds
 _ = Task.Run(async () =>
