@@ -96,18 +96,18 @@ export default function BillingPeriods() {
                 periods.map((period) => (
                   <tr key={period.id} className="hover:bg-slate-50 transition-colors cursor-pointer">
                     <td className="px-4 py-2.5 whitespace-nowrap">
-                      <Link to={`/billing/periods/${period.id}`} className="text-teal-600 font-medium hover:text-teal-700">
+                      <Link to={`/billing/periods/${period.id}`} className="text-sm text-teal-600 font-medium hover:text-teal-700">
                         {period.periodStart}
                       </Link>
                     </td>
                     <td className="px-4 py-2.5 whitespace-nowrap text-sm text-slate-700">{period.periodEnd}</td>
                     <td className="px-4 py-2.5 whitespace-nowrap">
-                      <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-slate-100 text-slate-700">
+                      <span className="inline-flex px-2 py-0.5 text-[11px] font-medium rounded-full bg-slate-100 text-slate-700">
                         {period.frequency}
                       </span>
                     </td>
                     <td className="px-4 py-2.5 whitespace-nowrap">
-                      <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-teal-100 text-teal-700">
+                      <span className="inline-flex px-2 py-0.5 text-[11px] font-medium rounded-full bg-teal-100 text-teal-700">
                         {period.settlementRunCount}
                       </span>
                     </td>

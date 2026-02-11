@@ -210,9 +210,9 @@ export default function SettlementRunDetail() {
                       <th className="px-4 py-2.5 text-right text-[10px] font-semibold text-slate-600 uppercase tracking-wider">{t('runDetail.colVat')}</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-50">
+                  <tbody className="divide-y divide-slate-100">
                     {group.lines.map((line) => (
-                      <tr key={line.id} className="hover:bg-slate-50/50 transition-colors">
+                      <tr key={line.id} className="hover:bg-slate-50 transition-colors">
                         <td className="px-4 py-2.5 text-sm text-slate-700">{chargeTypeLabel(line.chargeType)}</td>
                         <td className="px-4 py-2.5 text-right text-sm text-slate-600 tabular-nums">{line.totalKwh.toFixed(3)}</td>
                         <td className="px-4 py-2.5 text-right text-sm text-slate-900 tabular-nums">{line.totalAmount.toFixed(2)}</td>

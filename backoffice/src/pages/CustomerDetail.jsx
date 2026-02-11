@@ -114,9 +114,9 @@ export default function CustomerDetail() {
                   <td className="px-4 py-2.5">
                     <span className="text-[11px] font-mono text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">{c.gsrn}</span>
                   </td>
-                  <td className="px-4 py-2.5 text-xs text-slate-600 capitalize font-medium">{c.billingFrequency}</td>
-                  <td className="px-4 py-2.5 text-xs text-slate-600 capitalize font-medium">{c.paymentModel}</td>
-                  <td className="px-4 py-2.5 text-xs text-slate-500">{c.startDate}</td>
+                  <td className="px-4 py-2.5 text-sm text-slate-600 capitalize">{c.billingFrequency}</td>
+                  <td className="px-4 py-2.5 text-sm text-slate-600 capitalize">{c.paymentModel}</td>
+                  <td className="px-4 py-2.5 text-sm text-slate-500">{c.startDate}</td>
                 </tr>
               ))}
             </tbody>
@@ -156,9 +156,9 @@ export default function CustomerDetail() {
                   <td className="px-4 py-2.5">
                     <span className="text-[11px] font-mono text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">{mp.gsrn}</span>
                   </td>
-                  <td className="px-4 py-2.5 text-xs text-slate-600 font-medium">{mp.type}</td>
-                  <td className="px-4 py-2.5 text-xs text-slate-600 font-medium">{mp.settlementMethod}</td>
-                  <td className="px-4 py-2.5 text-xs text-slate-600">{mp.gridAreaCode} <span className="text-slate-400">({mp.priceArea})</span></td>
+                  <td className="px-4 py-2.5 text-sm text-slate-600">{mp.type}</td>
+                  <td className="px-4 py-2.5 text-sm text-slate-600">{mp.settlementMethod}</td>
+                  <td className="px-4 py-2.5 text-sm text-slate-600">{mp.gridAreaCode} <span className="text-slate-400">({mp.priceArea})</span></td>
                   <td className="px-4 py-2.5">
                     <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium ${
                       mp.connectionStatus === 'connected' ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'
@@ -167,7 +167,7 @@ export default function CustomerDetail() {
                       {t('status.' + mp.connectionStatus)}
                     </span>
                   </td>
-                  <td className="px-4 py-2.5 text-xs text-slate-500">
+                  <td className="px-4 py-2.5 text-sm text-slate-500">
                     {mp.supplyStart
                       ? `${mp.supplyStart}${mp.supplyEnd ? ` – ${mp.supplyEnd}` : ` – ${t('customerDetail.ongoing')}`}`
                       : <span className="text-slate-300">—</span>}

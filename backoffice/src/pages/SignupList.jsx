@@ -140,24 +140,24 @@ export default function SignupList() {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {signups.map((s) => (
-                <tr key={s.id} className={`transition-colors duration-150 hover:bg-slate-50`}>
+                <tr key={s.id} className="hover:bg-slate-50 transition-colors">
                   <td className="px-4 py-2.5">
-                    <Link to={`/signups/${s.id}`} className="text-xs font-semibold text-teal-600 hover:text-teal-800 transition-colors">
+                    <Link to={`/signups/${s.id}`} className="text-sm font-medium text-teal-600 hover:text-teal-700 transition-colors">
                       {s.signupNumber}
                     </Link>
                   </td>
-                  <td className="px-4 py-2.5 text-xs text-slate-700 font-medium">{s.customerName}</td>
+                  <td className="px-4 py-2.5 text-sm text-slate-700">{s.customerName}</td>
                   <td className="px-4 py-2.5">
                     <span className="text-[11px] font-mono text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">
                       {s.gsrn}
                     </span>
                   </td>
-                  <td className="px-4 py-2.5 text-xs text-slate-500">
+                  <td className="px-4 py-2.5 text-sm text-slate-500">
                     {s.type === 'move_in' ? t('signupList.typeMoveIn') : t('signupList.typeSwitch')}
                   </td>
-                  <td className="px-4 py-2.5 text-xs text-slate-500">{s.effectiveDate}</td>
+                  <td className="px-4 py-2.5 text-sm text-slate-500">{s.effectiveDate}</td>
                   <td className="px-4 py-2.5"><StatusBadge status={s.status} label={t('status.' + s.status)} /></td>
-                  <td className="px-4 py-2.5 text-xs text-slate-400">
+                  <td className="px-4 py-2.5 text-sm text-slate-500">
                     {new Date(s.createdAt).toLocaleDateString('da-DK')}
                   </td>
                   <td className="px-4 py-2.5 text-right">

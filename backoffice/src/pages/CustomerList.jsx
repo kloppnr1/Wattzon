@@ -128,7 +128,7 @@ export default function CustomerList() {
                           {c.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
                         </span>
                       </div>
-                      <span className="text-xs font-semibold text-teal-600 hover:text-teal-800 transition-colors">
+                      <span className="text-sm font-medium text-teal-600 hover:text-teal-700 transition-colors">
                         {c.name}
                       </span>
                     </Link>
@@ -136,7 +136,7 @@ export default function CustomerList() {
                   <td className="px-4 py-2.5">
                     <span className="text-[11px] font-mono text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">{c.cprCvr}</span>
                   </td>
-                  <td className="px-4 py-2.5 text-xs text-slate-500 capitalize">{c.contactType}</td>
+                  <td className="px-4 py-2.5 text-sm text-slate-500 capitalize">{c.contactType}</td>
                   <td className="px-4 py-2.5">
                     <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium ${
                       c.status === 'active' ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'

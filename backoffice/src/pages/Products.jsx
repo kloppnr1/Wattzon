@@ -70,7 +70,7 @@ export default function Products() {
               {products.map((p, i) => (
                 <tr key={p.id} className={`hover:bg-slate-50 transition-colors animate-slide-in`} style={{ animationDelay: `${i * 40}ms` }}>
                   <td className="px-4 py-2.5">
-                    <span className="text-xs font-semibold text-slate-900">{p.name}</span>
+                    <span className="text-sm font-medium text-slate-900">{p.name}</span>
                   </td>
                   <td className="px-4 py-2.5">
                     <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-medium bg-teal-50 text-teal-600">
@@ -87,19 +87,19 @@ export default function Products() {
                     )}
                   </td>
                   <td className="px-4 py-2.5 text-right">
-                    <span className="text-xs font-semibold text-slate-900">{p.margin_ore_per_kwh}</span>
+                    <span className="text-sm font-semibold text-slate-900">{p.margin_ore_per_kwh}</span>
                     <span className="text-[10px] text-slate-400 ml-1">øre</span>
                   </td>
                   <td className="px-4 py-2.5 text-right">
-                    <span className="text-xs font-semibold text-slate-900">{p.supplement_ore_per_kwh ?? '—'}</span>
+                    <span className="text-sm font-semibold text-slate-900">{p.supplement_ore_per_kwh ?? '—'}</span>
                     {p.supplement_ore_per_kwh && <span className="text-[10px] text-slate-400 ml-1">øre</span>}
                   </td>
                   <td className="px-4 py-2.5 text-right">
-                    <span className="text-xs font-semibold text-slate-900">{p.subscription_kr_per_month}</span>
+                    <span className="text-sm font-semibold text-slate-900">{p.subscription_kr_per_month}</span>
                     <span className="text-[10px] text-slate-400 ml-1">kr</span>
                   </td>
                   <td className="px-4 py-2.5">
-                    <span className="text-xs text-slate-500">{p.description || '—'}</span>
+                    <span className="text-sm text-slate-500">{p.description || '—'}</span>
                   </td>
                 </tr>
               ))}

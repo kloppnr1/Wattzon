@@ -169,7 +169,7 @@ export default function CorrectionDetail() {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {(detail.lines || []).map((line) => (
-                <tr key={line.id} className="hover:bg-slate-50/50 transition-colors">
+                <tr key={line.id} className="hover:bg-slate-50 transition-colors">
                   <td className="px-4 py-2.5 text-sm text-slate-700">{chargeTypeLabel(line.chargeType)}</td>
                   <td className="px-4 py-2.5 text-right text-sm text-slate-600 tabular-nums">{line.deltaKwh.toFixed(3)}</td>
                   <td className="px-4 py-2.5 text-right text-sm text-slate-900 tabular-nums font-medium">{line.deltaAmount.toFixed(2)} DKK</td>

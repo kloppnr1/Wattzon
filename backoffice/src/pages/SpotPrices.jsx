@@ -183,13 +183,13 @@ export default function SpotPrices() {
                   </td>
                 </tr>
               ) : (
-                items.map((item, i) => {
+                items.map((item) => {
                   const ts = new Date(item.timestamp);
                   const dateStr = ts.toLocaleDateString(lang === 'da' ? 'da-DK' : 'en-GB');
                   const timeStr = ts.toLocaleTimeString(lang === 'da' ? 'da-DK' : 'en-GB', { hour: '2-digit', minute: '2-digit' });
                   const dkkPerMwh = item.pricePerKwh * 10;
                   return (
-                    <tr key={`${item.timestamp}-${item.priceArea}`} className={`transition-colors ${i % 2 === 0 ? 'bg-white hover:bg-teal-50/30' : 'bg-slate-50/50 hover:bg-teal-50/50'}`}>
+                    <tr key={`${item.timestamp}-${item.priceArea}`} className="hover:bg-slate-50 transition-colors">
                       <td className="px-4 py-2.5 whitespace-nowrap text-sm font-mono text-slate-600">
                         {ts.toISOString().slice(0, 16).replace('T', ' ')}
                       </td>
@@ -202,7 +202,7 @@ export default function SpotPrices() {
                         {dkkPerMwh.toFixed(2)}
                       </td>
                       <td className="px-4 py-2.5 whitespace-nowrap">
-                        <span className={`inline-flex px-2 py-0.5 text-xs font-medium rounded-full ${
+                        <span className={`inline-flex px-2 py-0.5 text-[11px] font-medium rounded-full ${
                           item.resolution === 'PT15M'
                             ? 'bg-purple-100 text-purple-700'
                             : 'bg-slate-100 text-slate-600'

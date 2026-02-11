@@ -126,7 +126,7 @@ export default function BillingPeriodDetail() {
                 period.settlementRuns.map((run) => (
                   <tr key={run.id} className="hover:bg-slate-50 transition-colors cursor-pointer">
                     <td className="px-4 py-2.5 whitespace-nowrap">
-                      <Link to={`/billing/runs/${run.id}`} className="text-teal-600 font-medium hover:text-teal-700">
+                      <Link to={`/billing/runs/${run.id}`} className="text-sm text-teal-600 font-medium hover:text-teal-700">
                         v{run.version}
                       </Link>
                     </td>

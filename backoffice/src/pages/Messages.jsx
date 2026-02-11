@@ -337,12 +337,12 @@ export default function Messages() {
                     inboundItems.map((msg) => (
                       <tr key={msg.id} className="hover:bg-slate-50 transition-colors">
                         <td className="px-4 py-2.5 whitespace-nowrap">
-                          <Link to={`/datahub/messages/inbound/${msg.id}`} className="text-teal-600 font-medium hover:text-teal-700">
+                          <Link to={`/datahub/messages/inbound/${msg.id}`} className="text-sm text-teal-600 font-medium hover:text-teal-700">
                             {msg.messageType}
                           </Link>
                         </td>
                         <td className="px-4 py-2.5 whitespace-nowrap">
-                          <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                          <span className={`inline-flex px-2 py-0.5 text-[11px] font-medium rounded-full ${
                             msg.status === 'processed' ? 'bg-emerald-100 text-emerald-700'
                               : msg.status === 'dead_lettered' ? 'bg-rose-100 text-rose-700'
                               : 'bg-slate-100 text-slate-600'
@@ -478,13 +478,13 @@ export default function Messages() {
                     dlItems.map((dl) => (
                       <tr key={dl.id} className="hover:bg-slate-50 transition-colors">
                         <td className="px-4 py-2.5 whitespace-nowrap">
-                          <Link to={`/datahub/messages/dead-letters/${dl.id}`} className="text-teal-600 font-medium hover:text-teal-700">
+                          <Link to={`/datahub/messages/dead-letters/${dl.id}`} className="text-sm text-teal-600 font-medium hover:text-teal-700">
                             {dl.queueName}
                           </Link>
                         </td>
                         <td className="px-4 py-2.5 text-sm text-slate-700 max-w-md truncate">{dl.errorReason}</td>
                         <td className="px-4 py-2.5 whitespace-nowrap">
-                          <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                          <span className={`inline-flex px-2 py-0.5 text-[11px] font-medium rounded-full ${
                             dl.resolved ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'
                           }`}>
                             {dl.resolved ? t('common.yes') : t('common.no')}
