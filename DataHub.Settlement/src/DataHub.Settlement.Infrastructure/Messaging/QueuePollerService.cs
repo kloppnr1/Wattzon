@@ -115,7 +115,7 @@ public sealed class QueuePollerService : BackgroundService
             _logger.LogInformation("Message {MessageId} processed successfully", message.MessageId);
             return true;
         }
-        catch (Exception ex) when (ex is FormatException or ArgumentException or System.Text.Json.JsonException)
+        catch (Exception ex) when (ex is FormatException or ArgumentException or System.Text.Json.JsonException or InvalidOperationException)
         {
             // Parse errors → dead-letter + dequeue (free the queue)
             _logger.LogWarning(ex, "Message {MessageId} failed to parse, dead-lettering", message.MessageId);
@@ -190,37 +190,47 @@ public sealed class QueuePollerService : BackgroundService
             var signup = await _signupRepo.GetActiveByGsrnAsync(masterData.MeteringPointId, ct);
             if (signup is not null && signup.ProcessRequestId.HasValue)
             {
-                var effectiveDate = DateOnly.FromDateTime(masterData.SupplyStart.UtcDateTime);
-
-                // 1. Mark process completed (supply has started per DataHub)
-                var stateMachine = new ProcessStateMachine(_processRepo, _clock);
-                await stateMachine.MarkCompletedAsync(signup.ProcessRequestId.Value, ct);
-
-                // 2. Sync signup status → creates or links Customer entity
-                await _onboardingService.SyncFromProcessAsync(signup.ProcessRequestId.Value, "completed", null, ct);
-
-                // 3. Reload signup to get the customer_id (just created or linked)
-                // Note: Can't use GetActiveByGsrnAsync here because it filters OUT status='active'
-                signup = await _signupRepo.GetByIdAsync(signup.Id, ct);
-
-                if (signup?.CustomerId is not null)
+                var process = await _processRepo.GetAsync(signup.ProcessRequestId.Value, ct);
+                if (process is not null && process.Status is "cancellation_pending" or "cancelled")
                 {
-                    // 4. Create Contract and SupplyPeriod
-                    await _portfolioRepo.CreateContractAsync(
-                        signup.CustomerId.Value, masterData.MeteringPointId, signup.ProductId,
-                        "quarterly", "aconto", effectiveDate, ct);
-
-                    await _portfolioRepo.CreateSupplyPeriodAsync(masterData.MeteringPointId, effectiveDate, ct);
-
                     _logger.LogInformation(
-                        "RSM-007: Activated portfolio for signup {SignupNumber}, GSRN {Gsrn}, supply from {Start}",
-                        signup.SignupNumber, masterData.MeteringPointId, masterData.SupplyStart);
+                        "RSM-007: Skipping activation for process {ProcessId} — process is {Status}",
+                        process.Id, process.Status);
                 }
                 else
                 {
-                    _logger.LogWarning(
-                        "RSM-007: Signup {SignupNumber} for GSRN {Gsrn} has no customer after activation — portfolio not created",
-                        signup?.SignupNumber ?? "unknown", masterData.MeteringPointId);
+                    var effectiveDate = DateOnly.FromDateTime(masterData.SupplyStart.UtcDateTime);
+
+                    // 1. Mark process completed (supply has started per DataHub)
+                    var stateMachine = new ProcessStateMachine(_processRepo, _clock);
+                    await stateMachine.MarkCompletedAsync(signup.ProcessRequestId.Value, ct);
+
+                    // 2. Sync signup status → creates or links Customer entity
+                    await _onboardingService.SyncFromProcessAsync(signup.ProcessRequestId.Value, "completed", null, ct);
+
+                    // 3. Reload signup to get the customer_id (just created or linked)
+                    // Note: Can't use GetActiveByGsrnAsync here because it filters OUT status='active'
+                    signup = await _signupRepo.GetByIdAsync(signup.Id, ct);
+
+                    if (signup?.CustomerId is not null)
+                    {
+                        // 4. Create Contract and SupplyPeriod
+                        await _portfolioRepo.CreateContractAsync(
+                            signup.CustomerId.Value, masterData.MeteringPointId, signup.ProductId,
+                            "quarterly", "aconto", effectiveDate, ct);
+
+                        await _portfolioRepo.CreateSupplyPeriodAsync(masterData.MeteringPointId, effectiveDate, ct);
+
+                        _logger.LogInformation(
+                            "RSM-007: Activated portfolio for signup {SignupNumber}, GSRN {Gsrn}, supply from {Start}",
+                            signup.SignupNumber, masterData.MeteringPointId, masterData.SupplyStart);
+                    }
+                    else
+                    {
+                        _logger.LogWarning(
+                            "RSM-007: Signup {SignupNumber} for GSRN {Gsrn} has no customer after activation — portfolio not created",
+                            signup?.SignupNumber ?? "unknown", masterData.MeteringPointId);
+                    }
                 }
             }
             else if (signup is null)
