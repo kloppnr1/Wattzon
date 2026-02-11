@@ -317,10 +317,10 @@ describe('ConversationTimeline', () => {
 
     const rsm001Links = screen.getAllByText('RSM-001').map(el => el.closest('a'));
     const outboundLink = rsm001Links.find(a => a?.getAttribute('href')?.includes('/outbound/'));
-    expect(outboundLink).toHaveAttribute('href', '/messages/outbound/out-abc');
+    expect(outboundLink).toHaveAttribute('href', '/datahub/messages/outbound/out-abc');
 
     const inboundLink = rsm001Links.find(a => a?.getAttribute('href')?.includes('/inbound/'));
-    expect(inboundLink).toHaveAttribute('href', '/messages/inbound/in-xyz');
+    expect(inboundLink).toHaveAttribute('href', '/datahub/messages/inbound/in-xyz');
   });
 
   // ══════════════════════════════════════════════════════════════

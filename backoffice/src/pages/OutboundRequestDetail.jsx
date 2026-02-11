@@ -58,7 +58,7 @@ export default function OutboundRequestDetail() {
     <div className="p-4 sm:p-8 max-w-6xl mx-auto">
       {/* Breadcrumb */}
       <div className="mb-4 flex items-center gap-2 text-sm text-slate-500">
-        <Link to="/messages" className="hover:text-teal-600">{t('outboundDetail.breadcrumbMessages')}</Link>
+        <Link to="/datahub/messages" className="hover:text-teal-600">{t('outboundDetail.breadcrumbMessages')}</Link>
         <span>/</span>
         <span className="text-slate-900 font-medium">{t('outboundDetail.breadcrumbOutbound')}</span>
       </div>

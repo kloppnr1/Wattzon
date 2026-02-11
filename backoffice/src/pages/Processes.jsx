@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '../api';
 import { useTranslation } from '../i18n/LanguageContext';
+import { ConversationTimeline } from './Messages';
 
 const STATUSES = [
   'pending',
@@ -223,6 +224,7 @@ export default function Processes() {
                     {expandedId === p.id && (
                       <tr key={`${p.id}-events`}>
                         <td colSpan={6} className="bg-slate-50/50 px-6 py-4 pl-12">
+                          <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">{t('processes.processEvents')}</div>
                           {loadingEvents === p.id ? (
                             <div className="flex items-center gap-2 py-2">
                               <div className="w-4 h-4 border-2 border-teal-100 border-t-teal-500 rounded-full animate-spin" />
@@ -273,6 +275,11 @@ export default function Processes() {
                                   );
                                 })}
                               </div>
+                            </div>
+                          )}
+                          {p.datahubCorrelationId && (
+                            <div className="mt-6">
+                              <ConversationTimeline correlationId={p.datahubCorrelationId} />
                             </div>
                           )}
                         </td>

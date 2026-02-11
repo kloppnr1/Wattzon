@@ -13,6 +13,7 @@ export default {
   'nav.billing': 'Billing',
   'nav.corrections': 'Corrections',
   'nav.messages': 'Messages',
+  'nav.datahub': 'DataHub',
   'nav.development': 'Development',
 
   // ── Common ──
@@ -383,10 +384,19 @@ export default {
 
   // ── Messages ──
   'messages.title': 'Messages',
-  'messages.subtitle': 'Monitor DataHub messaging and integration logs.',
+  'messages.subtitle': 'Troubleshoot DataHub message processing and delivery issues.',
   'messages.loadingMessages': 'Loading messages...',
   'messages.totalMessages': 'Total Messages',
   'messages.activeConversations': 'Active Conversations',
+  'messages.inboundTotal': 'Inbound Total',
+  'messages.tabInbound': 'Inbound Messages',
+  'messages.allMessageTypes': 'All message types',
+  'messages.allStatuses': 'All statuses',
+  'messages.allQueues': 'All queues',
+  'messages.colMessageType': 'Message Type',
+  'messages.colCorrelation': 'Correlation ID',
+  'messages.colReceivedAt': 'Received At',
+  'messages.noInboundMessages': 'No inbound messages found.',
   'messages.processed': 'Processed',
   'messages.unresolvedDeadLetters': 'Unresolved Dead Letters',
   'messages.tabConversations': 'Conversations',
@@ -576,4 +586,6 @@ export default {
   'processes.colStatus': 'Status',
   'processes.colEffectiveDate': 'Effective Date',
   'processes.colCorrelation': 'Correlation ID',
+  'processes.processEvents': 'Process Events',
+  'processes.datahubMessages': 'DataHub Messages',
 };

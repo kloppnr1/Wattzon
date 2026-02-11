@@ -1,4 +1,4 @@
-import { Fragment, useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api';
 import { useTranslation } from '../i18n/LanguageContext';
@@ -91,7 +91,7 @@ export function ConversationTimeline({ correlationId }) {
                 color="teal"
                 label={
                   <span>
-                    <Link to={`/messages/outbound/${o.id}`} className="text-teal-600 hover:text-teal-700 font-medium">
+                    <Link to={`/datahub/messages/outbound/${o.id}`} className="text-teal-600 hover:text-teal-700 font-medium">
                       {o.processType}
                     </Link>
                     {' '}{t('messages.sentToDatahub')}
@@ -120,7 +120,7 @@ export function ConversationTimeline({ correlationId }) {
                 color={color}
                 label={
                   <span>
-                    <Link to={`/messages/inbound/${i.id}`} className="text-teal-600 hover:text-teal-700 font-medium">
+                    <Link to={`/datahub/messages/inbound/${i.id}`} className="text-teal-600 hover:text-teal-700 font-medium">
                       {i.messageType}
                     </Link>
                     {' '}{desc}
@@ -138,13 +138,13 @@ export function ConversationTimeline({ correlationId }) {
 
 export default function Messages() {
   const { t } = useTranslation();
-  const [tab, setTab] = useState('conversations');
+  const [tab, setTab] = useState('inbound');
   const [stats, setStats] = useState(null);
 
-  // Conversations
-  const [convData, setConvData] = useState(null);
-  const [convPage, setConvPage] = useState(1);
-  const [expandedCorr, setExpandedCorr] = useState(null);
+  // Inbound messages
+  const [inboundData, setInboundData] = useState(null);
+  const [inboundPage, setInboundPage] = useState(1);
+  const [inboundFilters, setInboundFilters] = useState({ messageType: '', status: '', queueName: '' });
 
   // Deliveries
   const [deliveries, setDeliveries] = useState(null);
@@ -160,11 +160,15 @@ export default function Messages() {
     api.getMessageStats().then(setStats).catch(() => {});
   }, []);
 
-  // Fetch conversations
-  const fetchConversations = useCallback((p) => {
+  // Fetch inbound messages
+  const fetchInbound = useCallback((p, filters) => {
     setError(null);
-    api.getConversations({ page: p, pageSize: PAGE_SIZE })
-      .then(setConvData)
+    const params = { page: p, pageSize: PAGE_SIZE };
+    if (filters.messageType) params.messageType = filters.messageType;
+    if (filters.status) params.status = filters.status;
+    if (filters.queueName) params.queueName = filters.queueName;
+    api.getInboundMessages(params)
+      .then(setInboundData)
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
   }, []);
@@ -189,10 +193,10 @@ export default function Messages() {
 
   useEffect(() => {
     setLoading(true);
-    if (tab === 'conversations') fetchConversations(convPage);
+    if (tab === 'inbound') fetchInbound(inboundPage, inboundFilters);
     else if (tab === 'deliveries') fetchDeliveries();
     else if (tab === 'dead-letters') fetchDeadLetters(dlPage);
-  }, [tab, convPage, dlPage, fetchConversations, fetchDeliveries, fetchDeadLetters]);
+  }, [tab, inboundPage, inboundFilters, dlPage, fetchInbound, fetchDeliveries, fetchDeadLetters]);
 
   if (loading && !stats) {
     return (
@@ -205,9 +209,9 @@ export default function Messages() {
     );
   }
 
-  const convItems = convData?.items ?? [];
-  const convTotal = convData?.totalCount ?? 0;
-  const convPages = Math.ceil(convTotal / PAGE_SIZE);
+  const inboundItems = inboundData?.items ?? [];
+  const inboundTotal = inboundData?.totalCount ?? 0;
+  const inboundPages = Math.ceil(inboundTotal / PAGE_SIZE);
 
   const dlItems = dlData?.items ?? [];
   const dlTotal = dlData?.totalCount ?? 0;
@@ -232,8 +236,8 @@ export default function Messages() {
             <div className="text-3xl font-bold text-slate-900">{stats.totalInbound + stats.pendingOutbound}</div>
           </div>
           <div className="bg-gradient-to-br from-white to-teal-50/30 rounded-xl p-5 shadow-sm border border-teal-100/50">
-            <div className="text-sm font-medium text-teal-600 mb-1">{t('messages.activeConversations')}</div>
-            <div className="text-3xl font-bold text-teal-700">{convTotal}</div>
+            <div className="text-sm font-medium text-teal-600 mb-1">{t('messages.inboundTotal')}</div>
+            <div className="text-3xl font-bold text-teal-700">{stats.totalInbound}</div>
           </div>
           <div className="bg-gradient-to-br from-white to-emerald-50/30 rounded-xl p-5 shadow-sm border border-emerald-100/50">
             <div className="text-sm font-medium text-emerald-600 mb-1">{t('messages.processed')}</div>
@@ -249,7 +253,7 @@ export default function Messages() {
       {/* Tabs */}
       <div className="flex items-center gap-1 mb-5 bg-white rounded-xl p-1.5 w-fit max-w-full overflow-x-auto shadow-sm border border-slate-100">
         {[
-          { key: 'conversations', label: t('messages.tabConversations') },
+          { key: 'inbound', label: t('messages.tabInbound') },
           { key: 'deliveries', label: t('messages.tabDeliveries') },
           { key: 'dead-letters', label: t('messages.tabDeadLetters') },
         ].map(({ key, label }) => (
@@ -275,91 +279,109 @@ export default function Messages() {
           </div>
         )}
 
-        {/* ── Conversations Tab ── */}
-        {tab === 'conversations' && (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-slate-200">
-              <thead className="bg-slate-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">{t('messages.colProcess')}</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">{t('messages.colGsrn')}</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">{t('messages.colCustomer')}</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">{t('messages.colStatus')}</th>
-                  <th className="px-6 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">{t('messages.colMessages')}</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">{t('messages.colLastActivity')}</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-slate-100">
-                {loading && convItems.length === 0 ? (
-                  <tr><td colSpan="6" className="px-6 py-12 text-center text-slate-500">{t('common.loading')}</td></tr>
-                ) : convItems.length === 0 ? (
-                  <tr><td colSpan="6" className="px-6 py-12 text-center text-slate-500">{t('messages.noConversations')}</td></tr>
-                ) : (
-                  convItems.map((conv) => (
-                    <Fragment key={conv.correlationId}>
-                      <tr
-                        className="hover:bg-slate-50 transition-colors cursor-pointer"
-                        onClick={() => setExpandedCorr(expandedCorr === conv.correlationId ? null : conv.correlationId)}
-                      >
+        {/* ── Inbound Messages Tab ── */}
+        {tab === 'inbound' && (
+          <>
+            <div className="px-6 py-4 border-b border-slate-200 flex flex-wrap gap-3">
+              <select
+                value={inboundFilters.messageType}
+                onChange={(e) => { setInboundPage(1); setInboundFilters(f => ({ ...f, messageType: e.target.value })); }}
+                className="px-3 py-1.5 text-sm rounded-lg border border-slate-300 text-slate-700 bg-white"
+              >
+                <option value="">{t('messages.allMessageTypes')}</option>
+                <option value="RSM-001">RSM-001</option>
+                <option value="RSM-004">RSM-004</option>
+                <option value="RSM-012">RSM-012</option>
+                <option value="RSM-014">RSM-014</option>
+                <option value="RSM-022">RSM-022</option>
+                <option value="RSM-028">RSM-028</option>
+                <option value="RSM-031">RSM-031</option>
+              </select>
+              <select
+                value={inboundFilters.status}
+                onChange={(e) => { setInboundPage(1); setInboundFilters(f => ({ ...f, status: e.target.value })); }}
+                className="px-3 py-1.5 text-sm rounded-lg border border-slate-300 text-slate-700 bg-white"
+              >
+                <option value="">{t('messages.allStatuses')}</option>
+                <option value="processed">{t('status.processed')}</option>
+                <option value="dead_lettered">{t('status.dead_lettered')}</option>
+              </select>
+              <select
+                value={inboundFilters.queueName}
+                onChange={(e) => { setInboundPage(1); setInboundFilters(f => ({ ...f, queueName: e.target.value })); }}
+                className="px-3 py-1.5 text-sm rounded-lg border border-slate-300 text-slate-700 bg-white"
+              >
+                <option value="">{t('messages.allQueues')}</option>
+                <option value="brs-001">brs-001</option>
+                <option value="brs-009">brs-009</option>
+                <option value="data-delivery">data-delivery</option>
+              </select>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-slate-200">
+                <thead className="bg-slate-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">{t('messages.colMessageType')}</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">{t('messages.colStatus')}</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">{t('messages.colQueue')}</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">{t('messages.colCorrelation')}</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">{t('messages.colReceivedAt')}</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-slate-100">
+                  {loading && inboundItems.length === 0 ? (
+                    <tr><td colSpan="5" className="px-6 py-12 text-center text-slate-500">{t('common.loading')}</td></tr>
+                  ) : inboundItems.length === 0 ? (
+                    <tr><td colSpan="5" className="px-6 py-12 text-center text-slate-500">{t('messages.noInboundMessages')}</td></tr>
+                  ) : (
+                    inboundItems.map((msg) => (
+                      <tr key={msg.id} className="hover:bg-slate-50 transition-colors">
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <ProcessTypeBadge type={conv.processType} />
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-slate-700">{conv.gsrn}</td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm font-medium text-slate-900">{conv.customerName || '-'}</div>
-                          {conv.signupNumber && <div className="text-xs text-slate-400">{conv.signupNumber}</div>}
+                          <Link to={`/datahub/messages/inbound/${msg.id}`} className="text-teal-600 font-medium hover:text-teal-700">
+                            {msg.messageType}
+                          </Link>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <ProcessStatusBadge status={conv.processStatus} />
+                          <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                            msg.status === 'processed' ? 'bg-emerald-100 text-emerald-700'
+                              : msg.status === 'dead_lettered' ? 'bg-rose-100 text-rose-700'
+                              : 'bg-slate-100 text-slate-600'
+                          }`}>
+                            {t('status.' + msg.status)}
+                          </span>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-center">
-                          <div className="flex items-center justify-center gap-2">
-                            <span className="text-xs font-medium text-slate-500">{conv.outboundCount + conv.inboundCount}</span>
-                            <div className="flex gap-0.5">
-                              {conv.hasAcknowledgement && (
-                                <span className="w-2 h-2 rounded-full bg-sky-400" title="Acknowledged (RSM-001)" />
-                              )}
-                              {conv.hasActivation && (
-                                <span className="w-2 h-2 rounded-full bg-emerald-400" title="Activated (RSM-022)" />
-                              )}
-                            </div>
-                          </div>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700">{msg.queueName}</td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          {msg.correlationId ? (
+                            <span className="font-mono text-xs text-slate-400">{msg.correlationId.slice(0, 8)}</span>
+                          ) : (
+                            <span className="text-slate-300">&mdash;</span>
+                          )}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
-                          {conv.lastReceivedAt ? new Date(conv.lastReceivedAt).toLocaleString()
-                            : conv.firstSentAt ? new Date(conv.firstSentAt).toLocaleString()
-                            : '-'}
-                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">{new Date(msg.receivedAt).toLocaleString()}</td>
                       </tr>
-                      {expandedCorr === conv.correlationId && (
-                        <tr>
-                          <td colSpan="6" className="p-0">
-                            <ConversationTimeline correlationId={conv.correlationId} />
-                          </td>
-                        </tr>
-                      )}
-                    </Fragment>
-                  ))
-                )}
-              </tbody>
-            </table>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
 
-            {convPages > 1 && (
+            {inboundPages > 1 && (
               <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                 <div className="text-sm text-slate-600">
-                  {t('common.showingRange', { from: (convPage - 1) * PAGE_SIZE + 1, to: Math.min(convPage * PAGE_SIZE, convTotal), total: convTotal })} {t('messages.showingConversations')}
+                  {t('common.showingRange', { from: (inboundPage - 1) * PAGE_SIZE + 1, to: Math.min(inboundPage * PAGE_SIZE, inboundTotal), total: inboundTotal })} {t('messages.showingItems')}
                 </div>
                 <div className="flex gap-2">
                   <button
-                    onClick={() => setConvPage(p => Math.max(1, p - 1))}
-                    disabled={convPage === 1}
+                    onClick={() => setInboundPage(p => Math.max(1, p - 1))}
+                    disabled={inboundPage === 1}
                     className="px-3 py-1.5 text-sm font-medium rounded-lg bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     {t('common.previous')}
                   </button>
                   <button
-                    onClick={() => setConvPage(p => Math.min(convPages, p + 1))}
-                    disabled={convPage === convPages}
+                    onClick={() => setInboundPage(p => Math.min(inboundPages, p + 1))}
+                    disabled={inboundPage === inboundPages}
                     className="px-3 py-1.5 text-sm font-medium rounded-lg bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     {t('common.next')}
@@ -367,7 +389,7 @@ export default function Messages() {
                 </div>
               </div>
             )}
-          </div>
+          </>
         )}
 
         {/* ── Data Deliveries Tab ── */}
@@ -456,7 +478,7 @@ export default function Messages() {
                     dlItems.map((dl) => (
                       <tr key={dl.id} className="hover:bg-slate-50 transition-colors">
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <Link to={`/messages/dead-letters/${dl.id}`} className="text-teal-600 font-medium hover:text-teal-700">
+                          <Link to={`/datahub/messages/dead-letters/${dl.id}`} className="text-teal-600 font-medium hover:text-teal-700">
                             {dl.queueName}
                           </Link>
                         </td>

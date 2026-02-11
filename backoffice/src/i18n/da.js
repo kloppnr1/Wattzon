@@ -13,6 +13,7 @@ export default {
   'nav.billing': 'Fakturering',
   'nav.corrections': 'Korrektioner',
   'nav.messages': 'Beskeder',
+  'nav.datahub': 'DataHub',
   'nav.development': 'Udvikling',
 
   // ── Common ──
@@ -383,10 +384,19 @@ export default {
 
   // ── Messages ──
   'messages.title': 'Beskeder',
-  'messages.subtitle': 'Overvåg DataHub-beskeder og integrationslogfiler.',
+  'messages.subtitle': 'Fejlfind DataHub-beskedbehandling og leveringsproblemer.',
   'messages.loadingMessages': 'Indlæser beskeder...',
   'messages.totalMessages': 'Beskeder i alt',
   'messages.activeConversations': 'Aktive samtaler',
+  'messages.inboundTotal': 'Indgående i alt',
+  'messages.tabInbound': 'Indgående beskeder',
+  'messages.allMessageTypes': 'Alle beskedtyper',
+  'messages.allStatuses': 'Alle statusser',
+  'messages.allQueues': 'Alle køer',
+  'messages.colMessageType': 'Beskedtype',
+  'messages.colCorrelation': 'Korrelations-ID',
+  'messages.colReceivedAt': 'Modtaget',
+  'messages.noInboundMessages': 'Ingen indgående beskeder fundet.',
   'messages.processed': 'Behandlet',
   'messages.unresolvedDeadLetters': 'Uløste fejlbeskeder',
   'messages.tabConversations': 'Samtaler',
@@ -576,4 +586,6 @@ export default {
   'processes.colStatus': 'Status',
   'processes.colEffectiveDate': 'Ikrafttrædelsesdato',
   'processes.colCorrelation': 'Korrelations-ID',
+  'processes.processEvents': 'Proceshændelser',
+  'processes.datahubMessages': 'DataHub-beskeder',
 };

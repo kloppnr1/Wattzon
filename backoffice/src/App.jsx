@@ -41,11 +41,11 @@ export default function App() {
             <Route path="/billing/runs/:id" element={<SettlementRunDetail />} />
             <Route path="/billing/corrections" element={<Corrections />} />
             <Route path="/billing/corrections/:batchId" element={<CorrectionDetail />} />
-            <Route path="/messages" element={<Messages />} />
-            <Route path="/messages/inbound/:id" element={<InboundMessageDetail />} />
-            <Route path="/messages/outbound/:id" element={<OutboundRequestDetail />} />
-            <Route path="/messages/dead-letters/:id" element={<DeadLetterDetail />} />
-            <Route path="/processes" element={<Processes />} />
+            <Route path="/datahub/messages" element={<Messages />} />
+            <Route path="/datahub/messages/inbound/:id" element={<InboundMessageDetail />} />
+            <Route path="/datahub/messages/outbound/:id" element={<OutboundRequestDetail />} />
+            <Route path="/datahub/messages/dead-letters/:id" element={<DeadLetterDetail />} />
+            <Route path="/datahub/processes" element={<Processes />} />
           </Route>
         </Routes>
       </BrowserRouter>
