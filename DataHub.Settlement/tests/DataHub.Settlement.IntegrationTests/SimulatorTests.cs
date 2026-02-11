@@ -40,7 +40,7 @@ public class SimulatorTests : IClassFixture<WebApplicationFactory<Program>>
         peekResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var msg = await peekResponse.Content.ReadFromJsonAsync<PeekResponse>(JsonOptions);
-        msg!.MessageType.Should().Be("RSM-022");
+        msg!.MessageType.Should().Be("RSM-028");
     }
 
     [Fact]
@@ -57,9 +57,11 @@ public class SimulatorTests : IClassFixture<WebApplicationFactory<Program>>
         var dequeueResponse = await _client.DeleteAsync($"/v1.0/cim/dequeue/{msg!.MessageId}");
         dequeueResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        // Peek again — MasterData queue should be empty (sunshine only has 1 MasterData message)
+        // Peek again — next message should be RSM-031 (sunshine has RSM-028, RSM-031, RSM-022)
         var peekResponse2 = await _client.GetAsync("/v1.0/cim/MasterData");
-        peekResponse2.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        peekResponse2.StatusCode.Should().Be(HttpStatusCode.OK);
+        var msg2 = await peekResponse2.Content.ReadFromJsonAsync<PeekResponse>(JsonOptions);
+        msg2!.MessageType.Should().Be("RSM-031");
     }
 
     [Fact]
