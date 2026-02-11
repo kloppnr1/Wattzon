@@ -5,8 +5,15 @@ EXPOSE 8080
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 WORKDIR /src
 COPY DataHub.Settlement/DataHub.Settlement.sln DataHub.Settlement/Directory.Build.props ./
+COPY DataHub.Settlement/src/DataHub.Settlement.Domain/DataHub.Settlement.Domain.csproj src/DataHub.Settlement.Domain/
 COPY DataHub.Settlement/src/DataHub.Settlement.Application/DataHub.Settlement.Application.csproj src/DataHub.Settlement.Application/
+COPY DataHub.Settlement/src/DataHub.Settlement.Infrastructure/DataHub.Settlement.Infrastructure.csproj src/DataHub.Settlement.Infrastructure/
+COPY DataHub.Settlement/src/DataHub.Settlement.Api/DataHub.Settlement.Api.csproj src/DataHub.Settlement.Api/
+COPY DataHub.Settlement/src/DataHub.Settlement.Worker/DataHub.Settlement.Worker.csproj src/DataHub.Settlement.Worker/
 COPY DataHub.Settlement/src/DataHub.Settlement.Simulator/DataHub.Settlement.Simulator.csproj src/DataHub.Settlement.Simulator/
+COPY DataHub.Settlement/src/DataHub.Settlement.Web/DataHub.Settlement.Web.csproj src/DataHub.Settlement.Web/
+COPY DataHub.Settlement/tests/DataHub.Settlement.UnitTests/DataHub.Settlement.UnitTests.csproj tests/DataHub.Settlement.UnitTests/
+COPY DataHub.Settlement/tests/DataHub.Settlement.IntegrationTests/DataHub.Settlement.IntegrationTests.csproj tests/DataHub.Settlement.IntegrationTests/
 RUN dotnet restore src/DataHub.Settlement.Simulator/DataHub.Settlement.Simulator.csproj
 
 COPY DataHub.Settlement/ ./
