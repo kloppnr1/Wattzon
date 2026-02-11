@@ -271,6 +271,7 @@ export default {
   'customerDetail.billingAddress': 'Billing Address',
   'customerDetail.colSupplyPeriod': 'Supply Period',
   'customerDetail.ongoing': 'ongoing',
+  'customerDetail.viewBilling': 'View Billing',
 
   // ── Products ──
   'products.title': 'Products',
@@ -538,4 +539,39 @@ export default {
   'runDetail.corrColDeltaKwh': 'Delta kWh',
   'runDetail.corrColTotal': 'Total',
   'runDetail.corrColCreated': 'Created',
+
+  // ── Customer Billing Summary ──
+  'billingSummary.loading': 'Loading billing summary...',
+  'billingSummary.backToCustomer': 'Back to customer',
+  'billingSummary.title': 'Billing Summary',
+  'billingSummary.subtitle': 'Billing Summary',
+  'billingSummary.totalBilled': 'Total Billed',
+  'billingSummary.totalPaid': 'Total Paid',
+  'billingSummary.balance': 'Balance',
+  'billingSummary.billingPeriods': 'Billing Periods',
+  'billingSummary.noPeriods': 'No billing periods.',
+  'billingSummary.colPeriod': 'Period',
+  'billingSummary.colAmount': 'Amount',
+  'billingSummary.colVat': 'VAT',
+  'billingSummary.acontoPayments': 'Aconto Payments',
+  'billingSummary.noAconto': 'No aconto payments recorded.',
+  'billingSummary.colDate': 'Date',
+  'billingSummary.colCurrency': 'Currency',
+
+  // ── Process Monitor ──
+  'nav.processes': 'Processes',
+  'processes.title': 'Process Monitor',
+  'processes.subtitle': 'Track DataHub process lifecycle across all metering points.',
+  'processes.loading': 'Loading processes...',
+  'processes.processCount': 'Process Count',
+  'processes.selectedStatus': 'Selected Status',
+  'processes.noProcesses': 'No processes found with this status.',
+  'processes.loadingEvents': 'Loading events...',
+  'processes.noEvents': 'No events recorded.',
+  'processes.colId': 'ID',
+  'processes.colType': 'Process Type',
+  'processes.colGsrn': 'Metering Point',
+  'processes.colStatus': 'Status',
+  'processes.colEffectiveDate': 'Effective Date',
+  'processes.colCorrelation': 'Correlation ID',
 };

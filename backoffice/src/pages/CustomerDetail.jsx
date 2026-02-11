@@ -51,12 +51,18 @@ export default function CustomerDetail() {
             {customer.contactType} &middot; <span className="font-mono text-xs bg-slate-100 px-2 py-0.5 rounded-md">{customer.cprCvr}</span>
           </p>
         </div>
-        <span className={`sm:ml-auto inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold ${
+        <div className="sm:ml-auto flex items-center gap-2">
+          <Link to={`/customers/${id}/billing`}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-teal-600 bg-teal-50 rounded-lg border border-teal-200 hover:bg-teal-100 hover:border-teal-300 transition-colors">
+            {t('customerDetail.viewBilling')}
+          </Link>
+        <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold ${
           customer.status === 'active' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-100 text-slate-500'
         }`}>
           <span className={`w-1.5 h-1.5 rounded-full ${customer.status === 'active' ? 'bg-emerald-400' : 'bg-slate-400'}`} />
           {t('status.' + customer.status)}
         </span>
+        </div>
       </div>
 
       {customer.billingAddress && (customer.billingAddress.street || customer.billingAddress.postalCode) && (

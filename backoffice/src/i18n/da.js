@@ -271,6 +271,7 @@ export default {
   'customerDetail.billingAddress': 'Faktureringsadresse',
   'customerDetail.colSupplyPeriod': 'Leveringsperiode',
   'customerDetail.ongoing': 'igangværende',
+  'customerDetail.viewBilling': 'Se fakturering',
 
   // ── Products ──
   'products.title': 'Produkter',
@@ -538,4 +539,39 @@ export default {
   'runDetail.corrColDeltaKwh': 'Delta kWh',
   'runDetail.corrColTotal': 'Total',
   'runDetail.corrColCreated': 'Oprettet',
+
+  // ── Customer Billing Summary ──
+  'billingSummary.loading': 'Indlæser faktureringsoversigt...',
+  'billingSummary.backToCustomer': 'Tilbage til kunde',
+  'billingSummary.title': 'Faktureringsoversigt',
+  'billingSummary.subtitle': 'Faktureringsoversigt',
+  'billingSummary.totalBilled': 'Faktureret i alt',
+  'billingSummary.totalPaid': 'Betalt i alt',
+  'billingSummary.balance': 'Saldo',
+  'billingSummary.billingPeriods': 'Faktureringsperioder',
+  'billingSummary.noPeriods': 'Ingen faktureringsperioder.',
+  'billingSummary.colPeriod': 'Periode',
+  'billingSummary.colAmount': 'Beløb',
+  'billingSummary.colVat': 'Moms',
+  'billingSummary.acontoPayments': 'Acontobetalinger',
+  'billingSummary.noAconto': 'Ingen acontobetalinger registreret.',
+  'billingSummary.colDate': 'Dato',
+  'billingSummary.colCurrency': 'Valuta',
+
+  // ── Process Monitor ──
+  'nav.processes': 'Processer',
+  'processes.title': 'Procesmonitor',
+  'processes.subtitle': 'Spor DataHub-proceslivscyklus på tværs af alle målepunkter.',
+  'processes.loading': 'Indlæser processer...',
+  'processes.processCount': 'Antal processer',
+  'processes.selectedStatus': 'Valgt status',
+  'processes.noProcesses': 'Ingen processer fundet med denne status.',
+  'processes.loadingEvents': 'Indlæser hændelser...',
+  'processes.noEvents': 'Ingen hændelser registreret.',
+  'processes.colId': 'ID',
+  'processes.colType': 'Procestype',
+  'processes.colGsrn': 'Målepunkt',
+  'processes.colStatus': 'Status',
+  'processes.colEffectiveDate': 'Ikrafttrædelsesdato',
+  'processes.colCorrelation': 'Korrelations-ID',
 };

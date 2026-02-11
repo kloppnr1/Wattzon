@@ -85,6 +85,16 @@ export const api = {
     request(`/metering/spot-prices${qs({ priceArea, from, to, page, pageSize })}`),
   getSpotPriceLatest: () => request(`/metering/spot-prices/latest`),
 
+  // Aconto Payments
+  getAcontoPayments: (gsrn, { from, to } = {}) =>
+    request(`/billing/aconto/${gsrn}${qs({ from, to })}`),
+
+  // Processes
+  getProcesses: ({ status } = {}) =>
+    request(`/processes${qs({ status })}`),
+  getProcessEvents: (id) =>
+    request(`/processes/${id}/events`),
+
   // Conversations & Deliveries
   getConversations: ({ page, pageSize } = {}) =>
     request(`/messages/conversations${qs({ page, pageSize })}`),

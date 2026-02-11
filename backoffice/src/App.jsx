@@ -18,6 +18,8 @@ import OutboundRequestDetail from './pages/OutboundRequestDetail';
 import DeadLetterDetail from './pages/DeadLetterDetail';
 import Corrections from './pages/Corrections';
 import CorrectionDetail from './pages/CorrectionDetail';
+import CustomerBillingSummary from './pages/CustomerBillingSummary';
+import Processes from './pages/Processes';
 
 export default function App() {
   return (
@@ -31,6 +33,7 @@ export default function App() {
             <Route path="/signups/:id" element={<SignupDetail />} />
             <Route path="/customers" element={<CustomerList />} />
             <Route path="/customers/:id" element={<CustomerDetail />} />
+            <Route path="/customers/:id/billing" element={<CustomerBillingSummary />} />
             <Route path="/products" element={<Products />} />
             <Route path="/spot-prices" element={<SpotPrices />} />
             <Route path="/billing" element={<BillingPeriods />} />
@@ -42,6 +45,7 @@ export default function App() {
             <Route path="/messages/inbound/:id" element={<InboundMessageDetail />} />
             <Route path="/messages/outbound/:id" element={<OutboundRequestDetail />} />
             <Route path="/messages/dead-letters/:id" element={<DeadLetterDetail />} />
+            <Route path="/processes" element={<Processes />} />
           </Route>
         </Routes>
       </BrowserRouter>
