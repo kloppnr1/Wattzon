@@ -53,7 +53,7 @@ function TimelineEvent({ icon, label, time, color = 'teal' }) {
   );
 }
 
-function ConversationTimeline({ correlationId }) {
+export function ConversationTimeline({ correlationId }) {
   const { t } = useTranslation();
   const [detail, setDetail] = useState(null);
   const [loading, setLoading] = useState(true);
