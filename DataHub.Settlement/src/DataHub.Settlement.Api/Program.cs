@@ -55,6 +55,7 @@ builder.Services.AddSingleton<ICorrectionRepository>(new CorrectionRepository(co
 builder.Services.AddSingleton<IMeteringDataRepository>(new MeteringDataRepository(connectionString));
 builder.Services.AddSingleton<ITariffRepository>(new TariffRepository(connectionString));
 builder.Services.AddSingleton<ICorrectionService, CorrectionService>();
+builder.Services.AddSingleton<IAcontoPaymentRepository>(new AcontoPaymentRepository(connectionString));
 
 var app = builder.Build();
 
@@ -563,6 +564,68 @@ app.MapGet("/api/metering/spot-prices/latest", async (ISpotPriceRepository repo,
     var dk1 = await repo.GetLatestPriceDateAsync("DK1", ct);
     var dk2 = await repo.GetLatestPriceDateAsync("DK2", ct);
     return Results.Ok(new { dk1, dk2 });
+});
+
+// --- Aconto Payments ---
+
+// GET /api/billing/aconto/{gsrn} — aconto payments for a metering point
+app.MapGet("/api/billing/aconto/{gsrn}", async (
+    string gsrn, DateOnly? from, DateOnly? to,
+    IAcontoPaymentRepository repo, CancellationToken ct) =>
+{
+    var fromDate = from ?? new DateOnly(DateTime.UtcNow.Year, 1, 1);
+    var toDate = to ?? DateOnly.FromDateTime(DateTime.UtcNow).AddDays(1);
+
+    var payments = await repo.GetPaymentsAsync(gsrn, fromDate, toDate, ct);
+    var totalPaid = await repo.GetTotalPaidAsync(gsrn, fromDate, toDate, ct);
+
+    return Results.Ok(new
+    {
+        gsrn,
+        from = fromDate,
+        to = toDate,
+        totalPaid,
+        count = payments.Count,
+        payments,
+    });
+});
+
+// --- Processes ---
+
+// GET /api/processes — processes by status
+app.MapGet("/api/processes", async (string? status, IProcessRepository repo, CancellationToken ct) =>
+{
+    if (string.IsNullOrEmpty(status))
+        return Results.BadRequest(new { error = "Status filter is required." });
+
+    var processes = await repo.GetByStatusAsync(status, ct);
+    return Results.Ok(new
+    {
+        status,
+        count = processes.Count,
+        processes = processes.Select(p => new
+        {
+            p.Id,
+            p.ProcessType,
+            p.Gsrn,
+            p.Status,
+            p.EffectiveDate,
+            p.DatahubCorrelationId,
+        }),
+    });
+});
+
+// GET /api/processes/{id}/events — process event timeline
+app.MapGet("/api/processes/{id:guid}/events", async (Guid id, IProcessRepository repo, CancellationToken ct) =>
+{
+    var events = await repo.GetEventsAsync(id, ct);
+    return Results.Ok(events.Select(e => new
+    {
+        e.OccurredAt,
+        e.EventType,
+        e.Payload,
+        e.Source,
+    }));
 });
 
 app.MapFallbackToFile("index.html");
