@@ -1,0 +1,7 @@
+# Bicep build artifacts
+infra/main.json
+
+# Temp files
+nul
+temp.txt
+temp_edit.txt
