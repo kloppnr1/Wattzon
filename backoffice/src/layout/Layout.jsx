@@ -163,7 +163,7 @@ export default function Layout() {
   return (
     <div className="flex h-screen bg-slate-50">
       {/* Mobile top bar */}
-      <div className="fixed top-0 left-0 right-0 z-40 flex items-center gap-3 bg-teal-600 px-4 h-14 md:hidden shadow-lg">
+      <div className="fixed top-0 left-0 right-0 z-40 flex items-center gap-3 px-4 h-14 md:hidden shadow-lg" style={{ background: 'linear-gradient(135deg, #3d5a6e 0%, #4a6b80 100%)' }}>
         <button
           onClick={() => setSidebarOpen(true)}
           className="p-1.5 rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition-colors"
@@ -172,10 +172,14 @@ export default function Layout() {
             <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
           </svg>
         </button>
-        <div className="w-8 h-8 rounded-lg bg-white/12 flex items-center justify-center">
-          <span className="text-[16px] font-black text-white/90 leading-none tracking-tighter">V</span>
+        <div className="w-8 h-8 rounded-[8px] bg-white/95 flex items-center justify-center relative overflow-hidden">
+          <span className="text-[14px] leading-none tracking-tight" style={{ fontFamily: "'Inter', sans-serif", fontWeight: 800, color: '#3d5a6e' }}>Wz</span>
+          <span className="absolute bottom-0 left-[15%] right-[15%] h-[2px] rounded-t-sm" style={{ background: '#e67e22' }} />
         </div>
-        <p className="text-[10px] text-teal-200/60 font-medium tracking-wide">Energy Platform</p>
+        <div>
+          <p className="text-[13px] font-semibold text-white/90 leading-tight" style={{ fontFamily: "'DM Sans', sans-serif" }}>Wattzon</p>
+          <p className="text-[9px] text-white/40 font-medium tracking-wide">Energy Platform</p>
+        </div>
       </div>
 
       {/* Dark overlay on mobile */}
@@ -188,22 +192,26 @@ export default function Layout() {
 
       {/* Sidebar */}
       <aside className={`
-        fixed inset-y-0 left-0 z-50 w-[240px] bg-teal-600 flex flex-col shrink-0 shadow-2xl shadow-teal-900/20 overflow-hidden
+        fixed inset-y-0 left-0 z-50 w-[240px] flex flex-col shrink-0 shadow-2xl overflow-hidden
         transition-transform duration-300 ease-in-out
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
         md:relative md:translate-x-0
-      `}>
+      `} style={{ background: 'linear-gradient(180deg, #3d5a6e 0%, #4a6b80 50%, #5a7d92 100%)', boxShadow: '4px 0 24px rgba(61, 90, 110, 0.15)' }}>
         {/* Decorative orbs */}
         <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl" />
-        <div className="absolute bottom-20 left-0 w-24 h-24 bg-teal-400/10 rounded-full -translate-x-1/2 blur-xl" />
+        <div className="absolute bottom-20 left-0 w-24 h-24 rounded-full -translate-x-1/2 blur-xl" style={{ background: 'rgba(90, 125, 146, 0.15)' }} />
 
         {/* Brand */}
         <div className="px-5 pt-7 pb-6 relative z-10">
-          <div className="flex items-center gap-3.5">
-            <div className="w-10 h-10 rounded-xl bg-white/12 flex items-center justify-center">
-              <span className="text-[20px] font-black text-white/90 leading-none tracking-tighter">V</span>
+          <div className="flex items-center gap-3">
+            <div className="w-[42px] h-[42px] rounded-[10px] bg-white/95 flex items-center justify-center relative overflow-hidden flex-shrink-0">
+              <span className="leading-none tracking-tight" style={{ fontFamily: "'Inter', sans-serif", fontWeight: 800, fontSize: '18px', color: '#3d5a6e' }}>Wz</span>
+              <span className="absolute bottom-0 left-[15%] right-[15%] h-[3px] rounded-t-sm" style={{ background: '#e67e22' }} />
             </div>
-            <p className="text-[10px] text-teal-200/40 font-medium tracking-wide">Energy Platform</p>
+            <div>
+              <p className="text-[14px] font-semibold text-white/95 leading-tight" style={{ fontFamily: "'DM Sans', sans-serif" }}>Wattzon</p>
+              <p className="text-[11px] text-white/40 mt-0.5" style={{ fontFamily: "'DM Sans', sans-serif" }}>Energy Platform</p>
+            </div>
           </div>
         </div>
 
@@ -211,7 +219,7 @@ export default function Layout() {
         <nav className="flex-1 px-3 pb-4 space-y-5 overflow-y-auto relative z-10">
           {navSections.map((section) => (
             <div key={section.labelKey}>
-              <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-teal-200/50">
+              <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-white/35">
                 {t(section.labelKey)}
               </p>
               <div className="space-y-0.5">
@@ -225,7 +233,7 @@ export default function Layout() {
                       `group relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium transition-all duration-200 ${
                         isActive
                           ? 'bg-white/15 text-white shadow-lg shadow-black/10 backdrop-blur-sm'
-                          : 'text-teal-100/70 hover:bg-white/10 hover:text-white'
+                          : 'text-white/70 hover:bg-white/10 hover:text-white'
                       }`
                     }
                   >
@@ -252,13 +260,13 @@ export default function Layout() {
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-sm shadow-emerald-400/50" />
-              <span className="text-[11px] text-teal-100/60 font-medium">{t('nav.development')}</span>
+              <span className="text-[11px] text-white/50 font-medium">{t('nav.development')}</span>
             </div>
             <div className="flex rounded-lg overflow-hidden border border-white/20">
               <button
                 onClick={() => setLang('en')}
                 className={`px-2 py-0.5 text-[10px] font-bold transition-colors ${
-                  lang === 'en' ? 'bg-white/20 text-white' : 'text-teal-200/50 hover:text-white hover:bg-white/10'
+                  lang === 'en' ? 'bg-white/20 text-white' : 'text-white/40 hover:text-white hover:bg-white/10'
                 }`}
               >
                 EN
@@ -266,14 +274,14 @@ export default function Layout() {
               <button
                 onClick={() => setLang('da')}
                 className={`px-2 py-0.5 text-[10px] font-bold transition-colors ${
-                  lang === 'da' ? 'bg-white/20 text-white' : 'text-teal-200/50 hover:text-white hover:bg-white/10'
+                  lang === 'da' ? 'bg-white/20 text-white' : 'text-white/40 hover:text-white hover:bg-white/10'
                 }`}
               >
                 DA
               </button>
             </div>
           </div>
-          <p className="text-[10px] text-teal-200/30 mt-1">V v0.1</p>
+          <p className="text-[10px] text-white/25 mt-1">Wattzon v0.1</p>
         </div>
       </aside>
 

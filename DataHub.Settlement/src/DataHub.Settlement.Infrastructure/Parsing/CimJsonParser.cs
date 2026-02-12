@@ -218,7 +218,7 @@ public sealed class CimJsonParser : ICimParser
 
         var customer = activity.GetProperty("Customer");
         var customerName = customer.GetProperty("name").GetString()!;
-        var cprCvr = customer.GetProperty("mRID").GetString()!;
+        var cprCvr = customer.TryGetProperty("mRID", out var mrid) ? mrid.GetString()! : "";
         var customerType = customer.TryGetProperty("type", out var ct) ? ct.GetString()! : "person";
 
         string? phone = null;
