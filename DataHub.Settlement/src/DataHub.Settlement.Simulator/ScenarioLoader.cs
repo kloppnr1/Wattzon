@@ -59,6 +59,7 @@ public static class ScenarioLoader
 
         // RSM-012: Metering data for January (744 hours)
         state.EnqueueMessage("Timeseries", "RSM-012", null, BuildRsm012Json(
+            "571313100000012345",
             new DateTimeOffset(2025, 1, 1, 0, 0, 0, TimeSpan.Zero),
             new DateTimeOffset(2025, 2, 1, 0, 0, 0, TimeSpan.Zero),
             744));
@@ -94,6 +95,7 @@ public static class ScenarioLoader
         // Phase 1: Onboarding
         state.EnqueueMessage("MasterData", "RSM-022", "corr-sim-lifecycle", BuildRsm022Json());
         state.EnqueueMessage("Timeseries", "RSM-012", null, BuildRsm012Json(
+            "571313100000012345",
             new DateTimeOffset(2025, 1, 1, 0, 0, 0, TimeSpan.Zero),
             new DateTimeOffset(2025, 2, 1, 0, 0, 0, TimeSpan.Zero),
             744));
@@ -103,6 +105,7 @@ public static class ScenarioLoader
 
         // Phase 3: Final metering data up to switch
         state.EnqueueMessage("Timeseries", "RSM-012", null, BuildRsm012Json(
+            "571313100000012345",
             new DateTimeOffset(2025, 2, 1, 0, 0, 0, TimeSpan.Zero),
             new DateTimeOffset(2025, 2, 16, 0, 0, 0, TimeSpan.Zero),
             360));
@@ -115,6 +118,7 @@ public static class ScenarioLoader
 
         // RSM-012: Metering data for January (744 hours)
         state.EnqueueMessage("Timeseries", "RSM-012", null, BuildRsm012Json(
+            "571313100000012345",
             new DateTimeOffset(2025, 1, 1, 0, 0, 0, TimeSpan.Zero),
             new DateTimeOffset(2025, 2, 1, 0, 0, 0, TimeSpan.Zero),
             744));
@@ -127,12 +131,14 @@ public static class ScenarioLoader
 
         // Phase 2: January metering data
         state.EnqueueMessage("Timeseries", "RSM-012", null, BuildRsm012Json(
+            "571313100000012345",
             new DateTimeOffset(2025, 1, 1, 0, 0, 0, TimeSpan.Zero),
             new DateTimeOffset(2025, 2, 1, 0, 0, 0, TimeSpan.Zero),
             744));
 
         // Phase 3: Final partial metering data (Feb 1-16)
         state.EnqueueMessage("Timeseries", "RSM-012", null, BuildRsm012Json(
+            "571313100000012345",
             new DateTimeOffset(2025, 2, 1, 0, 0, 0, TimeSpan.Zero),
             new DateTimeOffset(2025, 2, 16, 0, 0, 0, TimeSpan.Zero),
             360));
@@ -166,7 +172,7 @@ public static class ScenarioLoader
         return JsonSerializer.Serialize(doc);
     }
 
-    internal static string BuildRsm012Json(DateTimeOffset start, DateTimeOffset end, int hours)
+    internal static string BuildRsm012Json(string gsrn, DateTimeOffset start, DateTimeOffset end, int hours)
     {
         var points = new List<object>();
         for (var i = 1; i <= hours; i++)
@@ -207,7 +213,7 @@ public static class ScenarioLoader
                     new
                     {
                         mRID = $"txn-{Guid.NewGuid():N}",
-                        MarketEvaluationPoint = new { mRID = "571313100000012345", type = "E17" },
+                        MarketEvaluationPoint = new { mRID = gsrn, type = "E17" },
                         Product = "8716867000030",
                         Quantity_Measure_Unit = new { name = "KWH" },
                         Registration_DateAndOrTime = new { dateTime = registrationTime },
@@ -436,6 +442,7 @@ public static class ScenarioLoader
 
         // RSM-012: Metering data (retroactive)
         state.EnqueueMessage("Timeseries", "RSM-012", correlationId, BuildRsm012Json(
+            gsrn,
             new DateTimeOffset(2025, 1, 15, 0, 0, 0, TimeSpan.Zero),
             new DateTimeOffset(2025, 2, 1, 0, 0, 0, TimeSpan.Zero),
             408));

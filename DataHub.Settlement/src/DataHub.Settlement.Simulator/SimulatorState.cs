@@ -8,6 +8,7 @@ public sealed class SimulatorState
     private readonly ConcurrentBag<OutboundRequest> _requests = new();
     private readonly ConcurrentDictionary<string, string> _activeGsrns = new();
     private readonly ConcurrentBag<PendingEffectuation> _pendingEffectuations = new();
+    private readonly ConcurrentBag<ActiveSupply> _activeSupplies = new();
 
     public bool IsGsrnActive(string gsrn) => _activeGsrns.ContainsKey(gsrn);
     public void ActivateGsrn(string gsrn) => _activeGsrns[gsrn] = "active";
@@ -75,6 +76,41 @@ public sealed class SimulatorState
             pe.Enqueued = true;
             EnqueueMessage("MasterData", "RSM-022", pe.CorrelationId,
                 ScenarioLoader.BuildRsm022Json(pe.Gsrn, pe.EffectiveDate.ToString("yyyy-MM-dd") + "T00:00:00Z"));
+
+            // Enqueue initial RSM-012 covering effective date → today
+            var start = new DateTimeOffset(pe.EffectiveDate.Year, pe.EffectiveDate.Month, pe.EffectiveDate.Day, 0, 0, 0, TimeSpan.Zero);
+            var end = new DateTimeOffset(today.Year, today.Month, today.Day, 0, 0, 0, TimeSpan.Zero);
+            var hours = (int)(end - start).TotalHours;
+            if (hours > 0)
+            {
+                EnqueueMessage("Timeseries", "RSM-012", null,
+                    ScenarioLoader.BuildRsm012Json(pe.Gsrn, start, end, hours));
+            }
+
+            // Track for ongoing daily delivery
+            _activeSupplies.Add(new ActiveSupply(pe.Gsrn, pe.EffectiveDate, today));
+        }
+    }
+
+    public void FlushDailyTimeseries()
+    {
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        foreach (var supply in _activeSupplies)
+        {
+            if (supply.Cancelled || supply.LastDeliveredDate >= today) continue;
+
+            // Deliver one RSM-012 per missing day (yesterday's data, like real DataHub)
+            var nextDay = supply.LastDeliveredDate;
+            while (nextDay < today)
+            {
+                var start = new DateTimeOffset(nextDay.Year, nextDay.Month, nextDay.Day, 0, 0, 0, TimeSpan.Zero);
+                var end = start.AddHours(24);
+                EnqueueMessage("Timeseries", "RSM-012", null,
+                    ScenarioLoader.BuildRsm012Json(supply.Gsrn, start, end, 24));
+                nextDay = nextDay.AddDays(1);
+            }
+
+            supply.LastDeliveredDate = today;
         }
     }
 
@@ -84,6 +120,13 @@ public sealed class SimulatorState
         {
             if (pe.Gsrn == gsrn && !pe.Enqueued)
                 pe.Enqueued = true; // Mark as enqueued so FlushReadyEffectuations skips it
+        }
+
+        // Also remove from active supplies (supply ended)
+        foreach (var supply in _activeSupplies)
+        {
+            if (supply.Gsrn == gsrn)
+                supply.Cancelled = true;
         }
     }
 
@@ -95,6 +138,7 @@ public sealed class SimulatorState
         _requests.Clear();
         _activeGsrns.Clear();
         _pendingEffectuations.Clear();
+        _activeSupplies.Clear();
     }
 }
 
@@ -108,4 +152,12 @@ public class PendingEffectuation(string Gsrn, string CorrelationId, DateOnly Eff
     public string CorrelationId { get; } = CorrelationId;
     public DateOnly EffectiveDate { get; } = EffectiveDate;
     public bool Enqueued { get; set; } = Enqueued;
+}
+
+public class ActiveSupply(string Gsrn, DateOnly EffectiveDate, DateOnly LastDeliveredDate)
+{
+    public string Gsrn { get; } = Gsrn;
+    public DateOnly EffectiveDate { get; } = EffectiveDate;
+    public DateOnly LastDeliveredDate { get; set; } = LastDeliveredDate;
+    public bool Cancelled { get; set; }
 }

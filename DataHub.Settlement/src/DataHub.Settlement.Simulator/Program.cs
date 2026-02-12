@@ -22,6 +22,7 @@ _ = Task.Run(async () =>
     {
         await Task.Delay(5_000);
         state.FlushReadyEffectuations();
+        state.FlushDailyTimeseries();
     }
 });
 
@@ -264,7 +265,7 @@ app.MapPost("/admin/brs044", async (HttpRequest request) =>
             if (hours > 0)
             {
                 state.EnqueueMessage("Timeseries", "RSM-012", correlationId,
-                    ScenarioLoader.BuildRsm012Json(start, new DateTimeOffset(end, TimeSpan.Zero), hours));
+                    ScenarioLoader.BuildRsm012Json(gsrn, start, new DateTimeOffset(end, TimeSpan.Zero), hours));
             }
         });
     }
