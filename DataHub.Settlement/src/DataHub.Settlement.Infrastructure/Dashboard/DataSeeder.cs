@@ -1,11 +1,9 @@
 using Dapper;
-using DataHub.Settlement.Application.Lifecycle;
 using DataHub.Settlement.Application.Metering;
 using DataHub.Settlement.Application.Portfolio;
 using DataHub.Settlement.Application.Settlement;
 using DataHub.Settlement.Application.Tariff;
 using DataHub.Settlement.Infrastructure.Database;
-using DataHub.Settlement.Infrastructure.Lifecycle;
 using DataHub.Settlement.Infrastructure.Metering;
 using DataHub.Settlement.Infrastructure.Portfolio;
 using DataHub.Settlement.Infrastructure.Settlement;
@@ -45,7 +43,6 @@ public sealed class DataSeeder
         var tariffRepo = new TariffRepository(_connectionString);
         var spotPriceRepo = new SpotPriceRepository(_connectionString);
         var meteringRepo = new MeteringDataRepository(_connectionString);
-        var processRepo = new ProcessRepository(_connectionString);
 
         // ── 1. Grid area ──
         await portfolio.EnsureGridAreaAsync("344", "5790000392261", "N1 A/S", "DK1", ct);
@@ -100,34 +97,7 @@ public sealed class DataSeeder
         }
         await meteringRepo.StoreTimeSeriesAsync(Gsrn, rows, ct);
 
-        // ── 6. Process lifecycle ──
-        var stateMachine = new ProcessStateMachine(processRepo, new SystemClock());
-        var processRequest = await stateMachine.CreateRequestAsync(Gsrn, "supplier_switch", new DateOnly(2025, 1, 1), ct);
-        await stateMachine.MarkSentAsync(processRequest.Id, "corr-seed-001", ct);
-        await stateMachine.MarkAcknowledgedAsync(processRequest.Id, ct);
-        await stateMachine.MarkCompletedAsync(processRequest.Id, ct);
-
-        // ── 7. Inbound messages (so Messages page has data) ──
-        await using var msgConn = new NpgsqlConnection(_connectionString);
-        await msgConn.OpenAsync();
-        await msgConn.ExecuteAsync("""
-            INSERT INTO datahub.inbound_message (datahub_message_id, message_type, correlation_id, queue_name, status, raw_payload_size)
-            VALUES ('msg-rsm007-seed', 'RSM-007', 'corr-seed-001', 'MasterData', 'processed', 1024)
-            """);
-        await msgConn.ExecuteAsync("""
-            INSERT INTO datahub.inbound_message (datahub_message_id, message_type, correlation_id, queue_name, status, raw_payload_size)
-            VALUES ('msg-rsm012-seed', 'RSM-012', NULL, 'Timeseries', 'processed', 52000)
-            """);
-        await msgConn.ExecuteAsync("""
-            INSERT INTO datahub.processed_message_id (message_id) VALUES ('msg-rsm007-seed')
-            ON CONFLICT DO NOTHING
-            """);
-        await msgConn.ExecuteAsync("""
-            INSERT INTO datahub.processed_message_id (message_id) VALUES ('msg-rsm012-seed')
-            ON CONFLICT DO NOTHING
-            """);
-
-        // ── 8. Settlement run + lines (golden master result) ──
+        // ── 6. Settlement run + lines (golden master result) ──
         var consumption = await meteringRepo.GetConsumptionAsync(Gsrn,
             new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc),
             new DateTime(2025, 2, 1, 0, 0, 0, DateTimeKind.Utc), ct);

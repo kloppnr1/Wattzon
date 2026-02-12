@@ -16,16 +16,16 @@ public static class DatabaseSeeder
         await conn.ExecuteAsync("DELETE FROM settlement.settlement_run");
         await conn.ExecuteAsync("DELETE FROM settlement.billing_period");
         await conn.ExecuteAsync("DELETE FROM billing.aconto_payment");
-        await conn.ExecuteAsync("DELETE FROM datahub.dead_letter");
-        await conn.ExecuteAsync("DELETE FROM datahub.processed_message_id");
-        await conn.ExecuteAsync("DELETE FROM datahub.outbound_request");
-        await conn.ExecuteAsync("DELETE FROM datahub.inbound_message");
         await conn.ExecuteAsync("DELETE FROM portfolio.supply_period");
         await conn.ExecuteAsync("DELETE FROM portfolio.contract");
         await conn.ExecuteAsync("DELETE FROM portfolio.metering_point");
         await conn.ExecuteAsync("DELETE FROM portfolio.signup");
         await conn.ExecuteAsync("DELETE FROM lifecycle.process_event");
         await conn.ExecuteAsync("DELETE FROM lifecycle.process_request");
+        await conn.ExecuteAsync("DELETE FROM datahub.dead_letter");
+        await conn.ExecuteAsync("DELETE FROM datahub.processed_message_id");
+        await conn.ExecuteAsync("DELETE FROM datahub.outbound_request");
+        await conn.ExecuteAsync("DELETE FROM datahub.inbound_message");
         await conn.ExecuteAsync("DELETE FROM portfolio.payer");
         await conn.ExecuteAsync("DELETE FROM portfolio.customer");
 
@@ -201,8 +201,7 @@ public static class DatabaseSeeder
             custIdx++;
         }
 
-        // ── Phase 3: Signups + process requests ─────────────────────────
-        var processRequestIds = new Dictionary<int, Guid>();
+        // ── Phase 3: Signups ─────────────────────────────────────────────
         var signupIds = new Dictionary<int, Guid>();
         int signupNumber = 1;
 
@@ -213,40 +212,12 @@ public static class DatabaseSeeder
             var effectiveDate = s.Status == "active" ? new DateTime(2025, 1, 1) : DateTime.UtcNow.Date.AddDays(30);
             var customerId = s.Status == "active" && customerMap.TryGetValue(s.CprCvr, out var cid) ? cid : (Guid?)null;
 
-            Guid? processRequestId = null;
-            if (s.Status != "registered")
-            {
-                processRequestId = Guid.NewGuid();
-                processRequestIds[s.Index] = processRequestId.Value;
-                var corrId = $"CORR-SEED-{s.Index:D4}";
-                var processStatus = s.Status switch
-                {
-                    "active" => "completed",
-                    "processing" => "effectuation_pending",
-                    "rejected" => "rejected",
-                    "cancelled" => "cancelled",
-                    _ => "pending"
-                };
-                var processType = s.Type == "move_in" ? "move_in" : "supplier_switch";
-
-                await conn.ExecuteAsync(
-                    "INSERT INTO lifecycle.process_request (id, process_type, gsrn, status, effective_date, datahub_correlation_id, requested_at, completed_at, created_at) VALUES (@Id, @ProcessType, @Gsrn, @Status, @EffectiveDate, @CorrId, @Requested, @Completed, @Created)",
-                    new
-                    {
-                        Id = processRequestId.Value, ProcessType = processType, Gsrn = s.Gsrn, Status = processStatus,
-                        EffectiveDate = effectiveDate, CorrId = corrId,
-                        Requested = DateTime.UtcNow.AddDays(-rng.Next(10, 60)),
-                        Completed = processStatus == "completed" ? DateTime.UtcNow.AddDays(-rng.Next(1, 10)) : (DateTime?)null,
-                        Created = DateTime.UtcNow.AddDays(-rng.Next(10, 60))
-                    });
-            }
-
             var signupCity = cities[signupNumber % cities.Length];
             await conn.ExecuteAsync(
-                @"INSERT INTO portfolio.signup (id, signup_number, dar_id, gsrn, customer_id, product_id, process_request_id,
+                @"INSERT INTO portfolio.signup (id, signup_number, dar_id, gsrn, customer_id, product_id,
                     type, effective_date, status, created_at, customer_name, customer_cpr_cvr, customer_contact_type,
                     billing_street, billing_house_number, billing_floor, billing_door, billing_postal_code, billing_city)
-                  VALUES (@Id, @SignupNum, @DarId, @Gsrn, @CustomerId, @ProductId, @ProcessRequestId,
+                  VALUES (@Id, @SignupNum, @DarId, @Gsrn, @CustomerId, @ProductId,
                     @Type, @EffectiveDate, @Status, @Created, @CustomerName, @CustomerCprCvr, @CustomerContactType,
                     @BillStreet, @BillHouseNum, @BillFloor, @BillDoor, @BillPostalCode, @BillCity)",
                 new
@@ -255,7 +226,6 @@ public static class DatabaseSeeder
                     DarId = $"0a3f5000-{signupNumber:D4}-62c3-e044-0003ba298018",
                     Gsrn = s.Gsrn, CustomerId = customerId,
                     ProductId = productIds[s.Index % productIds.Count],
-                    ProcessRequestId = processRequestId,
                     Type = s.Type, EffectiveDate = effectiveDate, Status = s.Status,
                     Created = DateTime.UtcNow.AddDays(-rng.Next(10, 60)),
                     CustomerName = s.Name, CustomerCprCvr = s.CprCvr, CustomerContactType = s.SignupContactType,
@@ -266,158 +236,6 @@ public static class DatabaseSeeder
                     BillPostalCode = signupCity.Item1, BillCity = signupCity.Item2
                 });
             signupNumber++;
-        }
-
-        // ── Phase 3b: Additional processes with operationally interesting statuses ──
-        var extraProcessTypes = new[] { "supplier_switch", "move_in", "end_of_supply" };
-        var extraProcesses = new List<(Guid Id, string Status, string ProcessType, string Gsrn, DateTime Created)>();
-
-        // 6 pending (just created, not yet sent)
-        for (int i = 0; i < 6; i++)
-        {
-            var pid = Guid.NewGuid();
-            var gsrn = MakeGsrn(gsrnCounter++);
-            var created = DateTime.UtcNow.AddHours(-rng.Next(1, 12));
-            await conn.ExecuteAsync(
-                "INSERT INTO lifecycle.process_request (id, process_type, gsrn, status, effective_date, datahub_correlation_id, requested_at, created_at) VALUES (@Id, @ProcessType, @Gsrn, 'pending', @EffDate, @CorrId, @Created, @Created)",
-                new { Id = pid, ProcessType = extraProcessTypes[i % extraProcessTypes.Length], Gsrn = gsrn, EffDate = DateTime.UtcNow.Date.AddDays(14 + i), CorrId = $"CORR-PEND-{i:D4}", Created = created });
-            extraProcesses.Add((pid, "pending", extraProcessTypes[i % extraProcessTypes.Length], gsrn, created));
-        }
-
-        // 8 sent_to_datahub (awaiting acknowledgement — the most operationally relevant)
-        for (int i = 0; i < 8; i++)
-        {
-            var pid = Guid.NewGuid();
-            var gsrn = MakeGsrn(gsrnCounter++);
-            var created = DateTime.UtcNow.AddDays(-rng.Next(1, 5)).AddHours(-rng.Next(1, 12));
-            await conn.ExecuteAsync(
-                "INSERT INTO lifecycle.process_request (id, process_type, gsrn, status, effective_date, datahub_correlation_id, requested_at, created_at) VALUES (@Id, @ProcessType, @Gsrn, 'sent_to_datahub', @EffDate, @CorrId, @Created, @Created)",
-                new { Id = pid, ProcessType = extraProcessTypes[i % extraProcessTypes.Length], Gsrn = gsrn, EffDate = DateTime.UtcNow.Date.AddDays(10 + i), CorrId = $"CORR-SENT-{i:D4}", Created = created });
-            extraProcesses.Add((pid, "sent_to_datahub", extraProcessTypes[i % extraProcessTypes.Length], gsrn, created));
-        }
-
-        // 5 acknowledged (waiting for effectuation date)
-        for (int i = 0; i < 5; i++)
-        {
-            var pid = Guid.NewGuid();
-            var gsrn = MakeGsrn(gsrnCounter++);
-            var created = DateTime.UtcNow.AddDays(-rng.Next(5, 15));
-            await conn.ExecuteAsync(
-                "INSERT INTO lifecycle.process_request (id, process_type, gsrn, status, effective_date, datahub_correlation_id, requested_at, created_at) VALUES (@Id, @ProcessType, @Gsrn, 'acknowledged', @EffDate, @CorrId, @Created, @Created)",
-                new { Id = pid, ProcessType = extraProcessTypes[i % extraProcessTypes.Length], Gsrn = gsrn, EffDate = DateTime.UtcNow.Date.AddDays(5 + i * 3), CorrId = $"CORR-ACK-{i:D4}", Created = created });
-            extraProcesses.Add((pid, "acknowledged", extraProcessTypes[i % extraProcessTypes.Length], gsrn, created));
-        }
-
-        // 3 cancellation_pending (cancellation request sent, awaiting DataHub response)
-        for (int i = 0; i < 3; i++)
-        {
-            var pid = Guid.NewGuid();
-            var gsrn = MakeGsrn(gsrnCounter++);
-            var created = DateTime.UtcNow.AddDays(-rng.Next(10, 20));
-            await conn.ExecuteAsync(
-                "INSERT INTO lifecycle.process_request (id, process_type, gsrn, status, effective_date, datahub_correlation_id, requested_at, created_at) VALUES (@Id, @ProcessType, @Gsrn, 'cancellation_pending', @EffDate, @CorrId, @Created, @Created)",
-                new { Id = pid, ProcessType = "supplier_switch", Gsrn = gsrn, EffDate = DateTime.UtcNow.Date.AddDays(7 + i), CorrId = $"CORR-CANP-{i:D4}", Created = created });
-            extraProcesses.Add((pid, "cancellation_pending", "supplier_switch", gsrn, created));
-        }
-
-        // ── Phase 3c: Process events for all process requests ──────────
-        // Events for existing signup-linked processes
-        foreach (var s in signupDefs.Where(s => s.Status != "registered"))
-        {
-            var prId = processRequestIds[s.Index];
-            var processStatus = s.Status switch { "active" => "completed", "processing" => "effectuation_pending", "rejected" => "rejected", "cancelled" => "cancelled", _ => "pending" };
-            var baseTime = DateTime.UtcNow.AddDays(-rng.Next(20, 55));
-
-            // All processes start with 'created'
-            await conn.ExecuteAsync(
-                "INSERT INTO lifecycle.process_event (id, process_request_id, occurred_at, event_type, source) VALUES (@Id, @PrId, @At, 'created', 'system')",
-                new { Id = Guid.NewGuid(), PrId = prId, At = baseTime });
-
-            if (processStatus == "pending") continue;
-
-            // sent
-            var sentAt = baseTime.AddMinutes(rng.Next(5, 120));
-            await conn.ExecuteAsync(
-                "INSERT INTO lifecycle.process_event (id, process_request_id, occurred_at, event_type, source) VALUES (@Id, @PrId, @At, 'sent', 'system')",
-                new { Id = Guid.NewGuid(), PrId = prId, At = sentAt });
-
-            if (processStatus == "rejected")
-            {
-                var rejAt = sentAt.AddMinutes(rng.Next(5, 60));
-                await conn.ExecuteAsync(
-                    "INSERT INTO lifecycle.process_event (id, process_request_id, occurred_at, event_type, payload, source) VALUES (@Id, @PrId, @At, 'rejection_reason', @Payload::jsonb, 'datahub')",
-                    new { Id = Guid.NewGuid(), PrId = prId, At = rejAt, Payload = "{\"reason\": \"E86 - Invalid effective date or existing active supplier\"}" });
-                continue;
-            }
-
-            // acknowledged
-            var ackAt = sentAt.AddMinutes(rng.Next(2, 30));
-            await conn.ExecuteAsync(
-                "INSERT INTO lifecycle.process_event (id, process_request_id, occurred_at, event_type, source) VALUES (@Id, @PrId, @At, 'acknowledged', 'datahub')",
-                new { Id = Guid.NewGuid(), PrId = prId, At = ackAt });
-
-            if (processStatus == "cancelled")
-            {
-                var cancelSentAt = ackAt.AddHours(rng.Next(2, 48));
-                await conn.ExecuteAsync(
-                    "INSERT INTO lifecycle.process_event (id, process_request_id, occurred_at, event_type, source) VALUES (@Id, @PrId, @At, 'cancellation_sent', 'system')",
-                    new { Id = Guid.NewGuid(), PrId = prId, At = cancelSentAt });
-                var cancelledAt = cancelSentAt.AddMinutes(rng.Next(5, 60));
-                await conn.ExecuteAsync(
-                    "INSERT INTO lifecycle.process_event (id, process_request_id, occurred_at, event_type, source) VALUES (@Id, @PrId, @At, 'cancelled', 'datahub')",
-                    new { Id = Guid.NewGuid(), PrId = prId, At = cancelledAt });
-                continue;
-            }
-
-            // awaiting_effectuation
-            var awaitAt = ackAt.AddHours(rng.Next(1, 24));
-            await conn.ExecuteAsync(
-                "INSERT INTO lifecycle.process_event (id, process_request_id, occurred_at, event_type, source) VALUES (@Id, @PrId, @At, 'awaiting_effectuation', 'datahub')",
-                new { Id = Guid.NewGuid(), PrId = prId, At = awaitAt });
-
-            if (processStatus == "effectuation_pending") continue;
-
-            // completed
-            var completedAt = awaitAt.AddDays(rng.Next(1, 10));
-            await conn.ExecuteAsync(
-                "INSERT INTO lifecycle.process_event (id, process_request_id, occurred_at, event_type, source) VALUES (@Id, @PrId, @At, 'completed', 'datahub')",
-                new { Id = Guid.NewGuid(), PrId = prId, At = completedAt });
-        }
-
-        // Events for extra processes (new statuses)
-        foreach (var (pid, status, _, _, created) in extraProcesses)
-        {
-            await conn.ExecuteAsync(
-                "INSERT INTO lifecycle.process_event (id, process_request_id, occurred_at, event_type, source) VALUES (@Id, @PrId, @At, 'created', 'system')",
-                new { Id = Guid.NewGuid(), PrId = pid, At = created });
-
-            if (status == "pending") continue;
-
-            var sentAt = created.AddMinutes(rng.Next(5, 60));
-            await conn.ExecuteAsync(
-                "INSERT INTO lifecycle.process_event (id, process_request_id, occurred_at, event_type, source) VALUES (@Id, @PrId, @At, 'sent', 'system')",
-                new { Id = Guid.NewGuid(), PrId = pid, At = sentAt });
-
-            if (status == "sent_to_datahub") continue;
-
-            var ackAt = sentAt.AddMinutes(rng.Next(2, 15));
-            await conn.ExecuteAsync(
-                "INSERT INTO lifecycle.process_event (id, process_request_id, occurred_at, event_type, source) VALUES (@Id, @PrId, @At, 'acknowledged', 'datahub')",
-                new { Id = Guid.NewGuid(), PrId = pid, At = ackAt });
-
-            if (status == "acknowledged") continue;
-
-            if (status == "cancellation_pending")
-            {
-                var awaitAt = ackAt.AddHours(rng.Next(1, 12));
-                await conn.ExecuteAsync(
-                    "INSERT INTO lifecycle.process_event (id, process_request_id, occurred_at, event_type, source) VALUES (@Id, @PrId, @At, 'awaiting_effectuation', 'datahub')",
-                    new { Id = Guid.NewGuid(), PrId = pid, At = awaitAt });
-                var cancelSentAt = awaitAt.AddHours(rng.Next(1, 24));
-                await conn.ExecuteAsync(
-                    "INSERT INTO lifecycle.process_event (id, process_request_id, occurred_at, event_type, source) VALUES (@Id, @PrId, @At, 'cancellation_sent', 'system')",
-                    new { Id = Guid.NewGuid(), PrId = pid, At = cancelSentAt });
-            }
         }
 
         // ── Phase 4: Portfolio ───────────────────────────────────────────
@@ -529,106 +347,7 @@ public static class DatabaseSeeder
                 new { Gsrn = gsrn, GridArea = ga, Gln = GridGln(ga), PriceArea = GridPriceArea(ga), DeactivatedAt = DateTime.UtcNow.AddDays(-rng.Next(30, 180)) });
         }
 
-        // ── Phase 5: Process-linked messages ─────────────────────────────
-        foreach (var s in signupDefs.Where(s => s.Status == "active"))
-        {
-            var corrId = $"CORR-SEED-{s.Index:D4}";
-            var rsmType = s.Type == "move_in" ? "RSM-001" : "RSM-001";
-            var sentAt = DateTime.UtcNow.AddDays(-rng.Next(15, 55));
-
-            await conn.ExecuteAsync(
-                "INSERT INTO datahub.outbound_request (id, process_type, gsrn, status, correlation_id, sent_at, response_at) VALUES (@Id, @Type, @Gsrn, 'acknowledged_ok', @CorrId, @Sent, @Resp)",
-                new { Id = Guid.NewGuid(), Type = rsmType, Gsrn = s.Gsrn, CorrId = corrId, Sent = sentAt, Resp = sentAt.AddMinutes(rng.Next(1, 15)) });
-
-            var rsm009At = sentAt.AddMinutes(rng.Next(2, 30));
-            await conn.ExecuteAsync(
-                "INSERT INTO datahub.inbound_message (id, datahub_message_id, message_type, correlation_id, queue_name, status, raw_payload_size, received_at, processed_at) VALUES (@Id, @DhId, 'RSM-001', @CorrId, 'cim-001', 'processed', @Size, @Recv, @Proc)",
-                new { Id = Guid.NewGuid(), DhId = $"DH-{Guid.NewGuid():N}", CorrId = corrId, Size = rng.Next(800, 1500), Recv = rsm009At, Proc = rsm009At.AddSeconds(rng.Next(1, 10)) });
-
-            // RSM-028: Customer data
-            var rsm028At = rsm009At.AddMinutes(rng.Next(1, 15));
-            await conn.ExecuteAsync(
-                "INSERT INTO datahub.inbound_message (id, datahub_message_id, message_type, correlation_id, queue_name, status, raw_payload_size, received_at, processed_at) VALUES (@Id, @DhId, 'RSM-028', @CorrId, 'cim-001', 'processed', @Size, @Recv, @Proc)",
-                new { Id = Guid.NewGuid(), DhId = $"DH-{Guid.NewGuid():N}", CorrId = corrId, Size = rng.Next(600, 1200), Recv = rsm028At, Proc = rsm028At.AddSeconds(rng.Next(1, 5)) });
-
-            // RSM-031: Price attachments
-            var rsm031At = rsm028At.AddMinutes(rng.Next(1, 10));
-            await conn.ExecuteAsync(
-                "INSERT INTO datahub.inbound_message (id, datahub_message_id, message_type, correlation_id, queue_name, status, raw_payload_size, received_at, processed_at) VALUES (@Id, @DhId, 'RSM-031', @CorrId, 'cim-001', 'processed', @Size, @Recv, @Proc)",
-                new { Id = Guid.NewGuid(), DhId = $"DH-{Guid.NewGuid():N}", CorrId = corrId, Size = rng.Next(500, 1000), Recv = rsm031At, Proc = rsm031At.AddSeconds(rng.Next(1, 5)) });
-
-            var rsm007At = rsm031At.AddHours(rng.Next(1, 48));
-            await conn.ExecuteAsync(
-                "INSERT INTO datahub.inbound_message (id, datahub_message_id, message_type, correlation_id, queue_name, status, raw_payload_size, received_at, processed_at) VALUES (@Id, @DhId, 'RSM-022', @CorrId, 'cim-001', 'processed', @Size, @Recv, @Proc)",
-                new { Id = Guid.NewGuid(), DhId = $"DH-{Guid.NewGuid():N}", CorrId = corrId, Size = rng.Next(800, 1500), Recv = rsm007At, Proc = rsm007At.AddSeconds(rng.Next(1, 10)) });
-        }
-
-        foreach (var s in signupDefs.Where(s => s.Status == "processing"))
-        {
-            var corrId = $"CORR-SEED-{s.Index:D4}";
-            var sentAt = DateTime.UtcNow.AddDays(-rng.Next(3, 10));
-            await conn.ExecuteAsync(
-                "INSERT INTO datahub.outbound_request (id, process_type, gsrn, status, correlation_id, sent_at, response_at) VALUES (@Id, 'RSM-001', @Gsrn, 'acknowledged_ok', @CorrId, @Sent, @Resp)",
-                new { Id = Guid.NewGuid(), Gsrn = s.Gsrn, CorrId = corrId, Sent = sentAt, Resp = sentAt.AddMinutes(rng.Next(1, 15)) });
-            var rsm009At = sentAt.AddMinutes(rng.Next(5, 60));
-            await conn.ExecuteAsync(
-                "INSERT INTO datahub.inbound_message (id, datahub_message_id, message_type, correlation_id, queue_name, status, raw_payload_size, received_at, processed_at) VALUES (@Id, @DhId, 'RSM-001', @CorrId, 'cim-001', 'processed', @Size, @Recv, @Proc)",
-                new { Id = Guid.NewGuid(), DhId = $"DH-{Guid.NewGuid():N}", CorrId = corrId, Size = rng.Next(800, 1500), Recv = rsm009At, Proc = rsm009At.AddSeconds(rng.Next(1, 10)) });
-        }
-
-        foreach (var s in signupDefs.Where(s => s.Status == "rejected"))
-        {
-            var corrId = $"CORR-SEED-{s.Index:D4}";
-            var sentAt = DateTime.UtcNow.AddDays(-rng.Next(10, 30));
-            await conn.ExecuteAsync(
-                "INSERT INTO datahub.outbound_request (id, process_type, gsrn, status, correlation_id, sent_at, response_at, error_details) VALUES (@Id, 'RSM-001', @Gsrn, 'acknowledged_error', @CorrId, @Sent, @Resp, @Error)",
-                new { Id = Guid.NewGuid(), Gsrn = s.Gsrn, CorrId = corrId, Sent = sentAt, Resp = sentAt.AddMinutes(rng.Next(1, 10)), Error = "E86 - Invalid effective date or existing active supplier" });
-            var rsm009At = sentAt.AddMinutes(rng.Next(5, 60));
-            await conn.ExecuteAsync(
-                "INSERT INTO datahub.inbound_message (id, datahub_message_id, message_type, correlation_id, queue_name, status, raw_payload_size, received_at, processed_at) VALUES (@Id, @DhId, 'RSM-001', @CorrId, 'cim-001', 'processed', @Size, @Recv, @Proc)",
-                new { Id = Guid.NewGuid(), DhId = $"DH-{Guid.NewGuid():N}", CorrId = corrId, Size = rng.Next(800, 1500), Recv = rsm009At, Proc = rsm009At.AddSeconds(rng.Next(1, 10)) });
-        }
-
-        foreach (var s in signupDefs.Where(s => s.Status == "cancelled"))
-        {
-            var corrId = $"CORR-SEED-{s.Index:D4}";
-            var sentAt = DateTime.UtcNow.AddDays(-rng.Next(10, 30));
-            await conn.ExecuteAsync(
-                "INSERT INTO datahub.outbound_request (id, process_type, gsrn, status, correlation_id, sent_at, response_at) VALUES (@Id, 'RSM-001', @Gsrn, 'acknowledged_ok', @CorrId, @Sent, @Resp)",
-                new { Id = Guid.NewGuid(), Gsrn = s.Gsrn, CorrId = corrId, Sent = sentAt, Resp = sentAt.AddMinutes(rng.Next(1, 10)) });
-            var cancelAt = sentAt.AddHours(rng.Next(2, 48));
-            var cancelType = rng.Next(2) == 0 ? "RSM-024" : "RSM-044";
-            await conn.ExecuteAsync(
-                "INSERT INTO datahub.outbound_request (id, process_type, gsrn, status, correlation_id, sent_at, response_at) VALUES (@Id, @Type, @Gsrn, 'acknowledged_ok', @CorrId, @Sent, @Resp)",
-                new { Id = Guid.NewGuid(), Type = cancelType, Gsrn = s.Gsrn, CorrId = corrId, Sent = cancelAt, Resp = cancelAt.AddMinutes(rng.Next(1, 10)) });
-        }
-
-        // ── Phase 6: Operational messages ────────────────────────────────
-        for (int i = 0; i < 200; i++)
-        {
-            var receivedAt = DateTime.UtcNow.AddDays(-rng.Next(1, 90)).AddHours(2).AddMinutes(rng.Next(0, 60));
-            await conn.ExecuteAsync(
-                "INSERT INTO datahub.inbound_message (id, datahub_message_id, message_type, queue_name, status, raw_payload_size, received_at, processed_at) VALUES (@Id, @DhId, 'RSM-012', 'cim-metering', 'processed', @Size, @Recv, @Proc)",
-                new { Id = Guid.NewGuid(), DhId = $"DH-{Guid.NewGuid():N}", Size = rng.Next(2000, 8000), Recv = receivedAt, Proc = receivedAt.AddSeconds(rng.Next(2, 30)) });
-        }
-
-        for (int i = 0; i < 40; i++)
-        {
-            var receivedAt = DateTime.UtcNow.AddDays(-rng.Next(1, 60)).AddHours(3).AddMinutes(rng.Next(0, 60));
-            await conn.ExecuteAsync(
-                "INSERT INTO datahub.inbound_message (id, datahub_message_id, message_type, queue_name, status, raw_payload_size, received_at, processed_at) VALUES (@Id, @DhId, 'RSM-014', 'cim-aggregation', 'processed', @Size, @Recv, @Proc)",
-                new { Id = Guid.NewGuid(), DhId = $"DH-{Guid.NewGuid():N}", Size = rng.Next(1500, 5000), Recv = receivedAt, Proc = receivedAt.AddSeconds(rng.Next(2, 20)) });
-        }
-
-        for (int i = 0; i < 20; i++)
-        {
-            var receivedAt = DateTime.UtcNow.AddDays(-rng.Next(1, 45)).AddHours(rng.Next(0, 24));
-            await conn.ExecuteAsync(
-                "INSERT INTO datahub.inbound_message (id, datahub_message_id, message_type, queue_name, status, raw_payload_size, received_at, processed_at) VALUES (@Id, @DhId, 'RSM-004', 'cim-grid', 'processed', @Size, @Recv, @Proc)",
-                new { Id = Guid.NewGuid(), DhId = $"DH-{Guid.NewGuid():N}", Size = rng.Next(500, 2000), Recv = receivedAt, Proc = receivedAt.AddSeconds(rng.Next(1, 15)) });
-        }
-
-        // ── Phase 7: Billing ──────────────────────────────────────────────
+        // ── Phase 5: Billing ──────────────────────────────────────────────
         var billingPeriods = new List<(Guid Id, DateTime Start, DateTime End)>();
         for (int month = 1; month <= 12; month++)
         {
@@ -732,8 +451,5 @@ public static class DatabaseSeeder
                 new { Id = Guid.NewGuid(), Gsrn = gsrn, PeriodStart = periodStart, PeriodEnd = periodEnd, Amount = 400m + rng.Next(0, 400), PaidAt = periodStart.AddDays(15), Currency = "DKK" });
         }
 
-        // ── Phase 10: Processed message IDs ──────────────────────────────
-        await conn.ExecuteAsync(
-            "INSERT INTO datahub.processed_message_id (message_id, processed_at) SELECT datahub_message_id, processed_at FROM datahub.inbound_message WHERE status = 'processed' AND processed_at IS NOT NULL ON CONFLICT DO NOTHING");
     }
 }
