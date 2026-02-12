@@ -31,6 +31,7 @@ public record SignupRequest(
     Guid ProductId,
     string Type,
     DateOnly EffectiveDate,
+    string? Mobile = null,
     string? Gsrn = null,
     Guid? CorrectedFromId = null,
     // Billing address (customer's postal address — distinct from supply point)

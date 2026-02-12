@@ -467,7 +467,7 @@ public class ProcessTimelineTests
     /// <summary>Throws on all methods — QueuePoller RSM-001 path never touches signup (directly).</summary>
     private sealed class ThrowSignupRepo : ISignupRepository
     {
-        public Task<Signup> CreateAsync(string signupNumber, string darId, string gsrn, string customerName, string customerCprCvr, string customerContactType, Guid productId, Guid processRequestId, string type, DateOnly effectiveDate, Guid? correctedFromId, SignupAddressInfo? addressInfo, CancellationToken ct) => throw new NotImplementedException();
+        public Task<Signup> CreateAsync(string signupNumber, string darId, string gsrn, string customerName, string customerCprCvr, string customerContactType, Guid productId, Guid processRequestId, string type, DateOnly effectiveDate, Guid? correctedFromId, SignupAddressInfo? addressInfo, string? mobile, CancellationToken ct) => throw new NotImplementedException();
         public Task<string> NextSignupNumberAsync(CancellationToken ct) => throw new NotImplementedException();
         public Task<Signup?> GetBySignupNumberAsync(string signupNumber, CancellationToken ct) => throw new NotImplementedException();
         public Task<Signup?> GetByIdAsync(Guid id, CancellationToken ct) => throw new NotImplementedException();

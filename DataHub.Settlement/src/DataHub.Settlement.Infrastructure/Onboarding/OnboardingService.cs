@@ -121,6 +121,23 @@ public sealed class OnboardingService : IOnboardingService
         if (string.IsNullOrWhiteSpace(request.CustomerName))
             throw new ValidationException("Customer name is required.");
 
+        // 3a. Validate mobile phone is provided
+        if (string.IsNullOrWhiteSpace(request.Mobile))
+            throw new ValidationException("Mobile phone number is required.");
+
+        // 3b. Validate CPR/CVR format based on contact type
+        var dbContactTypeForValidation = MapContactTypeToDb(request.ContactType);
+        if (dbContactTypeForValidation == "person")
+        {
+            if (string.IsNullOrEmpty(request.CprCvr) || request.CprCvr.Length != 10 || !request.CprCvr.All(char.IsDigit))
+                throw new ValidationException("CPR must be exactly 10 digits.");
+        }
+        else if (dbContactTypeForValidation == "company")
+        {
+            if (string.IsNullOrEmpty(request.CprCvr) || request.CprCvr.Length != 8 || !request.CprCvr.All(char.IsDigit))
+                throw new ValidationException("CVR must be exactly 8 digits.");
+        }
+
         // 4. Check metering point exists and is eligible (BRS-001 E10/D16, BRS-009 E10/D16)
         var meteringPoint = await _portfolioRepo.GetMeteringPointByGsrnAsync(gsrn, ct);
         if (meteringPoint is not null && meteringPoint.ConnectionStatus == "closed_down")
@@ -165,7 +182,7 @@ public sealed class OnboardingService : IOnboardingService
             signupNumber, request.DarId ?? "", gsrn,
             request.CustomerName, request.CprCvr, dbContactType,
             request.ProductId, process.Id, request.Type, request.EffectiveDate,
-            request.CorrectedFromId, addressInfo, ct);
+            request.CorrectedFromId, addressInfo, request.Mobile, ct);
 
         _logger.LogInformation(
             "Signup {SignupNumber} created for GSRN {Gsrn}, type={Type}, effective={EffectiveDate}{Correction}",

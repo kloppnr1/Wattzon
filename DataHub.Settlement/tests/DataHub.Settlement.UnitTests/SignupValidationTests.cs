@@ -34,12 +34,14 @@ public class SignupValidationTests
         DateOnly? effectiveDate = null,
         string gsrn = "571313100000012345",
         string customerName = "John Doe",
-        string cprCvr = "1234567890") =>
+        string cprCvr = "1234567890",
+        string contactType = "private",
+        string? mobile = "12345678") =>
         new(DarId: null, CustomerName: customerName, CprCvr: cprCvr,
-            ContactType: "private", Email: "j@d.dk", Phone: "12345678",
+            ContactType: contactType, Email: "j@d.dk", Phone: "12345678",
             ProductId: InMemoryPortfolioRepo.DefaultProductId, Type: type,
             EffectiveDate: effectiveDate ?? new DateOnly(2026, 3, 1),
-            Gsrn: gsrn);
+            Gsrn: gsrn, Mobile: mobile);
 
     // ── Move-in effective date (BRS-009) ──
 
@@ -261,7 +263,7 @@ public class SignupValidationTests
         public Task<Signup> CreateAsync(string signupNumber, string darId, string gsrn,
             string customerName, string customerCprCvr, string customerContactType,
             Guid productId, Guid processRequestId, string type, DateOnly effectiveDate,
-            Guid? correctedFromId, SignupAddressInfo? addressInfo, CancellationToken ct)
+            Guid? correctedFromId, SignupAddressInfo? addressInfo, string? mobile, CancellationToken ct)
             => Task.FromResult(new Signup(Guid.NewGuid(), signupNumber, darId, gsrn, null, productId, processRequestId, type, effectiveDate, "registered", null, correctedFromId));
 
         public Task<string> NextSignupNumberAsync(CancellationToken ct)

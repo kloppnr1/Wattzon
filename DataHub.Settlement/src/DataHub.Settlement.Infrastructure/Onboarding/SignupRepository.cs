@@ -35,19 +35,19 @@ public sealed class SignupRepository : ISignupRepository
     public async Task<Signup> CreateAsync(string signupNumber, string darId, string gsrn,
         string customerName, string customerCprCvr, string customerContactType,
         Guid productId, Guid processRequestId, string type, DateOnly effectiveDate,
-        Guid? correctedFromId, SignupAddressInfo? addressInfo, CancellationToken ct)
+        Guid? correctedFromId, SignupAddressInfo? addressInfo, string? mobile, CancellationToken ct)
     {
         const string sql = """
             INSERT INTO portfolio.signup
                 (signup_number, dar_id, gsrn, customer_name, customer_cpr_cvr, customer_contact_type,
-                 product_id, process_request_id, type, effective_date, corrected_from_id,
+                 product_id, process_request_id, type, effective_date, corrected_from_id, mobile,
                  billing_dar_id, billing_street, billing_house_number, billing_floor, billing_door, billing_postal_code, billing_city,
                  payer_name, payer_cpr_cvr, payer_contact_type, payer_email, payer_phone,
                  payer_billing_street, payer_billing_house_number, payer_billing_floor,
                  payer_billing_door, payer_billing_postal_code, payer_billing_city)
             VALUES
                 (@SignupNumber, @DarId, @Gsrn, @CustomerName, @CustomerCprCvr, @CustomerContactType,
-                 @ProductId, @ProcessRequestId, @Type, @EffectiveDate, @CorrectedFromId,
+                 @ProductId, @ProcessRequestId, @Type, @EffectiveDate, @CorrectedFromId, @Mobile,
                  @BillingDarId, @BillingStreet, @BillingHouseNumber, @BillingFloor, @BillingDoor, @BillingPostalCode, @BillingCity,
                  @PayerName, @PayerCprCvr, @PayerContactType, @PayerEmail, @PayerPhone,
                  @PayerBillingStreet, @PayerBillingHouseNumber, @PayerBillingFloor,
@@ -64,7 +64,7 @@ public sealed class SignupRepository : ISignupRepository
                 SignupNumber = signupNumber, DarId = darId, Gsrn = gsrn,
                 CustomerName = customerName, CustomerCprCvr = customerCprCvr, CustomerContactType = customerContactType,
                 ProductId = productId, ProcessRequestId = processRequestId, Type = type,
-                EffectiveDate = effectiveDate, CorrectedFromId = correctedFromId,
+                EffectiveDate = effectiveDate, CorrectedFromId = correctedFromId, Mobile = mobile,
                 BillingDarId = addressInfo?.BillingDarId,
                 BillingStreet = addressInfo?.BillingStreet,
                 BillingHouseNumber = addressInfo?.BillingHouseNumber,
