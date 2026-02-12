@@ -102,8 +102,15 @@ app.MapGet("/health", () => Results.Ok(new { status = "healthy" }));
 // Seed test data
 app.MapPost("/api/seed", async () =>
 {
-    await DatabaseSeeder.SeedAsync(connectionString);
-    return Results.Ok(new { message = "Database seeded successfully." });
+    try
+    {
+        await DatabaseSeeder.SeedAsync(connectionString);
+        return Results.Ok(new { message = "Database seeded successfully." });
+    }
+    catch (Exception ex)
+    {
+        return Results.Problem(detail: ex.ToString(), statusCode: 500);
+    }
 });
 
 // --- Products ---
