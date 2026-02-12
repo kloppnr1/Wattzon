@@ -1,5 +1,6 @@
 using DataHub.Settlement.Application.AddressLookup;
 using DataHub.Settlement.Application.Authentication;
+using DataHub.Settlement.Application.Billing;
 using DataHub.Settlement.Application.DataHub;
 using DataHub.Settlement.Application.Lifecycle;
 using DataHub.Settlement.Application.Metering;
@@ -13,6 +14,7 @@ using DataHub.Settlement.Domain;
 using DataHub.Settlement.Infrastructure;
 using DataHub.Settlement.Infrastructure.AddressLookup;
 using DataHub.Settlement.Infrastructure.Authentication;
+using DataHub.Settlement.Infrastructure.Billing;
 using DataHub.Settlement.Infrastructure.Database;
 using DataHub.Settlement.Infrastructure.DataHub;
 using DataHub.Settlement.Infrastructure.Lifecycle;
@@ -110,11 +112,24 @@ builder.Services.AddSingleton<IMessageRepository>(new MessageRepository(connecti
 builder.Services.AddSingleton<IBrsRequestBuilder, BrsRequestBuilder>();
 builder.Services.AddSingleton<IOnboardingService, OnboardingService>();
 
+// Billing services
+builder.Services.AddSingleton<IAcontoPaymentRepository>(new AcontoPaymentRepository(connectionString));
+builder.Services.AddSingleton<IInvoiceRepository>(new InvoiceRepository(connectionString));
+builder.Services.AddSingleton<IPaymentRepository>(new PaymentRepository(connectionString));
+builder.Services.AddSingleton<IInvoiceService, InvoiceService>();
+builder.Services.AddSingleton<IPaymentMatchingService, PaymentMatchingService>();
+
 // Settlement services
 builder.Services.AddSingleton<ISettlementEngine, SettlementEngine>();
 builder.Services.AddSingleton<IMeteringCompletenessChecker>(new MeteringCompletenessChecker(connectionString));
 builder.Services.AddSingleton<ISettlementDataLoader, SettlementDataLoader>();
-builder.Services.AddSingleton<ISettlementResultStore>(new SettlementResultStore(connectionString));
+builder.Services.AddSingleton<ISettlementResultStore>(sp =>
+{
+    var invoiceService = sp.GetRequiredService<IInvoiceService>();
+    var portfolioRepo = sp.GetRequiredService<IPortfolioRepository>();
+    var logger = sp.GetRequiredService<ILogger<SettlementResultStore>>();
+    return new SettlementResultStore(connectionString, invoiceService, portfolioRepo, logger);
+});
 
 // Spot price fetching from Energi Data Service (energidataservice.dk)
 builder.Services.AddHttpClient<EnergiDataServiceClient>();
@@ -130,6 +145,7 @@ builder.Services.AddHostedService<QueuePollerService>();
 builder.Services.AddHostedService<ProcessSchedulerService>();
 builder.Services.AddHostedService<SettlementOrchestrationService>();
 builder.Services.AddHostedService<SpotPriceFetchingService>();
+builder.Services.AddHostedService<OverdueCheckService>();
 
 var host = builder.Build();
 

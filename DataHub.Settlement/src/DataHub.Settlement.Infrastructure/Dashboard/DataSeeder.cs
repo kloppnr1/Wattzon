@@ -14,18 +14,18 @@ using Npgsql;
 
 namespace DataHub.Settlement.Infrastructure.Dashboard;
 
-public sealed class DemoDataSeeder
+public sealed class DataSeeder
 {
     private const string Gsrn = "571313100000012345";
     private readonly string _connectionString;
 
-    static DemoDataSeeder()
+    static DataSeeder()
     {
         DefaultTypeMap.MatchNamesWithUnderscores = true;
         DapperTypeHandlers.Register();
     }
 
-    public DemoDataSeeder(string connectionString)
+    public DataSeeder(string connectionString)
     {
         _connectionString = connectionString;
     }

@@ -15,8 +15,7 @@ public static class CimMessageBuilder
     /// <returns>Example CIM JSON message, or null if no example available</returns>
     public static string? BuildExampleMessage(string stepName, string gsrn, DateOnly effectiveDate)
     {
-        // TODO: Implement actual CIM message examples when message audit is fully implemented
-        // For now, return a minimal placeholder
+        // Returns example CIM messages for known step types; null for unsupported types
         return stepName switch
         {
             "BRS-001 Request" => BuildBrs001Example(gsrn, effectiveDate),

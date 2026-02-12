@@ -1,6 +1,9 @@
 using Dapper;
+using DataHub.Settlement.Application.Billing;
+using DataHub.Settlement.Application.Portfolio;
 using DataHub.Settlement.Application.Settlement;
 using DataHub.Settlement.Infrastructure.Database;
+using Microsoft.Extensions.Logging;
 using Npgsql;
 
 namespace DataHub.Settlement.Infrastructure.Settlement;
@@ -8,6 +11,9 @@ namespace DataHub.Settlement.Infrastructure.Settlement;
 public sealed class SettlementResultStore : ISettlementResultStore
 {
     private readonly string _connectionString;
+    private readonly IInvoiceService? _invoiceService;
+    private readonly IPortfolioRepository? _portfolioRepo;
+    private readonly ILogger<SettlementResultStore>? _logger;
 
     static SettlementResultStore()
     {
@@ -18,6 +24,18 @@ public sealed class SettlementResultStore : ISettlementResultStore
     public SettlementResultStore(string connectionString)
     {
         _connectionString = connectionString;
+    }
+
+    public SettlementResultStore(
+        string connectionString,
+        IInvoiceService invoiceService,
+        IPortfolioRepository portfolioRepo,
+        ILogger<SettlementResultStore> logger)
+    {
+        _connectionString = connectionString;
+        _invoiceService = invoiceService;
+        _portfolioRepo = portfolioRepo;
+        _logger = logger;
     }
 
     public async Task StoreAsync(string gsrn, string gridAreaCode, SettlementResult result, CancellationToken ct)
@@ -67,6 +85,38 @@ public sealed class SettlementResultStore : ISettlementResultStore
                             VatAmount = Math.Round(line.Amount * 0.25m, 2),
                         },
                         cancellationToken: ct));
+            }
+
+            // Create settlement invoice if service is available
+            if (_invoiceService is not null && _portfolioRepo is not null)
+            {
+                try
+                {
+                    var contract = await _portfolioRepo.GetActiveContractAsync(gsrn, ct);
+                    if (contract is not null)
+                    {
+                        var invoiceLines = new List<CreateInvoiceLineRequest>();
+                        var sortOrder = 1;
+                        foreach (var line in result.Lines)
+                        {
+                            var vatAmt = Math.Round(line.Amount * 0.25m, 2);
+                            invoiceLines.Add(new CreateInvoiceLineRequest(
+                                null, gsrn, sortOrder++, line.ChargeType,
+                                $"{line.ChargeType.Replace('_', ' ')} — {result.PeriodStart:yyyy-MM-dd} to {result.PeriodEnd:yyyy-MM-dd}",
+                                line.Kwh, null, line.Amount, vatAmt, line.Amount + vatAmt));
+                        }
+
+                        await _invoiceService.CreateSettlementInvoiceAsync(
+                            contract.CustomerId, contract.PayerId, contract.Id,
+                            settlementRunId, billingPeriodId, gsrn,
+                            result.PeriodStart, result.PeriodEnd, invoiceLines, ct);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger?.LogWarning(ex,
+                        "Failed to create settlement invoice for GSRN {Gsrn} — invoice creation is non-blocking", gsrn);
+                }
             }
         }
         finally

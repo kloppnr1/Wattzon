@@ -324,7 +324,7 @@ public sealed class OnboardingService : IOnboardingService
                         ? new Address(addressInfo.PayerBillingStreet, addressInfo.PayerBillingHouseNumber,
                             addressInfo.PayerBillingFloor, addressInfo.PayerBillingDoor,
                             addressInfo.PayerBillingPostalCode, addressInfo.PayerBillingCity)
-                        : null;  // TODO: payer DAR ID not yet captured
+                        : null;  // Payer DAR ID not captured in signup flow — address from form fields only
 
                     var payer = await _portfolioRepo.CreatePayerAsync(
                         addressInfo.PayerName, addressInfo.PayerCprCvr ?? "",

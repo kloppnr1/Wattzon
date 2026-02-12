@@ -86,6 +86,10 @@ builder.Services.AddSingleton<IMeteringDataRepository>(new MeteringDataRepositor
 builder.Services.AddSingleton<ITariffRepository>(new TariffRepository(connectionString));
 builder.Services.AddSingleton<ICorrectionService, CorrectionService>();
 builder.Services.AddSingleton<IAcontoPaymentRepository>(new AcontoPaymentRepository(connectionString));
+builder.Services.AddSingleton<IInvoiceRepository>(new InvoiceRepository(connectionString));
+builder.Services.AddSingleton<IPaymentRepository>(new PaymentRepository(connectionString));
+builder.Services.AddSingleton<IInvoiceService, InvoiceService>();
+builder.Services.AddSingleton<IPaymentMatchingService, PaymentMatchingService>();
 
 var app = builder.Build();
 
@@ -627,6 +631,156 @@ app.MapGet("/api/billing/aconto/{gsrn}", async (
     });
 });
 
+// --- Invoices ---
+
+// GET /api/billing/invoices — paginated invoices with filters
+app.MapGet("/api/billing/invoices", async (
+    Guid? customerId, string? status, string? invoiceType,
+    DateOnly? fromDate, DateOnly? toDate,
+    int? page, int? pageSize,
+    IInvoiceRepository repo, CancellationToken ct) =>
+{
+    var p = Math.Max(page ?? 1, 1);
+    var ps = Math.Clamp(pageSize ?? 50, 1, 200);
+    var result = await repo.GetPagedAsync(customerId, status, invoiceType, fromDate, toDate, p, ps, ct);
+    return Results.Ok(result);
+});
+
+// GET /api/billing/invoices/overdue — all overdue invoices
+app.MapGet("/api/billing/invoices/overdue", async (IInvoiceRepository repo, CancellationToken ct) =>
+{
+    var invoices = await repo.GetOverdueAsync(ct);
+    return Results.Ok(invoices);
+});
+
+// GET /api/billing/invoices/{id} — invoice detail with lines
+app.MapGet("/api/billing/invoices/{id:guid}", async (Guid id, IInvoiceRepository repo, CancellationToken ct) =>
+{
+    var detail = await repo.GetDetailAsync(id, ct);
+    return detail is not null ? Results.Ok(detail) : Results.NotFound();
+});
+
+// POST /api/billing/invoices/{id}/send — draft → sent, assigns invoice number
+app.MapPost("/api/billing/invoices/{id:guid}/send", async (Guid id, IInvoiceService service, CancellationToken ct) =>
+{
+    try
+    {
+        var invoiceNumber = await service.SendInvoiceAsync(id, ct);
+        return Results.Ok(new { invoiceNumber, message = "Invoice sent." });
+    }
+    catch (InvalidOperationException ex)
+    {
+        return Results.BadRequest(new { error = ex.Message });
+    }
+});
+
+// POST /api/billing/invoices/{id}/cancel — cancel invoice
+app.MapPost("/api/billing/invoices/{id:guid}/cancel", async (Guid id, IInvoiceService service, CancellationToken ct) =>
+{
+    try
+    {
+        await service.CancelInvoiceAsync(id, ct);
+        return Results.Ok(new { message = "Invoice cancelled." });
+    }
+    catch (InvalidOperationException ex)
+    {
+        return Results.BadRequest(new { error = ex.Message });
+    }
+});
+
+// POST /api/billing/invoices/{id}/credit — create credit note
+app.MapPost("/api/billing/invoices/{id:guid}/credit", async (Guid id, CreditNoteRequest? request, IInvoiceService service, CancellationToken ct) =>
+{
+    try
+    {
+        var creditNote = await service.CreateCreditNoteAsync(id, request?.Notes, ct);
+        return Results.Created($"/api/billing/invoices/{creditNote.Id}", creditNote);
+    }
+    catch (InvalidOperationException ex)
+    {
+        return Results.BadRequest(new { error = ex.Message });
+    }
+});
+
+// --- Payments ---
+
+// GET /api/billing/payments — paginated payments
+app.MapGet("/api/billing/payments", async (
+    Guid? customerId, string? status,
+    int? page, int? pageSize,
+    IPaymentRepository repo, CancellationToken ct) =>
+{
+    var p = Math.Max(page ?? 1, 1);
+    var ps = Math.Clamp(pageSize ?? 50, 1, 200);
+    var result = await repo.GetPagedAsync(customerId, status, p, ps, ct);
+    return Results.Ok(result);
+});
+
+// GET /api/billing/payments/{id} — payment detail with allocations
+app.MapGet("/api/billing/payments/{id:guid}", async (Guid id, IPaymentRepository repo, CancellationToken ct) =>
+{
+    var detail = await repo.GetDetailAsync(id, ct);
+    return detail is not null ? Results.Ok(detail) : Results.NotFound();
+});
+
+// POST /api/billing/payments — record payment and auto-match
+app.MapPost("/api/billing/payments", async (CreatePaymentRequest request, IPaymentMatchingService service, CancellationToken ct) =>
+{
+    try
+    {
+        var payment = await service.RecordAndMatchPaymentAsync(request, ct);
+        return Results.Created($"/api/billing/payments/{payment.Id}", payment);
+    }
+    catch (InvalidOperationException ex)
+    {
+        return Results.BadRequest(new { error = ex.Message });
+    }
+});
+
+// POST /api/billing/payments/{id}/allocate — manual allocation
+app.MapPost("/api/billing/payments/{id:guid}/allocate", async (Guid id, ManualAllocationRequest request, IPaymentMatchingService service, CancellationToken ct) =>
+{
+    try
+    {
+        await service.ManualAllocateAsync(id, request.InvoiceId, request.Amount, "backoffice", ct);
+        return Results.Ok(new { message = "Payment allocated." });
+    }
+    catch (InvalidOperationException ex)
+    {
+        return Results.BadRequest(new { error = ex.Message });
+    }
+});
+
+// POST /api/billing/payments/import — bulk bank file import
+app.MapPost("/api/billing/payments/import", async (BankFileImportRequest request, IPaymentMatchingService service, CancellationToken ct) =>
+{
+    var result = await service.ImportBankFileAsync(request, ct);
+    return Results.Ok(result);
+});
+
+// --- Customer Balance ---
+
+// GET /api/billing/customers/{id}/balance — customer balance summary
+app.MapGet("/api/billing/customers/{id:guid}/balance", async (Guid id, IInvoiceRepository repo, CancellationToken ct) =>
+{
+    var balance = await repo.GetCustomerBalanceAsync(id, ct);
+    return balance is not null ? Results.Ok(balance) : Results.NotFound();
+});
+
+// GET /api/billing/customers/{id}/ledger — chronological invoices + payments
+app.MapGet("/api/billing/customers/{id:guid}/ledger", async (Guid id, IInvoiceRepository repo, CancellationToken ct) =>
+{
+    var ledger = await repo.GetCustomerLedgerAsync(id, ct);
+    return Results.Ok(ledger);
+});
+
+// GET /api/billing/outstanding — all customers with outstanding amounts
+app.MapGet("/api/billing/outstanding", async (IInvoiceRepository repo, CancellationToken ct) =>
+{
+    var outstanding = await repo.GetOutstandingCustomersAsync(ct);
+    return Results.Ok(outstanding);
+});
+
 // --- Processes ---
 
 // GET /api/processes — processes by status
@@ -686,3 +840,4 @@ app.MapFallbackToFile("index.html");
 app.Run();
 
 record ProcessInitRequest(string Gsrn, DateOnly EffectiveDate);
+record CreditNoteRequest(string? Notes);

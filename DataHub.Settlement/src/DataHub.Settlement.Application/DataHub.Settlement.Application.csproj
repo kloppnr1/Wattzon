@@ -1,6 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.*" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\DataHub.Settlement.Domain\DataHub.Settlement.Domain.csproj" />
   </ItemGroup>
 

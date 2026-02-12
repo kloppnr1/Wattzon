@@ -1,3 +1,4 @@
+using DataHub.Settlement.Application.Billing;
 using DataHub.Settlement.Application.DataHub;
 using DataHub.Settlement.Application.Lifecycle;
 using DataHub.Settlement.Application.Messaging;
@@ -358,6 +359,7 @@ public class ProcessTimelineTests
             new ThrowMessageRepo(),
             _clock,
             new NullMessageLog(),
+            new NullInvoiceService(),
             NullLogger<QueuePollerService>.Instance);
 
     /// <summary>Stub parser that returns a preconfigured RSM-001 result.</summary>

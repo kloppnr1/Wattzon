@@ -26,7 +26,7 @@ _ = Task.Run(async () =>
     }
 });
 
-// ── OAuth2 token endpoint (fake) ──
+// ── OAuth2 token endpoint (simulated) ──
 app.MapPost("/oauth2/v2.0/token", () =>
 {
     return Results.Ok(new

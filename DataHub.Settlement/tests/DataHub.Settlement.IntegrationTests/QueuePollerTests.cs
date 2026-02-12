@@ -1,4 +1,5 @@
 using DataHub.Settlement.Application.AddressLookup;
+using DataHub.Settlement.Application.Billing;
 using DataHub.Settlement.Application.DataHub;
 using DataHub.Settlement.Application.Lifecycle;
 using DataHub.Settlement.Application.Metering;
@@ -48,6 +49,7 @@ public class QueuePollerTests
             NullOnboardingService.Instance, new Infrastructure.Tariff.TariffRepository(TestDatabase.ConnectionString),
             new Infrastructure.DataHub.BrsRequestBuilder(), new NullMessageRepository(),
             new TestClock(), _messageLog,
+            new NullInvoiceService(),
             NullLogger<QueuePollerService>.Instance);
 
         client.Enqueue(QueueName.Timeseries, new DataHubMessage("msg-001", "RSM-012", null, LoadSingleDayFixture()));
@@ -80,6 +82,7 @@ public class QueuePollerTests
             NullOnboardingService.Instance, new Infrastructure.Tariff.TariffRepository(TestDatabase.ConnectionString),
             new Infrastructure.DataHub.BrsRequestBuilder(), new NullMessageRepository(),
             new TestClock(), _messageLog,
+            new NullInvoiceService(),
             NullLogger<QueuePollerService>.Instance);
 
         client.Enqueue(QueueName.Timeseries, new DataHubMessage("msg-dup", "RSM-012", null, LoadSingleDayFixture()));
@@ -111,6 +114,7 @@ public class QueuePollerTests
             NullOnboardingService.Instance, new Infrastructure.Tariff.TariffRepository(TestDatabase.ConnectionString),
             new Infrastructure.DataHub.BrsRequestBuilder(), new NullMessageRepository(),
             new TestClock(), _messageLog,
+            new NullInvoiceService(),
             NullLogger<QueuePollerService>.Instance);
 
         client.Enqueue(QueueName.Timeseries, new DataHubMessage("msg-bad", "RSM-012", null, "{ invalid json payload }"));
@@ -157,6 +161,7 @@ public class QueuePollerTests
             onboardingService, new Infrastructure.Tariff.TariffRepository(TestDatabase.ConnectionString),
             new Infrastructure.DataHub.BrsRequestBuilder(), new NullMessageRepository(),
             clock, _messageLog,
+            new NullInvoiceService(),
             NullLogger<QueuePollerService>.Instance);
 
         // 2. Ensure grid area exists (required for RSM-022)

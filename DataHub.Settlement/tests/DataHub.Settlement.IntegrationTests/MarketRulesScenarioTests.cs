@@ -1,4 +1,5 @@
 using Dapper;
+using DataHub.Settlement.Application.Billing;
 using DataHub.Settlement.Application.DataHub;
 using DataHub.Settlement.Application.Lifecycle;
 using DataHub.Settlement.Application.Metering;
@@ -328,6 +329,7 @@ public sealed class MarketRulesScenarioTests : IClassFixture<WebApplicationFacto
             NullOnboardingService.Instance, new Infrastructure.Tariff.TariffRepository(Conn),
             new Infrastructure.DataHub.BrsRequestBuilder(), new NullMessageRepository(),
             new TestClock(), messageLog,
+            new NullInvoiceService(),
             NullLogger<QueuePollerService>.Instance);
         await poller.PollQueueAsync(QueueName.Timeseries, ct);
 

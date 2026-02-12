@@ -1,3 +1,4 @@
+using DataHub.Settlement.Application.Billing;
 using DataHub.Settlement.Application.DataHub;
 using DataHub.Settlement.Application.Lifecycle;
 using DataHub.Settlement.Application.Metering;
@@ -27,6 +28,7 @@ public sealed class QueuePollerService : BackgroundService
     private readonly IMessageRepository _messageRepo;
     private readonly IClock _clock;
     private readonly IMessageLog _messageLog;
+    private readonly IInvoiceService _invoiceService;
     private readonly ILogger<QueuePollerService> _logger;
     private readonly TimeSpan _pollInterval;
 
@@ -51,6 +53,7 @@ public sealed class QueuePollerService : BackgroundService
         IMessageRepository messageRepo,
         IClock clock,
         IMessageLog messageLog,
+        IInvoiceService invoiceService,
         ILogger<QueuePollerService> logger,
         TimeSpan? pollInterval = null)
     {
@@ -66,6 +69,7 @@ public sealed class QueuePollerService : BackgroundService
         _messageRepo = messageRepo;
         _clock = clock;
         _messageLog = messageLog;
+        _invoiceService = invoiceService;
         _logger = logger;
         _pollInterval = pollInterval ?? TimeSpan.FromSeconds(5);
     }
@@ -282,6 +286,34 @@ public sealed class QueuePollerService : BackgroundService
 
                                 _logger.LogInformation("RSM-022: Sent RSM-027 customer data update for {Gsrn}", masterData.MeteringPointId);
                             }
+                        }
+
+                        // 7. Create aconto invoice for the first period
+                        try
+                        {
+                            var contract = await _portfolioRepo.GetActiveContractAsync(masterData.MeteringPointId, ct);
+                            var periodEnd = effectiveDate.AddMonths(1);
+                            var acontoAmount = 500m; // Default first-month aconto estimate
+
+                            await _invoiceService.CreateAcontoInvoiceAsync(
+                                signup.CustomerId.Value,
+                                contract?.PayerId,
+                                contract?.Id,
+                                masterData.MeteringPointId,
+                                effectiveDate,
+                                periodEnd,
+                                acontoAmount,
+                                ct);
+
+                            _logger.LogInformation(
+                                "RSM-022: Created aconto invoice for GSRN {Gsrn}, period {Start} to {End}",
+                                masterData.MeteringPointId, effectiveDate, periodEnd);
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogWarning(ex,
+                                "RSM-022: Failed to create aconto invoice for GSRN {Gsrn} — invoice creation is non-blocking",
+                                masterData.MeteringPointId);
                         }
 
                         _logger.LogInformation(

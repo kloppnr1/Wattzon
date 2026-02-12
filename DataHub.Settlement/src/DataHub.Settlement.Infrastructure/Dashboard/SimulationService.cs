@@ -2659,7 +2659,7 @@ public sealed class SimulationService
     /// </summary>
     public Task<IEnumerable<MessageAuditEntry>> GetMessageAuditListAsync(string? gsrn, string? direction, CancellationToken ct)
     {
-        // TODO: Implement message audit storage and retrieval when V021__message_audit migration is created
+        // Stub: message audit storage not yet implemented
         return Task.FromResult(Enumerable.Empty<MessageAuditEntry>());
     }
 
@@ -2669,7 +2669,7 @@ public sealed class SimulationService
     /// </summary>
     public Task<string?> GetMessageAuditAsync(string gsrn, string stepName, CancellationToken ct)
     {
-        // TODO: Implement message audit storage and retrieval when V021__message_audit migration is created
+        // Stub: message audit storage not yet implemented
         return Task.FromResult<string?>(null);
     }
 }
