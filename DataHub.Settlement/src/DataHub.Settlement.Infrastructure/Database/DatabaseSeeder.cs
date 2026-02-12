@@ -627,51 +627,7 @@ public static class DatabaseSeeder
                 new { Id = Guid.NewGuid(), DhId = $"DH-{Guid.NewGuid():N}", Size = rng.Next(500, 2000), Recv = receivedAt, Proc = receivedAt.AddSeconds(rng.Next(1, 15)) });
         }
 
-        // ── Phase 7: Dead letters ────────────────────────────────────────
-        var deadLetterErrors = new[]
-        {
-            "Invalid XML structure: missing required element 'mRID'",
-            "Schema validation failed: unexpected element 'MarketDocument'",
-            "Duplicate message ID detected: already processed",
-            "Business rule E47: metering point not found in portfolio",
-            "Business rule E86: invalid effective date for supplier switch",
-            "Deserialization error: invalid date format in 'startDate'",
-            "Missing mandatory field: correlationId",
-            "Timeout processing message: external service unavailable",
-            "Invalid GSRN format: must be 18 digits",
-            "Business rule E92: conflicting active process exists",
-            "Payload size exceeds maximum: 50KB limit",
-            "Unknown message type: RSM-099",
-            "Certificate validation failed: expired signing certificate",
-            "Business rule E17: metering point type mismatch",
-            "Malformed CIM XML: unclosed tag at position 1247",
-        };
-
-        for (int i = 0; i < 15; i++)
-        {
-            var receivedAt = DateTime.UtcNow.AddDays(-rng.Next(1, 45)).AddHours(rng.Next(0, 24));
-            var msgId = Guid.NewGuid();
-            var messageType = new[] { "RSM-022", "RSM-001", "RSM-012", "RSM-004" }[rng.Next(4)];
-
-            await conn.ExecuteAsync(
-                "INSERT INTO datahub.inbound_message (id, datahub_message_id, message_type, queue_name, status, raw_payload_size, received_at) VALUES (@Id, @DhId, @Type, 'cim-001', 'dead_lettered', @Size, @Recv)",
-                new { Id = msgId, DhId = $"DH-{Guid.NewGuid():N}", Type = messageType, Size = rng.Next(500, 3000), Recv = receivedAt });
-
-            var resolved = i < 3;
-            await conn.ExecuteAsync(
-                "INSERT INTO datahub.dead_letter (id, original_message_id, queue_name, error_reason, raw_payload, failed_at, resolved, resolved_at, resolved_by) VALUES (@Id, @OrigId, 'cim-001', @Error, @Payload::jsonb, @Failed, @Resolved, @ResolvedAt, @ResolvedBy)",
-                new
-                {
-                    Id = Guid.NewGuid(), OrigId = msgId.ToString(),
-                    Error = deadLetterErrors[i % deadLetterErrors.Length],
-                    Payload = "{\"raw\":\"<InvalidCIMMessage><mRID>test</mRID></InvalidCIMMessage>\"}",
-                    Failed = receivedAt.AddSeconds(5), Resolved = resolved,
-                    ResolvedAt = resolved ? receivedAt.AddHours(rng.Next(1, 24)) : (DateTime?)null,
-                    ResolvedBy = resolved ? "admin@settlement.dk" : null
-                });
-        }
-
-        // ── Phase 8: Billing ─────────────────────────────────────────────
+        // ── Phase 7: Billing ──────────────────────────────────────────────
         var billingPeriods = new List<(Guid Id, DateTime Start, DateTime End)>();
         for (int month = 1; month <= 12; month++)
         {
