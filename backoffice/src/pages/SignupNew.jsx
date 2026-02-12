@@ -63,7 +63,7 @@ export default function SignupNew() {
   const billingSuggestionsRef = useRef(null);
 
   const { results: billingSuggestions, loading: searchingBillingAddress } = useDawaSearch(billingAddressQuery, {
-    enabled: !billingSameAsSupply && !selectedBillingAddress,
+    enabled: (!billingSameAsSupply || !selectedAddress) && !selectedBillingAddress,
   });
 
   // ── Pre-fill from correction params ──
