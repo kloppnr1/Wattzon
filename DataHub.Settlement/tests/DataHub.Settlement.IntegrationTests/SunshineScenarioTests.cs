@@ -1,3 +1,4 @@
+using Dapper;
 using DataHub.Settlement.Application.Billing;
 using DataHub.Settlement.Application.DataHub;
 using DataHub.Settlement.Application.Lifecycle;
@@ -52,6 +53,18 @@ public class SunshineScenarioTests
     public async Task Full_sunshine_scenario_produces_golden_master_result()
     {
         var ct = CancellationToken.None;
+
+        // ──── 0. CLEANUP: remove leftover state from prior tests sharing this GSRN ────
+        await using (var cleanConn = new Npgsql.NpgsqlConnection(TestDatabase.ConnectionString))
+        {
+            await cleanConn.OpenAsync(ct);
+            await cleanConn.ExecuteAsync("DELETE FROM settlement.settlement_line WHERE metering_point_id = @Gsrn", new { Gsrn });
+            await cleanConn.ExecuteAsync("DELETE FROM portfolio.contract WHERE gsrn = @Gsrn", new { Gsrn });
+            await cleanConn.ExecuteAsync("DELETE FROM portfolio.supply_period WHERE gsrn = @Gsrn", new { Gsrn });
+            await cleanConn.ExecuteAsync("DELETE FROM portfolio.signup WHERE gsrn = @Gsrn", new { Gsrn });
+            await cleanConn.ExecuteAsync("DELETE FROM lifecycle.process_event WHERE process_request_id IN (SELECT id FROM lifecycle.process_request WHERE gsrn = @Gsrn)", new { Gsrn });
+            await cleanConn.ExecuteAsync("DELETE FROM lifecycle.process_request WHERE gsrn = @Gsrn", new { Gsrn });
+        }
 
         // ──── 1. SEED: tariffs, spot prices, electricity tax ────
         await _portfolio.EnsureGridAreaAsync("344", "5790000392261", "N1 A/S", "DK1", ct);

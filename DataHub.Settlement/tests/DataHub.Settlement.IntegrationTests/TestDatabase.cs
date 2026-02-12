@@ -58,6 +58,7 @@ public sealed class TestDatabase : IAsyncLifetime
                 tariff.grid_tariff,
                 tariff.subscription,
                 tariff.electricity_tax,
+                portfolio.signup,
                 portfolio.contract,
                 portfolio.supply_period,
                 portfolio.metering_point,

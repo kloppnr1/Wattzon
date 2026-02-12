@@ -1,3 +1,4 @@
+using Dapper;
 using DataHub.Settlement.Application.AddressLookup;
 using DataHub.Settlement.Application.Billing;
 using DataHub.Settlement.Application.DataHub;
@@ -143,6 +144,18 @@ public class QueuePollerTests
         var ct = CancellationToken.None;
         const string gsrn = "571313100000012345"; // Must match RSM-022 fixture
         const string cprCvr = "9999999999"; // Unique CPR/CVR for this test
+
+        // ──── CLEANUP: remove leftover state from prior tests sharing this GSRN ────
+        await using (var cleanConn = new Npgsql.NpgsqlConnection(TestDatabase.ConnectionString))
+        {
+            await cleanConn.OpenAsync(ct);
+            // Order matters due to foreign keys
+            await cleanConn.ExecuteAsync("DELETE FROM portfolio.contract WHERE gsrn = @Gsrn", new { Gsrn = gsrn });
+            await cleanConn.ExecuteAsync("DELETE FROM portfolio.supply_period WHERE gsrn = @Gsrn", new { Gsrn = gsrn });
+            await cleanConn.ExecuteAsync("DELETE FROM portfolio.signup WHERE gsrn = @Gsrn", new { Gsrn = gsrn });
+            await cleanConn.ExecuteAsync("DELETE FROM lifecycle.process_event WHERE process_request_id IN (SELECT id FROM lifecycle.process_request WHERE gsrn = @Gsrn)", new { Gsrn = gsrn });
+            await cleanConn.ExecuteAsync("DELETE FROM lifecycle.process_request WHERE gsrn = @Gsrn", new { Gsrn = gsrn });
+        }
 
         // ──── ARRANGE ────
 

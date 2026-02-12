@@ -83,7 +83,7 @@ public sealed class EffectuationService
             // 1. Mark process completed (state transition)
             var process = await conn.QuerySingleAsync<ProcessRow>(
                 new CommandDefinition(
-                    "SELECT id, status FROM datahub.process_request WHERE id = @Id FOR UPDATE",
+                    "SELECT id, status FROM lifecycle.process_request WHERE id = @Id FOR UPDATE",
                     new { Id = processId }, transaction: tx, cancellationToken: ct));
 
             if (process.Status != "effectuation_pending")
@@ -92,14 +92,14 @@ public sealed class EffectuationService
 
             await conn.ExecuteAsync(
                 new CommandDefinition("""
-                    UPDATE datahub.process_request SET status = 'completed', updated_at = @Now WHERE id = @Id AND status = @Expected
+                    UPDATE lifecycle.process_request SET status = 'completed', updated_at = @Now WHERE id = @Id AND status = @Expected
                     """,
                     new { Id = processId, Expected = process.Status, Now = _clock.UtcNow },
                     transaction: tx, cancellationToken: ct));
 
             await conn.ExecuteAsync(
                 new CommandDefinition("""
-                    INSERT INTO datahub.process_event (process_request_id, event_type, source, occurred_at)
+                    INSERT INTO lifecycle.process_event (process_request_id, event_type, source, occurred_at)
                     VALUES (@ProcessId, 'completed', 'system', @Now)
                     """,
                     new { ProcessId = processId, Now = _clock.UtcNow },
@@ -127,7 +127,7 @@ public sealed class EffectuationService
             // 3. Reload signup to get customer_id
             var signup = await conn.QuerySingleOrDefaultAsync<SignupRow>(
                 new CommandDefinition(
-                    "SELECT id, signup_number, customer_id, product_id FROM datahub.signup WHERE id = @Id",
+                    "SELECT id, signup_number, customer_id, product_id FROM portfolio.signup WHERE id = @Id",
                     new { Id = signupId }, transaction: tx2, cancellationToken: ct));
 
             if (signup?.CustomerId is null)
@@ -170,24 +170,12 @@ public sealed class EffectuationService
                     new { Gsrn = meteringPointId, StartDate = effectiveDate },
                     transaction: tx2, cancellationToken: ct));
 
-            // 6. Get staged customer data (informational)
-            var staged = await conn.QuerySingleOrDefaultAsync<dynamic>(
-                new CommandDefinition(
-                    "SELECT phone, email FROM portfolio.staged_customer_data WHERE gsrn = @Gsrn",
-                    new { Gsrn = meteringPointId }, transaction: tx2, cancellationToken: ct));
-
-            if (staged is not null)
-            {
-                _logger.LogInformation(
-                    "RSM-022: Merging staged RSM-028 customer data for {Gsrn}", meteringPointId);
-            }
-
             // 7. Check if we need to send RSM-027
             if (processType is "supplier_switch" or "move_in" && datahubCorrelationId is not null)
             {
                 var cprCvrRow = await conn.QuerySingleOrDefaultAsync<string?>(
                     new CommandDefinition(
-                        "SELECT cpr_cvr FROM datahub.signup WHERE id = @Id",
+                        "SELECT customer_cpr_cvr FROM portfolio.signup WHERE id = @Id",
                         new { Id = signupId }, transaction: tx2, cancellationToken: ct));
 
                 var customer = await conn.QuerySingleOrDefaultAsync<dynamic>(

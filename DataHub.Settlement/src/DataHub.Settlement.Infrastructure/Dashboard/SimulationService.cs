@@ -1118,9 +1118,9 @@ public sealed class SimulationService
             meteringStart = range.min;
             meteringEnd = range.max;
 
-            // Find already-settled range
+            // Find already-settled range (cast DATE→TIMESTAMPTZ so Npgsql returns DateTime with Kind=Utc)
             var settledEnd = await conn.QuerySingleOrDefaultAsync<DateTime?>("""
-                SELECT MAX(bp.period_end)
+                SELECT MAX(bp.period_end::timestamptz)
                 FROM settlement.settlement_line sl
                 JOIN settlement.settlement_run sr ON sr.id = sl.settlement_run_id
                 JOIN settlement.billing_period bp ON bp.id = sr.billing_period_id
