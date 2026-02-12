@@ -115,13 +115,10 @@ app.MapPost("/v1.0/cim/requestchangeofsupplier", async (HttpRequest request) =>
             ScenarioLoader.BuildRsm031Json(gsrn ?? "571313100000012345", effectiveDateStr));
     });
 
-    // RSM-022 (master data) after 18s delay — sent with stamdata bundle, not on effective date
-    _ = Task.Run(async () =>
-    {
-        await Task.Delay(18_000);
-        state.EnqueueMessage("MasterData", "RSM-022", correlationId,
-            ScenarioLoader.BuildRsm022Json(gsrn ?? "571313100000012345", effectiveDateStr));
-    });
+    // RSM-022 (master data) — deferred until effective date, like real DataHub
+    var effectiveDate = DateOnly.TryParse(effectiveDateStr.Split('T')[0], out var ed)
+        ? ed : DateOnly.FromDateTime(DateTime.UtcNow);
+    state.ScheduleEffectuation(gsrn ?? "571313100000012345", correlationId, effectiveDate);
 
     return Results.Ok(new
     {
@@ -234,13 +231,10 @@ app.MapPost("/admin/brs044", async (HttpRequest request) =>
     state.EnqueueMessage("MasterData", "RSM-004", correlationId,
         ScenarioLoader.BuildRsm004D31Json(gsrn, effectiveDateStr));
 
-    // RSM-022 after 1s (master data)
-    _ = Task.Run(async () =>
-    {
-        await Task.Delay(1_000);
-        state.EnqueueMessage("MasterData", "RSM-022", correlationId,
-            ScenarioLoader.BuildRsm022Json(gsrn, effectiveDateStr));
-    });
+    // RSM-022 (master data) — deferred until effective date, like real DataHub
+    var brs044EffectiveDate = DateOnly.TryParse(effectiveDateStr.Split('T')[0], out var brs044Ed)
+        ? brs044Ed : DateOnly.FromDateTime(DateTime.UtcNow);
+    state.ScheduleEffectuation(gsrn, correlationId, brs044EffectiveDate);
 
     // RSM-028 after 2s (customer data, no CPR)
     _ = Task.Run(async () =>
