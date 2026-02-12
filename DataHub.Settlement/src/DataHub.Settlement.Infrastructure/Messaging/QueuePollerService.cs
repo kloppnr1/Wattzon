@@ -527,10 +527,31 @@ public sealed class QueuePollerService : BackgroundService
         }
     }
 
-    private Task ProcessChargesAsync(DataHubMessage message, CancellationToken ct)
+    private async Task ProcessChargesAsync(DataHubMessage message, CancellationToken ct)
     {
-        _logger.LogInformation("Received Charges message {Type} — stored for future processing", message.MessageType);
-        return Task.CompletedTask;
+        if (message.MessageType is "GRID-TARIFF")
+        {
+            var tariffData = _parser.ParseGridTariff(message.RawPayload);
+
+            await _portfolioRepo.EnsureGridAreaAsync(
+                tariffData.GridAreaCode, tariffData.ChargeOwnerId,
+                $"Grid {tariffData.GridAreaCode}", tariffData.GridAreaCode.StartsWith("7") ? "DK2" : "DK1", ct);
+
+            await _tariffRepo.SeedGridTariffAsync(
+                tariffData.GridAreaCode, tariffData.TariffType, tariffData.ValidFrom, tariffData.Rates, ct);
+
+            await _tariffRepo.SeedSubscriptionAsync(
+                tariffData.GridAreaCode, tariffData.SubscriptionType, tariffData.SubscriptionAmountPerMonth,
+                tariffData.ValidFrom, ct);
+
+            _logger.LogInformation(
+                "GRID-TARIFF: Seeded {RateCount} hourly rates + subscription for grid area {GridArea}",
+                tariffData.Rates.Count, tariffData.GridAreaCode);
+        }
+        else
+        {
+            _logger.LogInformation("Received Charges message {Type} — not handled yet", message.MessageType);
+        }
     }
 
     private Task ProcessAggregationsAsync(DataHubMessage message, CancellationToken ct)

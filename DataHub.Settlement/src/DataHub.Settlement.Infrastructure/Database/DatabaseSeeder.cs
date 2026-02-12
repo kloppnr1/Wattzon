@@ -30,6 +30,16 @@ public static class DatabaseSeeder
         await conn.ExecuteAsync("DELETE FROM datahub.processed_message_id");
         await conn.ExecuteAsync("DELETE FROM datahub.outbound_request");
         await conn.ExecuteAsync("DELETE FROM datahub.inbound_message");
+        await conn.ExecuteAsync("DELETE FROM tariff.metering_point_tariff_attachment");
+        await conn.ExecuteAsync("DELETE FROM tariff.tariff_rate");
+        await conn.ExecuteAsync("DELETE FROM tariff.grid_tariff");
+        await conn.ExecuteAsync("DELETE FROM tariff.subscription");
+        await conn.ExecuteAsync("DELETE FROM tariff.electricity_tax");
+        await conn.ExecuteAsync("DELETE FROM settlement.erroneous_switch_reversal");
+        await conn.ExecuteAsync("DELETE FROM metering.metering_data_history");
+        await conn.ExecuteAsync("DELETE FROM metering.annual_consumption_tracker");
+        await conn.ExecuteAsync("DELETE FROM metering.metering_data");
+        await conn.ExecuteAsync("DELETE FROM metering.spot_price");
         await conn.ExecuteAsync("DELETE FROM portfolio.payer");
         await conn.ExecuteAsync("DELETE FROM portfolio.customer");
 
@@ -351,108 +361,40 @@ public static class DatabaseSeeder
                 new { Gsrn = gsrn, GridArea = ga, Gln = GridGln(ga), PriceArea = GridPriceArea(ga), DeactivatedAt = DateTime.UtcNow.AddDays(-rng.Next(30, 180)) });
         }
 
-        // ── Phase 5: Billing ──────────────────────────────────────────────
-        var billingPeriods = new List<(Guid Id, DateTime Start, DateTime End)>();
-        for (int month = 1; month <= 12; month++)
+        // ── Phase 5: Seed electricity tax (national rate) ─────────────────
+        await conn.ExecuteAsync(
+            "INSERT INTO tariff.electricity_tax (rate_per_kwh, valid_from, description) VALUES (0.008, '2025-01-01', 'Reduced rate 2025') ON CONFLICT (valid_from) DO UPDATE SET rate_per_kwh = 0.008");
+
+        // ── Phase 5b: Seed grid tariffs for seeded grid areas ────────────
+        foreach (var ga in gridAreas)
         {
-            var id = Guid.NewGuid();
-            var start = new DateTime(2025, month, 1);
-            var end = start.AddMonths(1).AddDays(-1);
-            billingPeriods.Add((id, start, end));
-            await conn.ExecuteAsync(
-                "INSERT INTO settlement.billing_period (id, period_start, period_end, frequency, created_at) VALUES (@Id, @Start, @End, 'monthly', @Created)",
-                new { Id = id, Start = start, End = end, Created = end.AddDays(1) });
-        }
+            // Grid tariff with 24 hourly rates
+            var tariffId = await conn.QuerySingleAsync<Guid>(
+                "INSERT INTO tariff.grid_tariff (grid_area_code, charge_owner_id, tariff_type, valid_from) VALUES (@Code, @Gln, 'grid_tariff', '2025-01-01') ON CONFLICT (grid_area_code, tariff_type, valid_from) DO UPDATE SET charge_owner_id = EXCLUDED.charge_owner_id RETURNING id",
+                new { ga.Code, ga.Gln });
 
-        var settlementRuns = new List<(Guid Id, Guid BpId, int Version, string Status)>();
-
-        for (int i = 0; i < 10; i++)
-        {
-            var runId = Guid.NewGuid();
-            var bp = billingPeriods[i];
-            var executedAt = bp.End.AddDays(1).AddHours(2);
-            settlementRuns.Add((runId, bp.Id, 1, "completed"));
-            await conn.ExecuteAsync(
-                "INSERT INTO settlement.settlement_run (id, billing_period_id, version, status, executed_at, completed_at, metering_points_count) VALUES (@Id, @BpId, 1, 'completed', @Exec, @Comp, @MpCount)",
-                new { Id = runId, BpId = bp.Id, Exec = executedAt, Comp = executedAt.AddMinutes(rng.Next(3, 15)), MpCount = activeMeteringPoints.Count });
-        }
-
-        foreach (var monthIdx in new[] { 1, 4 })
-        {
-            var runId = Guid.NewGuid();
-            var bp = billingPeriods[monthIdx];
-            var executedAt = bp.End.AddDays(35).AddHours(2);
-            settlementRuns.Add((runId, bp.Id, 2, "completed"));
-            await conn.ExecuteAsync(
-                "INSERT INTO settlement.settlement_run (id, billing_period_id, version, status, executed_at, completed_at, metering_points_count) VALUES (@Id, @BpId, 2, 'completed', @Exec, @Comp, @MpCount)",
-                new { Id = runId, BpId = bp.Id, Exec = executedAt, Comp = executedAt.AddMinutes(rng.Next(3, 15)), MpCount = activeMeteringPoints.Count });
-        }
-
-        {
-            var runId = Guid.NewGuid();
-            settlementRuns.Add((runId, billingPeriods[10].Id, 1, "running"));
-            await conn.ExecuteAsync(
-                "INSERT INTO settlement.settlement_run (id, billing_period_id, version, status, executed_at, metering_points_count) VALUES (@Id, @BpId, 1, 'running', @Exec, @MpCount)",
-                new { Id = runId, BpId = billingPeriods[10].Id, Exec = DateTime.UtcNow.AddMinutes(-10), MpCount = activeMeteringPoints.Count });
-        }
-
-        {
-            var runId = Guid.NewGuid();
-            settlementRuns.Add((runId, billingPeriods[11].Id, 1, "failed"));
-            await conn.ExecuteAsync(
-                "INSERT INTO settlement.settlement_run (id, billing_period_id, version, status, executed_at, error_details, metering_points_count) VALUES (@Id, @BpId, 1, 'failed', @Exec, @Error, @MpCount)",
-                new { Id = runId, BpId = billingPeriods[11].Id, Exec = DateTime.UtcNow.AddHours(-2), Error = "Spot price data missing for 2025-12-28 to 2025-12-31 in DK1", MpCount = 0 });
-        }
-
-        // Settlement lines
-        var chargeTypes = new[] { "energy", "grid_tariff", "system_tariff", "transmission_tariff", "electricity_tax" };
-        var lineBatch = new List<object>();
-
-        foreach (var run in settlementRuns.Where(r => r.Status == "completed"))
-        {
-            foreach (var gsrn in activeMeteringPoints)
+            var rates = new List<object>();
+            for (int h = 0; h < 24; h++)
             {
-                var totalKwh = rng.Next(250, 550);
-                foreach (var chargeType in chargeTypes)
+                var price = h switch
                 {
-                    var amount = chargeType switch
-                    {
-                        "energy" => totalKwh * (0.80m + (decimal)(rng.NextDouble() * 0.30)),
-                        "grid_tariff" => totalKwh * 0.28m,
-                        "system_tariff" => totalKwh * 0.054m,
-                        "transmission_tariff" => totalKwh * 0.049m,
-                        "electricity_tax" => totalKwh * 0.008m,
-                        _ => 0m
-                    };
-                    var vat = amount * 0.25m;
-                    lineBatch.Add(new { Id = Guid.NewGuid(), RunId = run.Id, MpId = gsrn, Type = chargeType, Kwh = (decimal)totalKwh, Amount = Math.Round(amount, 2), Vat = Math.Round(vat, 2), Currency = "DKK" });
-
-                    if (lineBatch.Count >= 100)
-                    {
-                        await conn.ExecuteAsync(
-                            "INSERT INTO settlement.settlement_line (id, settlement_run_id, metering_point_id, charge_type, total_kwh, total_amount, vat_amount, currency) VALUES (@Id, @RunId, @MpId, @Type, @Kwh, @Amount, @Vat, @Currency)",
-                            lineBatch);
-                        lineBatch.Clear();
-                    }
-                }
+                    >= 0 and <= 5 => 0.15m,
+                    >= 6 and <= 11 => 0.21m,
+                    >= 12 and <= 15 => 0.25m,
+                    >= 16 and <= 19 => 0.40m,
+                    >= 20 and <= 21 => 0.25m,
+                    _ => 0.15m,
+                };
+                rates.Add(new { GridTariffId = tariffId, HourNumber = h, PricePerKwh = price });
             }
-        }
-
-        if (lineBatch.Count > 0)
-        {
             await conn.ExecuteAsync(
-                "INSERT INTO settlement.settlement_line (id, settlement_run_id, metering_point_id, charge_type, total_kwh, total_amount, vat_amount, currency) VALUES (@Id, @RunId, @MpId, @Type, @Kwh, @Amount, @Vat, @Currency)",
-                lineBatch);
-        }
+                "INSERT INTO tariff.tariff_rate (grid_tariff_id, hour_number, price_per_kwh) VALUES (@GridTariffId, @HourNumber, @PricePerKwh) ON CONFLICT (grid_tariff_id, hour_number) DO UPDATE SET price_per_kwh = EXCLUDED.price_per_kwh",
+                rates);
 
-        // ── Phase 9: Aconto payments ─────────────────────────────────────
-        foreach (var gsrn in activeMeteringPoints.Take(100))
-        {
-            var periodStart = new DateTime(2025, rng.Next(1, 11), 1);
-            var periodEnd = periodStart.AddMonths(1).AddDays(-1);
+            // Grid subscription
             await conn.ExecuteAsync(
-                "INSERT INTO billing.aconto_payment (id, gsrn, period_start, period_end, amount, paid_at, currency) VALUES (@Id, @Gsrn, @PeriodStart, @PeriodEnd, @Amount, @PaidAt, @Currency)",
-                new { Id = Guid.NewGuid(), Gsrn = gsrn, PeriodStart = periodStart, PeriodEnd = periodEnd, Amount = 400m + rng.Next(0, 400), PaidAt = periodStart.AddDays(15), Currency = "DKK" });
+                "INSERT INTO tariff.subscription (grid_area_code, subscription_type, amount_kr_per_month, valid_from) VALUES (@Code, 'grid_subscription', 49.00, '2025-01-01') ON CONFLICT DO NOTHING",
+                new { ga.Code });
         }
 
     }

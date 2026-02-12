@@ -436,6 +436,44 @@ public static class ScenarioLoader
         }
     }
 
+    internal static string BuildGridTariffJson(string gridAreaCode, string chargeOwnerId, DateOnly validFrom)
+    {
+        // Realistic Danish grid tariff rates (DKK/kWh) — low overnight, medium daytime, peak evening
+        var hourlyRates = new decimal[]
+        {
+            0.15m, 0.15m, 0.15m, 0.15m, 0.15m, 0.15m,   // 00-05: low (night)
+            0.21m, 0.21m, 0.21m, 0.21m, 0.21m, 0.21m,   // 06-11: medium (morning)
+            0.25m, 0.25m, 0.25m, 0.25m,                   // 12-15: medium-high (afternoon)
+            0.40m, 0.40m, 0.40m, 0.40m,                   // 16-19: peak (evening)
+            0.25m, 0.25m,                                   // 20-21: medium-high
+            0.15m, 0.15m,                                   // 22-23: low (night)
+        };
+
+        var rates = new List<object>();
+        for (int h = 0; h < 24; h++)
+            rates.Add(new { hour = h, pricePerKwh = hourlyRates[h] });
+
+        var doc = new
+        {
+            GridTariff = new
+            {
+                gridAreaCode,
+                chargeOwnerId,
+                validFrom = validFrom.ToString("yyyy-MM-dd"),
+                tariffType = "grid_tariff",
+                rates,
+            },
+            Subscription = new
+            {
+                gridAreaCode,
+                subscriptionType = "grid_subscription",
+                amountPerMonth = 49.00m,
+                validFrom = validFrom.ToString("yyyy-MM-dd"),
+            },
+        };
+        return JsonSerializer.Serialize(doc);
+    }
+
     internal static string BuildRsm001AcceptJson(string correlationId)
     {
         var doc = new

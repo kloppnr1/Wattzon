@@ -28,24 +28,29 @@ function renderInvoiceDetail(invoiceId = 'inv-001') {
 }
 
 function makeInvoice(overrides = {}) {
+  const { lines = [], customerName = null, payerName = null, ...invoiceOverrides } = overrides;
   return {
-    id: 'inv-001',
-    invoiceNumber: 'INV-2025-0001',
-    invoiceType: 'settlement',
-    status: 'draft',
-    periodStart: '2025-01-01',
-    periodEnd: '2025-01-31',
-    totalExVat: 10000.0,
-    vatAmount: 2500.0,
-    totalInclVat: 12500.0,
-    amountOutstanding: 12500.0,
-    dueDate: '2025-02-15',
-    issuedAt: null,
-    paidAt: null,
-    customerId: 'cust-001',
-    notes: null,
-    lines: [],
-    ...overrides,
+    invoice: {
+      id: 'inv-001',
+      invoiceNumber: 'INV-2025-0001',
+      invoiceType: 'settlement',
+      status: 'draft',
+      periodStart: '2025-01-01',
+      periodEnd: '2025-01-31',
+      totalExVat: 10000.0,
+      vatAmount: 2500.0,
+      totalInclVat: 12500.0,
+      amountOutstanding: 12500.0,
+      dueDate: '2025-02-15',
+      issuedAt: null,
+      paidAt: null,
+      customerId: 'cust-001',
+      notes: null,
+      ...invoiceOverrides,
+    },
+    lines,
+    customerName,
+    payerName,
   };
 }
 
@@ -182,7 +187,7 @@ describe('InvoiceDetail', () => {
 
   it('Send action calls correct API and updates state', async () => {
     api.getInvoice.mockResolvedValue(makeInvoice({ status: 'draft' }));
-    api.sendInvoice.mockResolvedValue({ status: 'sent' });
+    api.sendInvoice.mockResolvedValue({ invoice: { status: 'sent' }, lines: [], customerName: null, payerName: null });
 
     renderInvoiceDetail();
 

@@ -23,7 +23,15 @@ export default function InvoiceDetail() {
 
   useEffect(() => {
     api.getInvoice(id)
-      .then(setInvoice)
+      .then(detail => {
+        if (!detail?.invoice) { setInvoice(null); return; }
+        setInvoice({
+          ...detail.invoice,
+          lines: detail.lines,
+          customerName: detail.customerName,
+          payerName: detail.payerName,
+        });
+      })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
   }, [id]);
@@ -31,8 +39,14 @@ export default function InvoiceDetail() {
   const handleSend = async () => {
     setActionLoading(true);
     try {
-      const result = await api.sendInvoice(id);
-      setInvoice(prev => ({ ...prev, ...result }));
+      const detail = await api.sendInvoice(id);
+      setInvoice(prev => ({
+        ...prev,
+        ...detail.invoice,
+        lines: detail.lines,
+        customerName: detail.customerName,
+        payerName: detail.payerName,
+      }));
     } catch (e) {
       setError(e.message);
     } finally {

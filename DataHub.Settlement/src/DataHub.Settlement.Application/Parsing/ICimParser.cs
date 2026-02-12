@@ -15,4 +15,5 @@ public interface ICimParser
     Rsm001ResponseResult ParseRsm024Response(string json);
     Rsm028Result ParseRsm028(string json);
     Rsm031Result ParseRsm031(string json);
+    GridTariffResult ParseGridTariff(string json);
 }

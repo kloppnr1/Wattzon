@@ -378,6 +378,7 @@ public class ProcessTimelineTests
         public Rsm001ResponseResult ParseRsm024Response(string json) => throw new NotImplementedException();
         public Rsm028Result ParseRsm028(string json) => throw new NotImplementedException();
         public Rsm031Result ParseRsm031(string json) => throw new NotImplementedException();
+        public GridTariffResult ParseGridTariff(string json) => throw new NotImplementedException();
     }
 
     /// <summary>No-op IMessageLog for tests.</summary>

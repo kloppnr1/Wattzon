@@ -9,6 +9,7 @@ public sealed class SimulatorState
     private readonly ConcurrentDictionary<string, string> _activeGsrns = new();
     private readonly ConcurrentBag<PendingEffectuation> _pendingEffectuations = new();
     private readonly ConcurrentBag<ActiveSupply> _activeSupplies = new();
+    private readonly HashSet<string> _knownGridAreas = new();
 
     public bool IsGsrnActive(string gsrn) => _activeGsrns.ContainsKey(gsrn);
     public void ActivateGsrn(string gsrn) => _activeGsrns[gsrn] = "active";
@@ -62,9 +63,9 @@ public sealed class SimulatorState
 
     public IReadOnlyList<OutboundRequest> GetRequests() => _requests.ToList();
 
-    public void ScheduleEffectuation(string gsrn, string correlationId, DateOnly effectiveDate)
+    public void ScheduleEffectuation(string gsrn, string correlationId, DateOnly effectiveDate, string gridArea = "344")
     {
-        _pendingEffectuations.Add(new PendingEffectuation(gsrn, correlationId, effectiveDate, Enqueued: false));
+        _pendingEffectuations.Add(new PendingEffectuation(gsrn, correlationId, effectiveDate, Enqueued: false, GridArea: gridArea));
     }
 
     public void FlushReadyEffectuations()
@@ -74,6 +75,14 @@ public sealed class SimulatorState
         {
             if (pe.Enqueued || pe.EffectiveDate > today) continue;
             pe.Enqueued = true;
+
+            // Deliver grid tariff data for new grid areas (like real DataHub)
+            if (_knownGridAreas.Add(pe.GridArea))
+            {
+                EnqueueMessage("Charges", "GRID-TARIFF", null,
+                    ScenarioLoader.BuildGridTariffJson(pe.GridArea, "5790001089030", pe.EffectiveDate));
+            }
+
             EnqueueMessage("MasterData", "RSM-022", pe.CorrelationId,
                 ScenarioLoader.BuildRsm022Json(pe.Gsrn, pe.EffectiveDate.ToString("yyyy-MM-dd") + "T00:00:00Z"));
 
@@ -146,6 +155,7 @@ public sealed class SimulatorState
         _activeGsrns.Clear();
         _pendingEffectuations.Clear();
         _activeSupplies.Clear();
+        _knownGridAreas.Clear();
     }
 }
 
@@ -153,12 +163,13 @@ public record QueueMessage(string MessageId, string MessageType, string? Correla
 
 public record OutboundRequest(string ProcessType, string Endpoint, string Payload, DateTime ReceivedAt);
 
-public class PendingEffectuation(string Gsrn, string CorrelationId, DateOnly EffectiveDate, bool Enqueued)
+public class PendingEffectuation(string Gsrn, string CorrelationId, DateOnly EffectiveDate, bool Enqueued, string GridArea = "344")
 {
     public string Gsrn { get; } = Gsrn;
     public string CorrelationId { get; } = CorrelationId;
     public DateOnly EffectiveDate { get; } = EffectiveDate;
     public bool Enqueued { get; set; } = Enqueued;
+    public string GridArea { get; } = GridArea;
 }
 
 public class ActiveSupply(string Gsrn, DateOnly EffectiveDate, DateOnly LastDeliveredDate)

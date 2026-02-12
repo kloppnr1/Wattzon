@@ -1,6 +1,7 @@
 using System.Text.Json;
 using DataHub.Settlement.Application.Parsing;
 using DataHub.Settlement.Application.Settlement;
+using DataHub.Settlement.Application.Tariff;
 using DataHub.Settlement.Domain.MasterData;
 using DataHub.Settlement.Domain.Metering;
 
@@ -288,6 +289,31 @@ public sealed class CimJsonParser : ICimParser
         }
 
         return new Rsm001ResponseResult(correlationId, accepted, rejectionReason, rejectionCode);
+    }
+
+    public GridTariffResult ParseGridTariff(string json)
+    {
+        using var doc = JsonDocument.Parse(json);
+
+        var tariff = doc.RootElement.GetProperty("GridTariff");
+        var gridAreaCode = tariff.GetProperty("gridAreaCode").GetString()!;
+        var chargeOwnerId = tariff.GetProperty("chargeOwnerId").GetString()!;
+        var validFrom = DateOnly.Parse(tariff.GetProperty("validFrom").GetString()!);
+        var tariffType = tariff.GetProperty("tariffType").GetString()!;
+
+        var rates = new List<TariffRateRow>();
+        foreach (var rate in tariff.GetProperty("rates").EnumerateArray())
+        {
+            var hour = rate.GetProperty("hour").GetInt32();
+            var price = rate.GetProperty("pricePerKwh").GetDecimal();
+            rates.Add(new TariffRateRow(hour, price));
+        }
+
+        var sub = doc.RootElement.GetProperty("Subscription");
+        var subscriptionType = sub.GetProperty("subscriptionType").GetString()!;
+        var amountPerMonth = sub.GetProperty("amountPerMonth").GetDecimal();
+
+        return new GridTariffResult(gridAreaCode, chargeOwnerId, validFrom, tariffType, rates, subscriptionType, amountPerMonth);
     }
 
     private static TimeSpan GetStep(string resolution)
