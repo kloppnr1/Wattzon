@@ -87,6 +87,13 @@ public sealed class SimulatorState
                     ScenarioLoader.BuildRsm012Json(pe.Gsrn, start, end, hours));
             }
 
+            // For retroactive effectuations, also deliver corrected data for 10 hours on the effective date
+            if (pe.EffectiveDate < today)
+            {
+                EnqueueMessage("Timeseries", "RSM-012", null,
+                    ScenarioLoader.BuildCorrectionRsm012Json(pe.Gsrn, pe.EffectiveDate));
+            }
+
             // Track for ongoing daily delivery
             _activeSupplies.Add(new ActiveSupply(pe.Gsrn, pe.EffectiveDate, today));
         }

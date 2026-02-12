@@ -230,6 +230,62 @@ public static class ScenarioLoader
         return JsonSerializer.Serialize(doc);
     }
 
+    internal static string BuildCorrectionRsm012Json(string gsrn, DateOnly day)
+    {
+        // Correction covers hours 6–15 on the given day (10 hours)
+        var start = new DateTimeOffset(day.Year, day.Month, day.Day, 6, 0, 0, TimeSpan.Zero);
+        var end = start.AddHours(10);
+
+        var points = new List<object>();
+        for (var i = 1; i <= 10; i++)
+        {
+            // Original value for hours 6–15 is 0.500 kWh; corrected = +0.150
+            points.Add(new { position = i, quantity = 0.650m, quality = "A01" });
+        }
+
+        // Registration timestamp must be newer than the original (+6h) to win the upsert
+        var registrationTime = end.AddHours(12).ToString("O");
+
+        var doc = new
+        {
+            MarketDocument = new
+            {
+                mRID = $"msg-rsm012-corr-{Guid.NewGuid():N}",
+                type = "E66",
+                Process = new { ProcessType = "E23" },
+                Sender_MarketParticipant = new
+                {
+                    mRID = "5790001330552",
+                    MarketRole = new { type = "DGL" },
+                },
+                Receiver_MarketParticipant = new
+                {
+                    mRID = "5790002000000",
+                    MarketRole = new { type = "DDQ" },
+                },
+                createdDateTime = registrationTime,
+                Series = new[]
+                {
+                    new
+                    {
+                        mRID = $"txn-{Guid.NewGuid():N}",
+                        MarketEvaluationPoint = new { mRID = gsrn, type = "E17" },
+                        Product = "8716867000030",
+                        Quantity_Measure_Unit = new { name = "KWH" },
+                        Registration_DateAndOrTime = new { dateTime = registrationTime },
+                        Period = new
+                        {
+                            resolution = "PT1H",
+                            timeInterval = new { start = start.ToString("O"), end = end.ToString("O") },
+                            Point = points,
+                        },
+                    },
+                },
+            },
+        };
+        return JsonSerializer.Serialize(doc);
+    }
+
     private static string BuildRejectionJson(string errorCode, string errorMessage)
     {
         var doc = new

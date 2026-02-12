@@ -775,64 +775,7 @@ public static class DatabaseSeeder
                 new { Id = Guid.NewGuid(), Gsrn = gsrn, PeriodStart = periodStart, PeriodEnd = periodEnd, Amount = 400m + rng.Next(0, 400), PaidAt = periodStart.AddDays(15), Currency = "DKK" });
         }
 
-        // ── Phase 10: Metering data history (for correction testing) ──────
-        // Insert revised metering data for the first 5 active metering points
-        // across October 2025, so corrections can be triggered via the UI.
-        var correctionTestGsrns = activeMeteringPoints.Take(5).ToList();
-        foreach (var gsrn in correctionTestGsrns)
-        {
-            for (int day = 1; day <= 31; day++)
-            {
-                for (int hour = 0; hour < 24; hour++)
-                {
-                    // Simulate a metering revision: original value vs corrected value
-                    var ts = new DateTime(2025, 10, day, hour, 0, 0, DateTimeKind.Utc);
-                    if (day > 28 && ts.Month != 10) break; // skip invalid dates
-                    var previousKwh = 0.3m + (decimal)(rng.NextDouble() * 0.5);
-                    var newKwh = previousKwh + 0.05m + (decimal)(rng.NextDouble() * 0.15); // always a positive delta
-                    await conn.ExecuteAsync(
-                        "INSERT INTO metering.metering_data_history (metering_point_id, timestamp, previous_kwh, new_kwh, previous_message_id, new_message_id) VALUES (@Gsrn, @Ts, @Prev, @New, @PrevMsg, @NewMsg)",
-                        new { Gsrn = gsrn, Ts = ts, Prev = Math.Round(previousKwh, 6), New = Math.Round(newKwh, 6), PrevMsg = $"MSG-ORIG-{day:D2}{hour:D2}", NewMsg = $"MSG-REV-{day:D2}{hour:D2}" });
-                }
-            }
-        }
-
-        // Insert a few pre-existing correction records so the list page has data
-        await conn.ExecuteAsync("DELETE FROM settlement.correction_settlement");
-        var chargeTypesForCorr = new[] { "energy", "grid_tariff", "system_tariff", "transmission_tariff", "electricity_tax" };
-        for (int c = 0; c < 3; c++)
-        {
-            var batchId = Guid.NewGuid();
-            var corrGsrn = correctionTestGsrns[c];
-            var origRunId = settlementRuns.FirstOrDefault(r => r.Status == "completed").Id;
-            var corrAmounts = new[] { 12.45m, 3.20m, 0.85m, 0.72m, 0.10m };
-            var corrKwh = 15.5m + c * 3.2m;
-
-            for (int ct = 0; ct < chargeTypesForCorr.Length; ct++)
-            {
-                var subtotal = corrAmounts.Sum();
-                var vatAmt = Math.Round(subtotal * 0.25m, 2);
-                var totalAmt = subtotal + vatAmt;
-                await conn.ExecuteAsync(
-                    @"INSERT INTO settlement.correction_settlement
-                        (correction_batch_id, metering_point_id, period_start, period_end, original_run_id,
-                         delta_kwh, charge_type, delta_amount, trigger_type, status, vat_amount, total_amount, note)
-                      VALUES
-                        (@BatchId, @Gsrn, @PeriodStart, @PeriodEnd, @OrigRunId,
-                         @DeltaKwh, @ChargeType, @DeltaAmount, @TriggerType, 'completed', @VatAmount, @TotalAmount, @Note)",
-                    new
-                    {
-                        BatchId = batchId, Gsrn = corrGsrn,
-                        PeriodStart = new DateTime(2025, 10, 1), PeriodEnd = new DateTime(2025, 10, 31),
-                        OrigRunId = origRunId, DeltaKwh = corrKwh, ChargeType = chargeTypesForCorr[ct],
-                        DeltaAmount = corrAmounts[ct], TriggerType = c == 0 ? "auto" : "manual",
-                        VatAmount = vatAmt, TotalAmount = totalAmt,
-                        Note = c == 0 ? (string?)null : $"Manual correction test #{c}"
-                    });
-            }
-        }
-
-        // ── Phase 11: Processed message IDs ──────────────────────────────
+        // ── Phase 10: Processed message IDs ──────────────────────────────
         await conn.ExecuteAsync(
             "INSERT INTO datahub.processed_message_id (message_id, processed_at) SELECT datahub_message_id, processed_at FROM datahub.inbound_message WHERE status = 'processed' AND processed_at IS NOT NULL ON CONFLICT DO NOTHING");
     }
