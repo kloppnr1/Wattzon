@@ -451,7 +451,7 @@ public static class ScenarioLoader
 
         var rates = new List<object>();
         for (int h = 0; h < 24; h++)
-            rates.Add(new { hour = h, pricePerKwh = hourlyRates[h] });
+            rates.Add(new { hour = h + 1, pricePerKwh = hourlyRates[h] });
 
         var doc = new
         {

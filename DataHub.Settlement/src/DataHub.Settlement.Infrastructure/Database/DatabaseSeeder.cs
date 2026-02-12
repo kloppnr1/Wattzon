@@ -288,15 +288,15 @@ public static class DatabaseSeeder
                 new { ga.Code, ga.Gln });
 
             var rates = new List<object>();
-            for (int h = 0; h < 24; h++)
+            for (int h = 1; h <= 24; h++)
             {
                 var price = h switch
                 {
-                    >= 0 and <= 5 => 0.15m,
-                    >= 6 and <= 11 => 0.21m,
-                    >= 12 and <= 15 => 0.25m,
-                    >= 16 and <= 19 => 0.40m,
-                    >= 20 and <= 21 => 0.25m,
+                    >= 1 and <= 6 => 0.15m,
+                    >= 7 and <= 12 => 0.21m,
+                    >= 13 and <= 16 => 0.25m,
+                    >= 17 and <= 20 => 0.40m,
+                    >= 21 and <= 22 => 0.25m,
                     _ => 0.15m,
                 };
                 rates.Add(new { GridTariffId = tariffId, HourNumber = h, PricePerKwh = price });
