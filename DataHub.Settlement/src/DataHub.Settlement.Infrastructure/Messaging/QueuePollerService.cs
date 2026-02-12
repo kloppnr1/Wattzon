@@ -125,7 +125,7 @@ public sealed class QueuePollerService : BackgroundService
             _logger.LogInformation("Message {MessageId} processed successfully", message.MessageId);
             return true;
         }
-        catch (Exception ex) when (ex is FormatException or ArgumentException or System.Text.Json.JsonException or InvalidOperationException)
+        catch (Exception ex) when (ex is FormatException or ArgumentException or System.Text.Json.JsonException or InvalidOperationException or KeyNotFoundException)
         {
             // Parse errors → dead-letter + dequeue (free the queue)
             _logger.LogWarning(ex, "Message {MessageId} failed to parse, dead-lettering", message.MessageId);
@@ -134,7 +134,15 @@ public sealed class QueuePollerService : BackgroundService
             await _client.DequeueAsync(message.MessageId, ct);
             return true;
         }
-        // DB errors propagate up → message NOT dequeued → retry on next poll
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            // Unexpected errors (DB failures, etc.) — dead-letter to prevent infinite retry
+            _logger.LogError(ex, "Message {MessageId} failed with unexpected error, dead-lettering", message.MessageId);
+            await _messageLog.DeadLetterAsync(message.MessageId, queue.ToString(), ex.Message, message.RawPayload, ct);
+            await _messageLog.MarkInboundStatusAsync(message.MessageId, "dead_lettered", ex.Message, ct);
+            await _client.DequeueAsync(message.MessageId, ct);
+            return true;
+        }
     }
 
     private Task ProcessMessageAsync(DataHubMessage message, QueueName queue, CancellationToken ct)
