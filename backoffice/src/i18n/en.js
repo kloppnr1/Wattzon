@@ -1,23 +1,25 @@
 export default {
   // ── Navigation ──
-  'nav.overview': 'Overview',
   'nav.dashboard': 'Dashboard',
-  'nav.onboarding': 'Onboarding',
-  'nav.signups': 'Signups',
-  'nav.newSignup': 'New Signup',
-  'nav.portfolio': 'Portfolio',
   'nav.customers': 'Customers',
+  'nav.signups': 'Signups',
   'nav.products': 'Products',
-  'nav.operations': 'Operations',
-  'nav.spotPrices': 'Spot Prices',
   'nav.billing': 'Billing',
-  'nav.corrections': 'Corrections',
-  'nav.messages': 'Messages',
-  'nav.datahub': 'DataHub',
-  'nav.development': 'Development',
   'nav.invoices': 'Invoices',
   'nav.payments': 'Payments',
-  'nav.outstanding': 'Outstanding',
+  'nav.settlement': 'Settlement',
+  'nav.spotPrices': 'Spot Prices',
+  'nav.datahub': 'DataHub',
+  'nav.processes': 'Processes',
+  'nav.messages': 'Messages',
+  'nav.development': 'Development',
+
+  // ── Breadcrumb context labels ──
+  'breadcrumb.customer': 'Customer',
+  'breadcrumb.invoice': 'Invoice',
+  'breadcrumb.signup': 'Signup',
+  'breadcrumb.payment': 'Payment',
+  'breadcrumb.process': 'Process',
 
   // ── Common ──
   'common.loading': 'Loading...',
@@ -650,7 +652,6 @@ export default {
 
 
   // ── Process Monitor ──
-  'nav.processes': 'Processes',
   'processes.title': 'Process Monitor',
   'processes.subtitle': 'Track DataHub process lifecycle across all metering points.',
   'processes.loading': 'Loading processes...',

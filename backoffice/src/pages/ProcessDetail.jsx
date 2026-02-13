@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { api } from '../api';
 import { useTranslation } from '../i18n/LanguageContext';
+import Breadcrumb from '../components/Breadcrumb';
 import { ConversationTimeline } from './Messages';
 
 const statusStyles = {
@@ -118,11 +119,12 @@ export default function ProcessDetail() {
 
   return (
     <div className="p-4 sm:p-8 max-w-4xl mx-auto">
-      {/* Back link + header */}
+      {/* Breadcrumb + header */}
       <div className="mb-6 animate-fade-in-up">
-        <Link to="/datahub/processes" className="text-sm text-teal-600 hover:text-teal-700 font-medium mb-3 inline-block">
-          &larr; Back to Processes
-        </Link>
+        <Breadcrumb
+          fallback={[{ label: t('processes.title'), to: '/datahub/processes' }]}
+          current={detail.id}
+        />
         <div className="flex items-start justify-between flex-wrap gap-4">
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">Process Detail</h1>

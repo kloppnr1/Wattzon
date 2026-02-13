@@ -1,23 +1,25 @@
 export default {
   // ── Navigation ──
-  'nav.overview': 'Overblik',
   'nav.dashboard': 'Dashboard',
-  'nav.onboarding': 'Onboarding',
-  'nav.signups': 'Tilmeldinger',
-  'nav.newSignup': 'Ny tilmelding',
-  'nav.portfolio': 'Portefølje',
   'nav.customers': 'Kunder',
+  'nav.signups': 'Tilmeldinger',
   'nav.products': 'Produkter',
-  'nav.operations': 'Drift',
-  'nav.spotPrices': 'Spotpriser',
   'nav.billing': 'Fakturering',
-  'nav.corrections': 'Korrektioner',
-  'nav.messages': 'Beskeder',
-  'nav.datahub': 'DataHub',
-  'nav.development': 'Udvikling',
   'nav.invoices': 'Fakturaer',
   'nav.payments': 'Betalinger',
-  'nav.outstanding': 'Udestående',
+  'nav.settlement': 'Afregning',
+  'nav.spotPrices': 'Spotpriser',
+  'nav.datahub': 'DataHub',
+  'nav.processes': 'Processer',
+  'nav.messages': 'Beskeder',
+  'nav.development': 'Udvikling',
+
+  // ── Breadcrumb context labels ──
+  'breadcrumb.customer': 'Kunde',
+  'breadcrumb.invoice': 'Faktura',
+  'breadcrumb.signup': 'Tilmelding',
+  'breadcrumb.payment': 'Betaling',
+  'breadcrumb.process': 'Proces',
 
   // ── Common ──
   'common.loading': 'Indlæser...',
@@ -650,7 +652,6 @@ export default {
 
 
   // ── Process Monitor ──
-  'nav.processes': 'Processer',
   'processes.title': 'Procesmonitor',
   'processes.subtitle': 'Spor DataHub-proceslivscyklus på tværs af alle målepunkter.',
   'processes.loading': 'Indlæser processer...',

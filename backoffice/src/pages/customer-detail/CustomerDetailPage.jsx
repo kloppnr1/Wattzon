@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { api } from '../../api';
 import { useTranslation } from '../../i18n/LanguageContext';
+import Breadcrumb from '../../components/Breadcrumb';
 import OverviewTab from './OverviewTab';
 import ContractsMeteringTab from './ContractsMeteringTab';
 import InvoicesTab from './InvoicesTab';
@@ -50,12 +51,10 @@ export default function CustomerDetailPage() {
 
   return (
     <div className="p-4 sm:p-8 max-w-6xl mx-auto">
-      <Link to="/customers" className="inline-flex items-center gap-1.5 text-sm text-slate-400 hover:text-teal-600 mb-4 transition-colors font-medium">
-        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
-        </svg>
-        {t('customerDetail.backToCustomers')}
-      </Link>
+      <Breadcrumb
+        fallback={[{ label: t('customerList.title'), to: '/customers' }]}
+        current={customer.name}
+      />
 
       <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-6 animate-fade-in-up">
         <div className="w-14 h-14 rounded-2xl bg-teal-500 flex items-center justify-center shadow-lg shadow-teal-500/25">

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { api } from '../api';
 import { useTranslation } from '../i18n/LanguageContext';
+import Breadcrumb from '../components/Breadcrumb';
 
 const statusStyles = {
   draft: { dot: 'bg-slate-400', badge: 'bg-slate-50 text-slate-700' },
@@ -100,14 +101,10 @@ export default function InvoiceDetail() {
 
   return (
     <div className="p-4 sm:p-8 max-w-5xl mx-auto">
-      {/* Breadcrumb */}
-      <div className="mb-4 animate-fade-in-up">
-        <div className="flex items-center gap-2 text-sm text-slate-500">
-          <Link to="/invoices" className="hover:text-teal-600 transition-colors">{t('invoices.title')}</Link>
-          <span>/</span>
-          <span className="text-slate-900 font-medium">{invoice.invoiceNumber || id.substring(0, 8)}</span>
-        </div>
-      </div>
+      <Breadcrumb
+        fallback={[{ label: t('invoices.title'), to: '/invoices' }]}
+        current={invoice.invoiceNumber || id.substring(0, 8)}
+      />
 
       {error && (
         <div className="mb-4 p-3 bg-rose-50 border border-rose-200 rounded-lg text-sm text-rose-700">{error}</div>
@@ -202,7 +199,7 @@ export default function InvoiceDetail() {
             <div>
               <dt className="text-xs font-medium text-slate-500">{t('invoiceDetail.customer')}</dt>
               <dd className="text-sm mt-0.5">
-                <Link to={`/customers/${invoice.customerId}`} className="text-teal-600 hover:text-teal-700">{invoice.customerId.substring(0, 8)}...</Link>
+                <Link to={`/customers/${invoice.customerId}?from=/invoices/${id}`} className="text-teal-600 hover:text-teal-700">{invoice.customerId.substring(0, 8)}...</Link>
               </dd>
             </div>
           )}

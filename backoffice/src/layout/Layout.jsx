@@ -4,7 +4,6 @@ import { useTranslation } from '../i18n/LanguageContext';
 
 const navSections = [
   {
-    labelKey: 'nav.overview',
     items: [
       {
         to: '/',
@@ -19,7 +18,7 @@ const navSections = [
     ],
   },
   {
-    labelKey: 'nav.onboarding',
+    labelKey: 'nav.customers',
     items: [
       {
         to: '/signups',
@@ -30,20 +29,6 @@ const navSections = [
           </svg>
         ),
       },
-      {
-        to: '/signups/new',
-        labelKey: 'nav.newSignup',
-        icon: (
-          <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-          </svg>
-        ),
-      },
-    ],
-  },
-  {
-    labelKey: 'nav.portfolio',
-    items: [
       {
         to: '/customers',
         labelKey: 'nav.customers',
@@ -65,33 +50,15 @@ const navSections = [
     ],
   },
   {
-    labelKey: 'nav.operations',
+    labelKey: 'nav.billing',
     items: [
       {
-        to: '/spot-prices',
-        labelKey: 'nav.spotPrices',
-        icon: (
-          <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z" />
-          </svg>
-        ),
-      },
-      {
         to: '/billing',
-        labelKey: 'nav.billing',
+        labelKey: 'nav.settlement',
         end: true,
         icon: (
           <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25M9 16.5v.75m3-3v3M15 12v5.25m-4.5-15H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
-          </svg>
-        ),
-      },
-      {
-        to: '/billing/corrections',
-        labelKey: 'nav.corrections',
-        icon: (
-          <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 21 3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" />
           </svg>
         ),
       },
@@ -114,11 +81,11 @@ const navSections = [
         ),
       },
       {
-        to: '/outstanding',
-        labelKey: 'nav.outstanding',
+        to: '/spot-prices',
+        labelKey: 'nav.spotPrices',
         icon: (
           <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+            <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z" />
           </svg>
         ),
       },
@@ -217,11 +184,13 @@ export default function Layout() {
 
         {/* Navigation */}
         <nav className="flex-1 px-3 pb-4 space-y-5 overflow-y-auto relative z-10">
-          {navSections.map((section) => (
-            <div key={section.labelKey}>
-              <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-white/35">
-                {t(section.labelKey)}
-              </p>
+          {navSections.map((section, idx) => (
+            <div key={section.labelKey || idx}>
+              {section.labelKey && (
+                <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-white/35">
+                  {t(section.labelKey)}
+                </p>
+              )}
               <div className="space-y-0.5">
                 {section.items.map(({ to, labelKey, icon, end }) => (
                   <NavLink

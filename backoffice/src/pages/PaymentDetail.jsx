@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { api } from '../api';
 import { useTranslation } from '../i18n/LanguageContext';
+import Breadcrumb from '../components/Breadcrumb';
 
 const statusStyles = {
   received: { dot: 'bg-blue-400', badge: 'bg-blue-50 text-blue-700' },
@@ -46,14 +47,10 @@ export default function PaymentDetail() {
 
   return (
     <div className="p-4 sm:p-8 max-w-5xl mx-auto">
-      {/* Breadcrumb */}
-      <div className="mb-4 animate-fade-in-up">
-        <div className="flex items-center gap-2 text-sm text-slate-500">
-          <Link to="/payments" className="hover:text-teal-600 transition-colors">{t('payments.title')}</Link>
-          <span>/</span>
-          <span className="text-slate-900 font-medium">{payment.paymentReference || id.substring(0, 8)}</span>
-        </div>
-      </div>
+      <Breadcrumb
+        fallback={[{ label: t('payments.title'), to: '/payments' }]}
+        current={payment.paymentReference || id.substring(0, 8)}
+      />
 
       {error && (
         <div className="mb-4 p-3 bg-rose-50 border border-rose-200 rounded-lg text-sm text-rose-700">{error}</div>
@@ -101,7 +98,7 @@ export default function PaymentDetail() {
             <div>
               <dt className="text-xs font-medium text-slate-500">{t('paymentDetail.customer')}</dt>
               <dd className="text-sm mt-0.5">
-                <Link to={`/customers/${payment.customerId}`} className="text-teal-600 hover:text-teal-700">{payment.customerId.substring(0, 8)}...</Link>
+                <Link to={`/customers/${payment.customerId}?from=/payments/${id}`} className="text-teal-600 hover:text-teal-700">{payment.customerId.substring(0, 8)}...</Link>
               </dd>
             </div>
           )}

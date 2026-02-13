@@ -58,7 +58,7 @@ export default function ProcessesTab({ customerId }) {
                       <span className="text-[11px] font-mono text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">{p.gsrn}</span>
                     </td>
                     <td className="px-4 py-2.5 whitespace-nowrap">
-                      <Link to={`/datahub/processes/${p.id}`} className="text-sm text-teal-600 font-medium hover:text-teal-700">
+                      <Link to={`/datahub/processes/${p.id}?from=/customers/${customerId}`} className="text-sm text-teal-600 font-medium hover:text-teal-700">
                         {t(`processType.${p.processType}`)}
                       </Link>
                     </td>

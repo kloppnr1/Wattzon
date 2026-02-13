@@ -67,7 +67,7 @@ export default function PaymentsTab({ customerId }) {
                 return (
                   <tr key={pay.id} className="hover:bg-slate-50 transition-colors">
                     <td className="px-4 py-2.5 whitespace-nowrap">
-                      <Link to={`/payments/${pay.id}`} className="text-sm text-teal-600 font-medium hover:text-teal-700">
+                      <Link to={`/payments/${pay.id}?from=/customers/${customerId}`} className="text-sm text-teal-600 font-medium hover:text-teal-700">
                         {pay.paymentReference || pay.id.slice(0, 8)}
                       </Link>
                     </td>

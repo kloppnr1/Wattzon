@@ -71,7 +71,7 @@ export default function InvoicesTab({ customerId }) {
                 return (
                   <tr key={inv.id} className="hover:bg-slate-50 transition-colors">
                     <td className="px-4 py-2.5 whitespace-nowrap">
-                      <Link to={`/invoices/${inv.id}`} className="text-sm text-teal-600 font-medium hover:text-teal-700">
+                      <Link to={`/invoices/${inv.id}?from=/customers/${customerId}`} className="text-sm text-teal-600 font-medium hover:text-teal-700">
                         {inv.invoiceNumber || inv.id.slice(0, 8)}
                       </Link>
                     </td>

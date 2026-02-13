@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { api } from '../api';
 import { useTranslation } from '../i18n/LanguageContext';
+import Breadcrumb from '../components/Breadcrumb';
 import { shouldShowPendingStep, getPendingEventType } from '../utils/pendingStep';
 
 const statusStyles = {
@@ -114,12 +115,10 @@ export default function SignupDetail() {
 
   return (
     <div className="p-4 sm:p-8 max-w-3xl mx-auto">
-      <Link to="/signups" className="inline-flex items-center gap-1.5 text-sm text-slate-400 hover:text-teal-600 mb-4 transition-colors font-medium">
-        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
-        </svg>
-        {t('signupDetail.backToSignups')}
-      </Link>
+      <Breadcrumb
+        fallback={[{ label: t('signupList.title'), to: '/signups' }]}
+        current={signup.signupNumber}
+      />
 
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 animate-fade-in-up">
         <div className="flex items-center gap-3">
@@ -247,7 +246,7 @@ export default function SignupDetail() {
           <Field
             label={t('signupDetail.name')}
             value={
-              <Link to={`/customers/${signup.customerId}`} className="font-semibold text-teal-600 hover:text-teal-800 transition-colors">
+              <Link to={`/customers/${signup.customerId}?from=/signups/${id}`} className="font-semibold text-teal-600 hover:text-teal-800 transition-colors">
                 {signup.customerName}
               </Link>
             }
