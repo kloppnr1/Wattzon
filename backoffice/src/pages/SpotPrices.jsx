@@ -9,9 +9,7 @@ function formatDate(d) {
 }
 
 function defaultFrom() {
-  const d = new Date();
-  d.setDate(d.getDate() - 7);
-  return formatDate(d);
+  return formatDate(new Date());
 }
 
 function defaultTo() {

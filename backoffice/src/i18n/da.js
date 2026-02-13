@@ -269,7 +269,7 @@ export default {
   'customerDetail.tabContracts': 'Kontrakter og målepunkter',
   'customerDetail.tabInvoices': 'Fakturaer',
   'customerDetail.tabPayments': 'Betalinger',
-  'customerDetail.tabCharges': 'Afgifter',
+  'customerDetail.tabCharges': 'Afregning',
   'customerDetail.tabProcesses': 'Processer',
   'customerDetail.tabLedger': 'Kontoudtog',
   'customerDetail.contracts': 'Kontrakter',

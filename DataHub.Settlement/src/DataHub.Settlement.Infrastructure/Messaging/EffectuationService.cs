@@ -154,7 +154,7 @@ public sealed class EffectuationService
                         CustomerId = customerId.Value,
                         Gsrn = meteringPointId,
                         ProductId = productId,
-                        BillingFrequency = "quarterly",
+                        BillingFrequency = "monthly",
                         PaymentModel = "aconto",
                         StartDate = effectiveDate,
                     },

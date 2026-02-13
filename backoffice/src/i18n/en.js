@@ -269,7 +269,7 @@ export default {
   'customerDetail.tabContracts': 'Contracts & Metering',
   'customerDetail.tabInvoices': 'Invoices',
   'customerDetail.tabPayments': 'Payments',
-  'customerDetail.tabCharges': 'Charges',
+  'customerDetail.tabCharges': 'Settlement',
   'customerDetail.tabProcesses': 'Processes',
   'customerDetail.tabLedger': 'Ledger',
   'customerDetail.contracts': 'Contracts',
