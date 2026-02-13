@@ -172,8 +172,8 @@ public class SunshineScenarioTests
         var gridRates = await _tariffRepo.GetRatesAsync("344", "grid", new DateOnly(2025, 1, 15), ct);
         var systemRate = 0.054m; // Would come from tariff DB in full implementation
         var transmissionRate = 0.049m;
-        var electricityTaxRate = await _tariffRepo.GetElectricityTaxAsync(new DateOnly(2025, 1, 15), ct);
-        var gridSubscription = await _tariffRepo.GetSubscriptionAsync("344", "grid", new DateOnly(2025, 1, 15), ct);
+        var electricityTaxRate = await _tariffRepo.GetElectricityTaxAsync(new DateOnly(2025, 1, 15), ct) ?? 0m;
+        var gridSubscription = await _tariffRepo.GetSubscriptionAsync("344", "grid", new DateOnly(2025, 1, 15), ct) ?? 0m;
 
         var engine = new SettlementEngine();
         var settlementRequest = new SettlementRequest(

@@ -89,6 +89,9 @@ export const api = {
   getAcontoPayments: (gsrn, { from, to } = {}) =>
     request(`/billing/aconto/${gsrn}${qs({ from, to })}`),
 
+  // Metering Point Tariffs
+  getMeteringPointTariffs: (gsrn) => request(`/metering-points/${gsrn}/tariffs`),
+
   // Customer Processes
   getCustomerProcesses: (customerId) => request(`/customers/${customerId}/processes`),
 

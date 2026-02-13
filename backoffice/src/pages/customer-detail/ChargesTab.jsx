@@ -121,6 +121,39 @@ export default function ChargesTab({ customerId }) {
           </div>
         )}
       </div>
+
+      {/* Aconto payments */}
+      {summary.acontoPayments && summary.acontoPayments.length > 0 && (
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+          <div className="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-1 h-4 rounded-full bg-teal-500" />
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">{t('customerDetail.acontoPayments')}</h3>
+            </div>
+            <span className="text-xs font-semibold text-teal-600 bg-teal-50 px-2.5 py-0.5 rounded-full">{summary.acontoPayments.length}</span>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="bg-slate-50 border-b border-slate-200">
+                  <th className="text-left text-[10px] font-semibold text-slate-600 uppercase tracking-wider px-4 py-2.5">{t('customerDetail.acontoColDate')}</th>
+                  <th className="text-right text-[10px] font-semibold text-slate-600 uppercase tracking-wider px-4 py-2.5">{t('customerDetail.acontoColAmount')}</th>
+                  <th className="text-left text-[10px] font-semibold text-slate-600 uppercase tracking-wider px-4 py-2.5">{t('customerDetail.acontoColCurrency')}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {summary.acontoPayments.map((ap) => (
+                  <tr key={ap.id} className="hover:bg-slate-50 transition-colors">
+                    <td className="px-4 py-2.5 text-sm text-slate-700">{ap.paymentDate}</td>
+                    <td className="px-4 py-2.5 text-right text-sm tabular-nums font-semibold text-slate-900">{ap.amount?.toFixed(2)}</td>
+                    <td className="px-4 py-2.5 text-sm text-slate-500">{ap.currency}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -220,8 +220,8 @@ public sealed class MarketRulesScenarioTests : IClassFixture<WebApplicationFacto
 
         var spotPrices = await _spotPriceRepo.GetPricesAsync("DK1", start, start.AddMonths(1), ct);
         var gridRates = await _tariffRepo.GetRatesAsync("344", "grid", new DateOnly(2025, 1, 15), ct);
-        var elTax = await _tariffRepo.GetElectricityTaxAsync(new DateOnly(2025, 1, 15), ct);
-        var gridSub = await _tariffRepo.GetSubscriptionAsync("344", "grid", new DateOnly(2025, 1, 15), ct);
+        var elTax = await _tariffRepo.GetElectricityTaxAsync(new DateOnly(2025, 1, 15), ct) ?? 0m;
+        var gridSub = await _tariffRepo.GetSubscriptionAsync("344", "grid", new DateOnly(2025, 1, 15), ct) ?? 0m;
 
         var engine = new SettlementEngine();
         var result = engine.Calculate(new SettlementRequest(

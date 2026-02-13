@@ -379,8 +379,8 @@ public sealed class SimulationService
         var finalSpotPrices = await setup.SpotPriceRepo.GetPricesAsync("DK2",
             finalStart, new DateTime(2025, 2, 16, 0, 0, 0, DateTimeKind.Utc), ct);
         var ratesForCalc = await setup.TariffRepo.GetRatesAsync("344", "grid", new DateOnly(2025, 1, 15), ct);
-        var electricityTax = await setup.TariffRepo.GetElectricityTaxAsync(new DateOnly(2025, 1, 15), ct);
-        var gridSub = await setup.TariffRepo.GetSubscriptionAsync("344", "grid", new DateOnly(2025, 1, 15), ct);
+        var electricityTax = await setup.TariffRepo.GetElectricityTaxAsync(new DateOnly(2025, 1, 15), ct) ?? 0m;
+        var gridSub = await setup.TariffRepo.GetSubscriptionAsync("344", "grid", new DateOnly(2025, 1, 15), ct) ?? 0m;
 
         var finalEngine = new SettlementEngine();
         var finalService = new FinalSettlementService(finalEngine);
@@ -526,8 +526,8 @@ public sealed class SimulationService
         var q1Consumption = await setup.MeteringRepo.GetConsumptionAsync(Gsrn, start, q1End, ct);
         var q1SpotPrices = await setup.SpotPriceRepo.GetPricesAsync("DK1", start, q1End, ct);
         var rates = await setup.TariffRepo.GetRatesAsync("344", "grid", new DateOnly(2025, 1, 15), ct);
-        var elTax = await setup.TariffRepo.GetElectricityTaxAsync(new DateOnly(2025, 1, 15), ct);
-        var gridSub = await setup.TariffRepo.GetSubscriptionAsync("344", "grid", new DateOnly(2025, 1, 15), ct);
+        var elTax = await setup.TariffRepo.GetElectricityTaxAsync(new DateOnly(2025, 1, 15), ct) ?? 0m;
+        var gridSub = await setup.TariffRepo.GetSubscriptionAsync("344", "grid", new DateOnly(2025, 1, 15), ct) ?? 0m;
 
         // Calculate each month separately and sum (subscriptions are per-month)
         var engine = new SettlementEngine();
@@ -774,8 +774,8 @@ public sealed class SimulationService
         var finalConsumption = await setup.MeteringRepo.GetConsumptionAsync(Gsrn, finalStart, finalEnd, ct);
         var finalSpotPrices = await setup.SpotPriceRepo.GetPricesAsync("DK1", finalStart, finalEnd, ct);
         var rates = await setup.TariffRepo.GetRatesAsync("344", "grid", new DateOnly(2025, 1, 15), ct);
-        var elTax = await setup.TariffRepo.GetElectricityTaxAsync(new DateOnly(2025, 1, 15), ct);
-        var gridSub = await setup.TariffRepo.GetSubscriptionAsync("344", "grid", new DateOnly(2025, 1, 15), ct);
+        var elTax = await setup.TariffRepo.GetElectricityTaxAsync(new DateOnly(2025, 1, 15), ct) ?? 0m;
+        var gridSub = await setup.TariffRepo.GetSubscriptionAsync("344", "grid", new DateOnly(2025, 1, 15), ct) ?? 0m;
 
         var engine = new SettlementEngine();
         var finalService = new FinalSettlementService(engine);
@@ -970,8 +970,8 @@ public sealed class SimulationService
         var consumption = await meteringRepo.GetConsumptionAsync(gsrn, start, periodEnd, ct);
         var spotPrices = await spotPriceRepo.GetPricesAsync("DK1", start, periodEnd, ct);
         var rates = await tariffRepo.GetRatesAsync("344", "grid", new DateOnly(2025, 1, 15), ct);
-        var elTax = await tariffRepo.GetElectricityTaxAsync(new DateOnly(2025, 1, 15), ct);
-        var gridSub = await tariffRepo.GetSubscriptionAsync("344", "grid", new DateOnly(2025, 1, 15), ct);
+        var elTax = await tariffRepo.GetElectricityTaxAsync(new DateOnly(2025, 1, 15), ct) ?? 0m;
+        var gridSub = await tariffRepo.GetSubscriptionAsync("344", "grid", new DateOnly(2025, 1, 15), ct) ?? 0m;
 
         var engine = new SettlementEngine();
         var result = engine.Calculate(new SettlementRequest(
@@ -1142,8 +1142,8 @@ public sealed class SimulationService
         var consumption = await meteringRepo.GetConsumptionAsync(gsrn, meteringStart, meteringEnd, ct);
         var spotPrices = await spotPriceRepo.GetPricesAsync("DK1", meteringStart, meteringEnd, ct);
         var rates = await tariffRepo.GetRatesAsync("344", "grid", periodStart, ct);
-        var elTax = await tariffRepo.GetElectricityTaxAsync(periodStart, ct);
-        var gridSub = await tariffRepo.GetSubscriptionAsync("344", "grid", periodStart, ct);
+        var elTax = await tariffRepo.GetElectricityTaxAsync(periodStart, ct) ?? 0m;
+        var gridSub = await tariffRepo.GetSubscriptionAsync("344", "grid", periodStart, ct) ?? 0m;
 
         await onStepCompleted(new SimulationStep(1, "Load Data",
             $"Period {periodStart} to {periodEnd}: {consumption.Count} readings, {spotPrices.Count} prices"));
@@ -1301,8 +1301,8 @@ public sealed class SimulationService
         var finalConsumption = await meteringRepo.GetConsumptionAsync(gsrn, departureStart, departureEnd, ct);
         var finalSpotPrices = await spotPriceRepo.GetPricesAsync("DK1", departureStart, departureEnd, ct);
         var rates = await tariffRepo.GetRatesAsync("344", "grid", DateOnly.FromDateTime(departureStart), ct);
-        var elTax = await tariffRepo.GetElectricityTaxAsync(DateOnly.FromDateTime(departureStart), ct);
-        var gridSub = await tariffRepo.GetSubscriptionAsync("344", "grid", DateOnly.FromDateTime(departureStart), ct);
+        var elTax = await tariffRepo.GetElectricityTaxAsync(DateOnly.FromDateTime(departureStart), ct) ?? 0m;
+        var gridSub = await tariffRepo.GetSubscriptionAsync("344", "grid", DateOnly.FromDateTime(departureStart), ct) ?? 0m;
 
         var engine = new SettlementEngine();
         var finalService = new FinalSettlementService(engine);
@@ -1429,8 +1429,8 @@ public sealed class SimulationService
         var reconcileEnd = month2Start.AddMonths(1);
 
         var rates = await tariffRepo.GetRatesAsync("344", "grid", qStartDate, ct);
-        var elTax = await tariffRepo.GetElectricityTaxAsync(qStartDate, ct);
-        var gridSub = await tariffRepo.GetSubscriptionAsync("344", "grid", qStartDate, ct);
+        var elTax = await tariffRepo.GetElectricityTaxAsync(qStartDate, ct) ?? 0m;
+        var gridSub = await tariffRepo.GetSubscriptionAsync("344", "grid", qStartDate, ct) ?? 0m;
 
         var consumption = await meteringRepo.GetConsumptionAsync(gsrn, reconcileStart, reconcileEnd, ct);
         var spotPrices = await spotPriceRepo.GetPricesAsync("DK1", reconcileStart, reconcileEnd, ct);
@@ -1632,8 +1632,8 @@ public sealed class SimulationService
         var consumption = await meteringRepo.GetConsumptionAsync(gsrn, start, periodEnd, ct);
         var spotPrices = await spotPriceRepo.GetPricesAsync("DK1", start, periodEnd, ct);
         var rates = await tariffRepo.GetRatesAsync("344", "grid", new DateOnly(2025, 1, 15), ct);
-        var elTax = await tariffRepo.GetElectricityTaxAsync(new DateOnly(2025, 1, 15), ct);
-        var gridSub = await tariffRepo.GetSubscriptionAsync("344", "grid", new DateOnly(2025, 1, 15), ct);
+        var elTax = await tariffRepo.GetElectricityTaxAsync(new DateOnly(2025, 1, 15), ct) ?? 0m;
+        var gridSub = await tariffRepo.GetSubscriptionAsync("344", "grid", new DateOnly(2025, 1, 15), ct) ?? 0m;
 
         var engine = new SettlementEngine();
         var result = engine.Calculate(new SettlementRequest(
@@ -1777,8 +1777,8 @@ public sealed class SimulationService
         var finalConsumption = await meteringRepo.GetConsumptionAsync(gsrn, departureStart, departureEnd, ct);
         var finalSpotPrices = await spotPriceRepo.GetPricesAsync("DK1", departureStart, departureEnd, ct);
         var rates = await tariffRepo.GetRatesAsync("344", "grid", DateOnly.FromDateTime(departureStart), ct);
-        var elTax = await tariffRepo.GetElectricityTaxAsync(DateOnly.FromDateTime(departureStart), ct);
-        var gridSub = await tariffRepo.GetSubscriptionAsync("344", "grid", DateOnly.FromDateTime(departureStart), ct);
+        var elTax = await tariffRepo.GetElectricityTaxAsync(DateOnly.FromDateTime(departureStart), ct) ?? 0m;
+        var gridSub = await tariffRepo.GetSubscriptionAsync("344", "grid", DateOnly.FromDateTime(departureStart), ct) ?? 0m;
 
         var engine = new SettlementEngine();
         var finalService = new FinalSettlementService(engine);
@@ -1828,8 +1828,8 @@ public sealed class SimulationService
         var consumption = await setup.MeteringRepo.GetConsumptionAsync(Gsrn, periodStart, periodEnd, ct);
         var spotPrices = await setup.SpotPriceRepo.GetPricesAsync("DK1", periodStart, periodEnd, ct);
         var rates = await setup.TariffRepo.GetRatesAsync("344", "grid", new DateOnly(2025, 1, 15), ct);
-        var elTax = await setup.TariffRepo.GetElectricityTaxAsync(new DateOnly(2025, 1, 15), ct);
-        var gridSub = await setup.TariffRepo.GetSubscriptionAsync("344", "grid", new DateOnly(2025, 1, 15), ct);
+        var elTax = await setup.TariffRepo.GetElectricityTaxAsync(new DateOnly(2025, 1, 15), ct) ?? 0m;
+        var gridSub = await setup.TariffRepo.GetSubscriptionAsync("344", "grid", new DateOnly(2025, 1, 15), ct) ?? 0m;
 
         var engine = new SettlementEngine();
         var result = engine.Calculate(new SettlementRequest(
@@ -2123,8 +2123,8 @@ public sealed class SimulationService
             var spotPrices = await spotPriceRepo.GetPricesAsync("DK1", effectiveStart, periodEnd, ct);
             var midMonth = ed.AddDays(14);
             var rates = await tariffRepo.GetRatesAsync("344", "grid", midMonth, ct);
-            var elTax = await tariffRepo.GetElectricityTaxAsync(midMonth, ct);
-            var gridSub = await tariffRepo.GetSubscriptionAsync("344", "grid", midMonth, ct);
+            var elTax = await tariffRepo.GetElectricityTaxAsync(midMonth, ct) ?? 0m;
+            var gridSub = await tariffRepo.GetSubscriptionAsync("344", "grid", midMonth, ct) ?? 0m;
 
             var engine = new SettlementEngine();
             var result = engine.Calculate(new SettlementRequest(
@@ -2354,8 +2354,8 @@ public sealed class SimulationService
             var spotPrices = await spotPriceRepo.GetPricesAsync("DK1", effectiveStart, periodEnd, ct);
             var midMonth = ed.AddDays(14);
             var rates = await tariffRepo.GetRatesAsync("344", "grid", midMonth, ct);
-            var elTax = await tariffRepo.GetElectricityTaxAsync(midMonth, ct);
-            var gridSub = await tariffRepo.GetSubscriptionAsync("344", "grid", midMonth, ct);
+            var elTax = await tariffRepo.GetElectricityTaxAsync(midMonth, ct) ?? 0m;
+            var gridSub = await tariffRepo.GetSubscriptionAsync("344", "grid", midMonth, ct) ?? 0m;
 
             var engine = new SettlementEngine();
             var result = engine.Calculate(new SettlementRequest(

@@ -5,10 +5,10 @@ public interface ITariffRepository
     Task<IReadOnlyList<TariffRateRow>> GetRatesAsync(
         string gridAreaCode, string tariffType, DateOnly date, CancellationToken ct);
 
-    Task<decimal> GetSubscriptionAsync(
+    Task<decimal?> GetSubscriptionAsync(
         string gridAreaCode, string subscriptionType, DateOnly date, CancellationToken ct);
 
-    Task<decimal> GetElectricityTaxAsync(DateOnly date, CancellationToken ct);
+    Task<decimal?> GetElectricityTaxAsync(DateOnly date, CancellationToken ct);
 
     Task SeedGridTariffAsync(
         string gridAreaCode, string tariffType, DateOnly validFrom,
@@ -21,4 +21,16 @@ public interface ITariffRepository
     Task SeedElectricityTaxAsync(decimal ratePerKwh, DateOnly validFrom, CancellationToken ct);
 
     Task StoreTariffAttachmentsAsync(string gsrn, IReadOnlyList<Application.Parsing.TariffAttachment> tariffs, string? correlationId, CancellationToken ct);
+
+    Task<IReadOnlyList<MeteringPointTariffAttachment>> GetAttachmentsForGsrnAsync(string gsrn, CancellationToken ct);
 }
+
+public record MeteringPointTariffAttachment(
+    Guid Id,
+    string Gsrn,
+    string TariffId,
+    string TariffType,
+    DateOnly ValidFrom,
+    DateOnly? ValidTo,
+    string? CorrelationId,
+    DateTime CreatedAt);

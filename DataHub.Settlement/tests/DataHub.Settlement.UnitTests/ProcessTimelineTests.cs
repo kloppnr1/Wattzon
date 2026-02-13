@@ -439,12 +439,13 @@ public class ProcessTimelineTests
     private sealed class ThrowTariffRepo : Application.Tariff.ITariffRepository
     {
         public Task<IReadOnlyList<Application.Tariff.TariffRateRow>> GetRatesAsync(string gridAreaCode, string tariffType, DateOnly date, CancellationToken ct) => throw new NotImplementedException();
-        public Task<decimal> GetSubscriptionAsync(string gridAreaCode, string subscriptionType, DateOnly date, CancellationToken ct) => throw new NotImplementedException();
-        public Task<decimal> GetElectricityTaxAsync(DateOnly date, CancellationToken ct) => throw new NotImplementedException();
+        public Task<decimal?> GetSubscriptionAsync(string gridAreaCode, string subscriptionType, DateOnly date, CancellationToken ct) => throw new NotImplementedException();
+        public Task<decimal?> GetElectricityTaxAsync(DateOnly date, CancellationToken ct) => throw new NotImplementedException();
         public Task SeedGridTariffAsync(string gridAreaCode, string tariffType, DateOnly validFrom, IReadOnlyList<Application.Tariff.TariffRateRow> rates, CancellationToken ct) => throw new NotImplementedException();
         public Task SeedSubscriptionAsync(string gridAreaCode, string subscriptionType, decimal amountPerMonth, DateOnly validFrom, CancellationToken ct) => throw new NotImplementedException();
         public Task SeedElectricityTaxAsync(decimal ratePerKwh, DateOnly validFrom, CancellationToken ct) => throw new NotImplementedException();
         public Task StoreTariffAttachmentsAsync(string gsrn, IReadOnlyList<Application.Parsing.TariffAttachment> tariffs, string? correlationId, CancellationToken ct) => throw new NotImplementedException();
+        public Task<IReadOnlyList<Application.Tariff.MeteringPointTariffAttachment>> GetAttachmentsForGsrnAsync(string gsrn, CancellationToken ct) => throw new NotImplementedException();
     }
 
     private sealed class ThrowBrsBuilder : Application.DataHub.IBrsRequestBuilder

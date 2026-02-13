@@ -35,18 +35,23 @@ public sealed class SettlementDataLoader : ISettlementDataLoader
         var ratesTask = _tariffRepo.GetRatesAsync(gridAreaCode, "grid", midDate, ct);
         var elTaxTask = _tariffRepo.GetElectricityTaxAsync(midDate, ct);
         var gridSubTask = _tariffRepo.GetSubscriptionAsync(gridAreaCode, "grid", midDate, ct);
+        var systemRatesTask = _tariffRepo.GetRatesAsync(gridAreaCode, "system", midDate, ct);
+        var transmissionRatesTask = _tariffRepo.GetRatesAsync(gridAreaCode, "transmission", midDate, ct);
 
-        await Task.WhenAll(consumptionTask, spotPricesTask, ratesTask, elTaxTask, gridSubTask);
+        await Task.WhenAll(consumptionTask, spotPricesTask, ratesTask, elTaxTask, gridSubTask, systemRatesTask, transmissionRatesTask);
+
+        var systemRates = await systemRatesTask;
+        var transmissionRates = await transmissionRatesTask;
 
         return new SettlementInput(
             gsrn, periodStart, periodEnd,
             await consumptionTask,
             await spotPricesTask,
             await ratesTask,
-            SystemTariffRate: 0.054m,
-            TransmissionTariffRate: 0.049m,
-            ElectricityTaxRate: await elTaxTask,
-            GridSubscriptionPerMonth: await gridSubTask,
+            SystemTariffRate: systemRates.Count > 0 ? systemRates[0].PricePerKwh : 0.054m,
+            TransmissionTariffRate: transmissionRates.Count > 0 ? transmissionRates[0].PricePerKwh : 0.049m,
+            ElectricityTaxRate: await elTaxTask ?? 0m,
+            GridSubscriptionPerMonth: await gridSubTask ?? 0m,
             MarginPerKwh: marginPerKwh,
             SupplementPerKwh: supplementPerKwh,
             SupplierSubscriptionPerMonth: supplierSubscriptionPerMonth);

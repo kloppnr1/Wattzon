@@ -97,7 +97,12 @@ public sealed class InvoiceRepository : IInvoiceRepository
 
         var lines = await conn.QueryAsync<InvoiceLine>(
             new CommandDefinition(
-                "SELECT * FROM billing.invoice_line WHERE invoice_id = @Id ORDER BY sort_order",
+                """
+                SELECT id, invoice_id, settlement_line_id, gsrn, sort_order,
+                       line_type, description, quantity, unit_price,
+                       amount_ex_vat, vat_amount, amount_incl_vat
+                FROM billing.invoice_line WHERE invoice_id = @Id ORDER BY sort_order
+                """,
                 new { Id = id }, cancellationToken: ct));
 
         var names = await conn.QuerySingleOrDefaultAsync<InvoiceNames>(

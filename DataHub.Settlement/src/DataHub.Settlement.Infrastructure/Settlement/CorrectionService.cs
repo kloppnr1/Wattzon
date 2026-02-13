@@ -63,13 +63,11 @@ public sealed class CorrectionService : ICorrectionService
         // 5. Load spot prices
         var spotPrices = await _spotPriceRepo.GetPricesAsync(priceArea, from, to, ct);
 
-        var gridTariffRates = await _tariffRepo.GetRatesAsync(gridAreaCode, "grid_tariff", request.PeriodStart, ct);
-        var systemRates = await _tariffRepo.GetRatesAsync(gridAreaCode, "system_tariff", request.PeriodStart, ct);
-        var transmissionRates = await _tariffRepo.GetRatesAsync(gridAreaCode, "transmission_tariff", request.PeriodStart, ct);
+        var gridTariffRates = await _tariffRepo.GetRatesAsync(gridAreaCode, "grid", request.PeriodStart, ct);
+        var systemRates = await _tariffRepo.GetRatesAsync(gridAreaCode, "system", request.PeriodStart, ct);
+        var transmissionRates = await _tariffRepo.GetRatesAsync(gridAreaCode, "transmission", request.PeriodStart, ct);
 
-        decimal electricityTaxRate;
-        try { electricityTaxRate = await _tariffRepo.GetElectricityTaxAsync(request.PeriodStart, ct); }
-        catch (InvalidOperationException) { electricityTaxRate = 0m; }
+        var electricityTaxRate = await _tariffRepo.GetElectricityTaxAsync(request.PeriodStart, ct) ?? 0m;
 
         var systemTariffRate = systemRates.Count > 0 ? systemRates[0].PricePerKwh : 0m;
         var transmissionTariffRate = transmissionRates.Count > 0 ? transmissionRates[0].PricePerKwh : 0m;

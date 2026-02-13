@@ -87,11 +87,12 @@ public class SettlementDataLoaderTests
     private sealed class InMemoryTariffRepository(IReadOnlyList<TariffRateRow> rates, decimal electricityTax, decimal gridSubscription) : ITariffRepository
     {
         public Task<IReadOnlyList<TariffRateRow>> GetRatesAsync(string gridAreaCode, string tariffType, DateOnly date, CancellationToken ct) => Task.FromResult(rates);
-        public Task<decimal> GetSubscriptionAsync(string gridAreaCode, string subscriptionType, DateOnly date, CancellationToken ct) => Task.FromResult(gridSubscription);
-        public Task<decimal> GetElectricityTaxAsync(DateOnly date, CancellationToken ct) => Task.FromResult(electricityTax);
+        public Task<decimal?> GetSubscriptionAsync(string gridAreaCode, string subscriptionType, DateOnly date, CancellationToken ct) => Task.FromResult<decimal?>(gridSubscription);
+        public Task<decimal?> GetElectricityTaxAsync(DateOnly date, CancellationToken ct) => Task.FromResult<decimal?>(electricityTax);
         public Task SeedGridTariffAsync(string gridAreaCode, string tariffType, DateOnly validFrom, IReadOnlyList<TariffRateRow> rates, CancellationToken ct) => Task.CompletedTask;
         public Task SeedSubscriptionAsync(string gridAreaCode, string subscriptionType, decimal amountPerMonth, DateOnly validFrom, CancellationToken ct) => Task.CompletedTask;
         public Task SeedElectricityTaxAsync(decimal ratePerKwh, DateOnly validFrom, CancellationToken ct) => Task.CompletedTask;
         public Task StoreTariffAttachmentsAsync(string gsrn, IReadOnlyList<Application.Parsing.TariffAttachment> tariffs, string? correlationId, CancellationToken ct) => Task.CompletedTask;
+        public Task<IReadOnlyList<MeteringPointTariffAttachment>> GetAttachmentsForGsrnAsync(string gsrn, CancellationToken ct) => Task.FromResult<IReadOnlyList<MeteringPointTariffAttachment>>(Array.Empty<MeteringPointTariffAttachment>());
     }
 }

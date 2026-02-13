@@ -105,8 +105,8 @@ public sealed class DataSeeder
             new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc),
             new DateTime(2025, 2, 1, 0, 0, 0, DateTimeKind.Utc), ct);
         var ratesForCalc = await tariffRepo.GetRatesAsync("344", "grid", new DateOnly(2025, 1, 15), ct);
-        var electricityTax = await tariffRepo.GetElectricityTaxAsync(new DateOnly(2025, 1, 15), ct);
-        var gridSub = await tariffRepo.GetSubscriptionAsync("344", "grid", new DateOnly(2025, 1, 15), ct);
+        var electricityTax = await tariffRepo.GetElectricityTaxAsync(new DateOnly(2025, 1, 15), ct) ?? 0m;
+        var gridSub = await tariffRepo.GetSubscriptionAsync("344", "grid", new DateOnly(2025, 1, 15), ct) ?? 0m;
 
         var engine = new SettlementEngine();
         var result = engine.Calculate(new SettlementRequest(

@@ -283,11 +283,12 @@ public static class DatabaseSeeder
         // Grid tariffs + subscriptions per grid area
         foreach (var ga in gridAreas)
         {
-            var tariffId = await conn.QuerySingleAsync<Guid>(
+            // Grid tariff (time-of-use hourly rates)
+            var gridTariffId = await conn.QuerySingleAsync<Guid>(
                 "INSERT INTO tariff.grid_tariff (grid_area_code, charge_owner_id, tariff_type, valid_from) VALUES (@Code, @Gln, 'grid', '2025-01-01') ON CONFLICT (grid_area_code, tariff_type, valid_from) DO UPDATE SET charge_owner_id = EXCLUDED.charge_owner_id RETURNING id",
                 new { ga.Code, ga.Gln });
 
-            var rates = new List<object>();
+            var gridRates = new List<object>();
             for (int h = 1; h <= 24; h++)
             {
                 var price = h switch
@@ -299,11 +300,31 @@ public static class DatabaseSeeder
                     >= 21 and <= 22 => 0.25m,
                     _ => 0.15m,
                 };
-                rates.Add(new { GridTariffId = tariffId, HourNumber = h, PricePerKwh = price });
+                gridRates.Add(new { GridTariffId = gridTariffId, HourNumber = h, PricePerKwh = price });
             }
             await conn.ExecuteAsync(
                 "INSERT INTO tariff.tariff_rate (grid_tariff_id, hour_number, price_per_kwh) VALUES (@GridTariffId, @HourNumber, @PricePerKwh) ON CONFLICT (grid_tariff_id, hour_number) DO UPDATE SET price_per_kwh = EXCLUDED.price_per_kwh",
-                rates);
+                gridRates);
+
+            // System tariff (flat rate per hour)
+            var systemTariffId = await conn.QuerySingleAsync<Guid>(
+                "INSERT INTO tariff.grid_tariff (grid_area_code, charge_owner_id, tariff_type, valid_from) VALUES (@Code, @Gln, 'system', '2025-01-01') ON CONFLICT (grid_area_code, tariff_type, valid_from) DO UPDATE SET charge_owner_id = EXCLUDED.charge_owner_id RETURNING id",
+                new { ga.Code, ga.Gln });
+
+            var systemRates = Enumerable.Range(1, 24).Select(h => new { GridTariffId = systemTariffId, HourNumber = h, PricePerKwh = 0.054m }).ToList();
+            await conn.ExecuteAsync(
+                "INSERT INTO tariff.tariff_rate (grid_tariff_id, hour_number, price_per_kwh) VALUES (@GridTariffId, @HourNumber, @PricePerKwh) ON CONFLICT (grid_tariff_id, hour_number) DO UPDATE SET price_per_kwh = EXCLUDED.price_per_kwh",
+                systemRates);
+
+            // Transmission tariff (flat rate per hour)
+            var transmissionTariffId = await conn.QuerySingleAsync<Guid>(
+                "INSERT INTO tariff.grid_tariff (grid_area_code, charge_owner_id, tariff_type, valid_from) VALUES (@Code, @Gln, 'transmission', '2025-01-01') ON CONFLICT (grid_area_code, tariff_type, valid_from) DO UPDATE SET charge_owner_id = EXCLUDED.charge_owner_id RETURNING id",
+                new { ga.Code, ga.Gln });
+
+            var transmissionRates = Enumerable.Range(1, 24).Select(h => new { GridTariffId = transmissionTariffId, HourNumber = h, PricePerKwh = 0.049m }).ToList();
+            await conn.ExecuteAsync(
+                "INSERT INTO tariff.tariff_rate (grid_tariff_id, hour_number, price_per_kwh) VALUES (@GridTariffId, @HourNumber, @PricePerKwh) ON CONFLICT (grid_tariff_id, hour_number) DO UPDATE SET price_per_kwh = EXCLUDED.price_per_kwh",
+                transmissionRates);
 
             await conn.ExecuteAsync(
                 "INSERT INTO tariff.subscription (grid_area_code, subscription_type, amount_kr_per_month, valid_from) VALUES (@Code, 'grid', 49.00, '2025-01-01') ON CONFLICT DO NOTHING",

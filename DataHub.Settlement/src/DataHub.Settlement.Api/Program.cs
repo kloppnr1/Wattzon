@@ -458,6 +458,72 @@ app.MapGet("/api/billing/metering-points/{gsrn}/lines", async (string gsrn, Date
     return Results.Ok(lines);
 });
 
+// GET /api/metering-points/{gsrn}/tariffs — all price elements for a metering point
+app.MapGet("/api/metering-points/{gsrn}/tariffs", async (string gsrn, ITariffRepository tariffRepo, IPortfolioRepository portfolioRepo, CancellationToken ct) =>
+{
+    var attachments = await tariffRepo.GetAttachmentsForGsrnAsync(gsrn, ct);
+    var mp = await portfolioRepo.GetMeteringPointByGsrnAsync(gsrn, ct);
+    var today = DateOnly.FromDateTime(DateTime.UtcNow);
+
+    var result = new List<object>();
+
+    // RSM-031 tariff attachments with hourly rates
+    foreach (var att in attachments)
+    {
+        IReadOnlyList<TariffRateRow>? rates = null;
+        if (mp != null && att.TariffType is "grid" or "system" or "transmission")
+            rates = await tariffRepo.GetRatesAsync(mp.GridAreaCode, att.TariffType, att.ValidFrom, ct);
+
+        result.Add(new
+        {
+            att.Id, att.Gsrn, att.TariffId, att.TariffType,
+            att.ValidFrom, att.ValidTo, att.CorrelationId, att.CreatedAt,
+            Rates = rates?.Select(r => new { r.HourNumber, r.PricePerKwh }) ?? Enumerable.Empty<object>(),
+            AmountPerMonth = (decimal?)null,
+            RatePerKwh = (decimal?)null,
+        });
+    }
+
+    // Subscriptions and electricity tax (looked up by grid area)
+    if (mp != null)
+    {
+        var gridSub = await tariffRepo.GetSubscriptionAsync(mp.GridAreaCode, "grid", today, ct);
+        if (gridSub.HasValue)
+            result.Add(new
+            {
+                Id = Guid.Empty, Gsrn = gsrn, TariffId = (string?)null, TariffType = "grid_subscription",
+                ValidFrom = today, ValidTo = (DateOnly?)null, CorrelationId = (string?)null, CreatedAt = (DateTime?)null,
+                Rates = Enumerable.Empty<object>(),
+                AmountPerMonth = gridSub,
+                RatePerKwh = (decimal?)null,
+            });
+
+        var supplierSub = await tariffRepo.GetSubscriptionAsync(mp.GridAreaCode, "supplier", today, ct);
+        if (supplierSub.HasValue)
+            result.Add(new
+            {
+                Id = Guid.Empty, Gsrn = gsrn, TariffId = (string?)null, TariffType = "supplier_subscription",
+                ValidFrom = today, ValidTo = (DateOnly?)null, CorrelationId = (string?)null, CreatedAt = (DateTime?)null,
+                Rates = Enumerable.Empty<object>(),
+                AmountPerMonth = supplierSub,
+                RatePerKwh = (decimal?)null,
+            });
+
+        var elTax = await tariffRepo.GetElectricityTaxAsync(today, ct);
+        if (elTax.HasValue)
+            result.Add(new
+            {
+                Id = Guid.Empty, Gsrn = gsrn, TariffId = (string?)null, TariffType = "electricity_tax",
+                ValidFrom = today, ValidTo = (DateOnly?)null, CorrelationId = (string?)null, CreatedAt = (DateTime?)null,
+                Rates = Enumerable.Empty<object>(),
+                AmountPerMonth = (decimal?)null,
+                RatePerKwh = elTax,
+            });
+    }
+
+    return Results.Ok(result);
+});
+
 // GET /api/billing/customers/{id}/summary — customer billing summary
 app.MapGet("/api/billing/customers/{id:guid}/summary", async (Guid id, IBillingRepository repo, CancellationToken ct) =>
 {

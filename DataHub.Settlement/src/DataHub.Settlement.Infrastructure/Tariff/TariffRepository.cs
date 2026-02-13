@@ -44,7 +44,7 @@ public sealed class TariffRepository : ITariffRepository
         return rows.ToList();
     }
 
-    public async Task<decimal> GetSubscriptionAsync(
+    public async Task<decimal?> GetSubscriptionAsync(
         string gridAreaCode, string subscriptionType, DateOnly date, CancellationToken ct)
     {
         const string sql = """
@@ -61,11 +61,11 @@ public sealed class TariffRepository : ITariffRepository
         await using var conn = new NpgsqlConnection(_connectionString);
         await conn.OpenAsync(ct);
 
-        return await conn.QuerySingleAsync<decimal>(
+        return await conn.QuerySingleOrDefaultAsync<decimal?>(
             new CommandDefinition(sql, new { GridAreaCode = gridAreaCode, SubscriptionType = subscriptionType, Date = date }, cancellationToken: ct));
     }
 
-    public async Task<decimal> GetElectricityTaxAsync(DateOnly date, CancellationToken ct)
+    public async Task<decimal?> GetElectricityTaxAsync(DateOnly date, CancellationToken ct)
     {
         const string sql = """
             SELECT rate_per_kwh
@@ -79,7 +79,7 @@ public sealed class TariffRepository : ITariffRepository
         await using var conn = new NpgsqlConnection(_connectionString);
         await conn.OpenAsync(ct);
 
-        return await conn.QuerySingleAsync<decimal>(
+        return await conn.QuerySingleOrDefaultAsync<decimal?>(
             new CommandDefinition(sql, new { Date = date }, cancellationToken: ct));
     }
 
@@ -143,6 +143,22 @@ public sealed class TariffRepository : ITariffRepository
         await conn.ExecuteAsync(new CommandDefinition(sql,
             new { RatePerKwh = ratePerKwh, ValidFrom = validFrom },
             cancellationToken: ct));
+    }
+
+    public async Task<IReadOnlyList<MeteringPointTariffAttachment>> GetAttachmentsForGsrnAsync(string gsrn, CancellationToken ct)
+    {
+        const string sql = """
+            SELECT id, gsrn, tariff_id, tariff_type, valid_from, valid_to, correlation_id, created_at
+            FROM tariff.metering_point_tariff_attachment
+            WHERE gsrn = @Gsrn
+            ORDER BY valid_from DESC, tariff_type
+            """;
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+        await conn.OpenAsync(ct);
+        var rows = await conn.QueryAsync<MeteringPointTariffAttachment>(
+            new CommandDefinition(sql, new { Gsrn = gsrn }, cancellationToken: ct));
+        return rows.ToList();
     }
 
     public async Task StoreTariffAttachmentsAsync(string gsrn, IReadOnlyList<TariffAttachment> tariffs, string? correlationId, CancellationToken ct)
