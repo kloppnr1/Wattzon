@@ -133,7 +133,7 @@ public class QueuePollerTests
     }
 
     [Fact]
-    public async Task RSM007_creates_customer_and_activates_portfolio()
+    public async Task RSM022_effectuation_creates_customer_and_activates_portfolio()
     {
         // This test verifies the complete RSM-022 activation flow:
         // 1. Signup created with customer info (customer_id = NULL)
@@ -267,7 +267,7 @@ public class QueuePollerTests
         var contract = contracts[0];
         contract.Gsrn.Should().Be(gsrn);
         contract.ProductId.Should().Be(product.Id);
-        contract.BillingFrequency.Should().Be("quarterly");
+        contract.BillingFrequency.Should().Be("monthly");
         contract.PaymentModel.Should().Be("aconto");
 
         // 11. Verify SupplyPeriod created

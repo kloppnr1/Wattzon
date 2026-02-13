@@ -63,11 +63,12 @@ public sealed class BillingRepository : IBillingRepository
             """;
 
         const string runsSql = """
-            SELECT id, billing_period_id, grid_area_code, version, status, executed_at, completed_at,
-                   (SELECT COUNT(DISTINCT metering_point_id) FROM settlement.settlement_line WHERE settlement_run_id = sr.id) AS metering_points_count
+            SELECT sr.id, sr.billing_period_id, sr.grid_area_code, sr.version, sr.status, sr.executed_at, sr.completed_at,
+                   sr.metering_point_id, ct.customer_id
             FROM settlement.settlement_run sr
-            WHERE billing_period_id = @BillingPeriodId
-            ORDER BY executed_at DESC
+            LEFT JOIN portfolio.contract ct ON sr.metering_point_id = ct.gsrn
+            WHERE sr.billing_period_id = @BillingPeriodId
+            ORDER BY sr.executed_at DESC
             """;
 
         await using var conn = new NpgsqlConnection(_connectionString);
@@ -84,7 +85,8 @@ public sealed class BillingRepository : IBillingRepository
             r.Status,
             r.ExecutedAt,
             r.CompletedAt,
-            r.MeteringPointsCount)).ToList();
+            r.MeteringPointId,
+            r.CustomerId)).ToList();
 
         return new BillingPeriodDetail(
             period.Id,
@@ -102,7 +104,7 @@ public sealed class BillingRepository : IBillingRepository
         var sql = """
             WITH counted AS (
                 SELECT sr.id, sr.billing_period_id, sr.grid_area_code, sr.version, sr.status, sr.executed_at, sr.completed_at,
-                       COUNT(*) OVER() AS total_count
+                       sr.metering_point_id, COUNT(*) OVER() AS total_count
                 FROM settlement.settlement_run sr
             """;
 
@@ -114,8 +116,9 @@ public sealed class BillingRepository : IBillingRepository
                 LIMIT @PageSize OFFSET @Offset
             )
             SELECT c.id, c.billing_period_id, c.grid_area_code, c.version, c.status, c.executed_at, c.completed_at, c.total_count,
-                   (SELECT COUNT(DISTINCT metering_point_id) FROM settlement.settlement_line WHERE settlement_run_id = c.id) AS metering_points_count
+                   c.metering_point_id, ct.customer_id
             FROM counted c
+            LEFT JOIN portfolio.contract ct ON c.metering_point_id = ct.gsrn
             """;
 
         await using var conn = new NpgsqlConnection(_connectionString);
@@ -131,7 +134,8 @@ public sealed class BillingRepository : IBillingRepository
             r.Status,
             r.ExecutedAt,
             r.CompletedAt,
-            r.MeteringPointsCount)).ToList();
+            r.MeteringPointId,
+            r.CustomerId)).ToList();
 
         return new PagedResult<SettlementRunSummary>(items, totalCount, page, pageSize);
     }
@@ -140,11 +144,12 @@ public sealed class BillingRepository : IBillingRepository
     {
         const string sql = """
             SELECT sr.id, sr.billing_period_id, bp.period_start, bp.period_end, sr.grid_area_code, sr.version, sr.status, sr.executed_at, sr.completed_at, sr.error_details,
-                   (SELECT COUNT(DISTINCT metering_point_id) FROM settlement.settlement_line WHERE settlement_run_id = sr.id) AS metering_points_count,
+                   sr.metering_point_id, ct.customer_id,
                    (SELECT COALESCE(SUM(total_amount), 0) FROM settlement.settlement_line WHERE settlement_run_id = sr.id) AS total_amount,
                    (SELECT COALESCE(SUM(vat_amount), 0) FROM settlement.settlement_line WHERE settlement_run_id = sr.id) AS total_vat
             FROM settlement.settlement_run sr
             JOIN settlement.billing_period bp ON sr.billing_period_id = bp.id
+            LEFT JOIN portfolio.contract ct ON sr.metering_point_id = ct.gsrn
             WHERE sr.id = @Id
             """;
 
@@ -163,7 +168,8 @@ public sealed class BillingRepository : IBillingRepository
             row.Status,
             row.ExecutedAt,
             row.CompletedAt,
-            row.MeteringPointsCount,
+            row.MeteringPointId,
+            row.CustomerId,
             row.TotalAmount,
             row.TotalVat,
             row.ErrorDetails);
@@ -317,7 +323,8 @@ internal class SettlementRunRow
     public DateTime ExecutedAt { get; set; }
     public DateTime? CompletedAt { get; set; }
     public int TotalCount { get; set; }
-    public int MeteringPointsCount { get; set; }
+    public string MeteringPointId { get; set; } = null!;
+    public Guid? CustomerId { get; set; }
 }
 
 internal class SettlementRunDetailRow
@@ -331,7 +338,8 @@ internal class SettlementRunDetailRow
     public string Status { get; set; } = null!;
     public DateTime ExecutedAt { get; set; }
     public DateTime? CompletedAt { get; set; }
-    public int MeteringPointsCount { get; set; }
+    public string MeteringPointId { get; set; } = null!;
+    public Guid? CustomerId { get; set; }
     public decimal TotalAmount { get; set; }
     public decimal TotalVat { get; set; }
     public string? ErrorDetails { get; set; }

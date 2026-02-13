@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { api } from '../api';
 import { useTranslation } from '../i18n/LanguageContext';
+import WattzonLoader from '../components/WattzonLoader';
 
 const statusStyles = {
   running: { dot: 'bg-teal-400', badge: 'bg-teal-50 text-teal-700' },
@@ -37,12 +38,7 @@ export default function BillingPeriodDetail() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-[3px] border-teal-100 border-t-teal-500 rounded-full animate-spin" />
-          <p className="text-sm text-slate-400 font-medium">{t('billingDetail.loadingPeriod')}</p>
-        </div>
-      </div>
+      <WattzonLoader message={t('billingDetail.loadingPeriod')} />
     );
   }
 
@@ -109,7 +105,7 @@ export default function BillingPeriodDetail() {
               <tr className="bg-slate-50 border-b border-slate-200">
                 <th className="px-4 py-2.5 text-left text-[10px] font-semibold text-slate-600 uppercase tracking-wider">{t('billingDetail.colRun')}</th>
                 <th className="px-4 py-2.5 text-left text-[10px] font-semibold text-slate-600 uppercase tracking-wider">{t('billingDetail.colStatus')}</th>
-                <th className="px-4 py-2.5 text-left text-[10px] font-semibold text-slate-600 uppercase tracking-wider">{t('billingDetail.colMeteringPoints')}</th>
+                <th className="px-4 py-2.5 text-left text-[10px] font-semibold text-slate-600 uppercase tracking-wider">{t('billingDetail.colMeteringPoint')}</th>
                 <th className="px-4 py-2.5 text-left text-[10px] font-semibold text-slate-600 uppercase tracking-wider">{t('billingDetail.colGridArea')}</th>
                 <th className="px-4 py-2.5 text-left text-[10px] font-semibold text-slate-600 uppercase tracking-wider">{t('billingDetail.colExecutedAt')}</th>
                 <th className="px-4 py-2.5 text-left text-[10px] font-semibold text-slate-600 uppercase tracking-wider">{t('billingDetail.colCompletedAt')}</th>
@@ -133,7 +129,13 @@ export default function BillingPeriodDetail() {
                     <td className="px-4 py-2.5 whitespace-nowrap">
                       <StatusBadge status={run.status} label={t('status.' + run.status)} />
                     </td>
-                    <td className="px-4 py-2.5 whitespace-nowrap text-sm text-slate-700">{run.meteringPointsCount}</td>
+                    <td className="px-4 py-2.5 whitespace-nowrap text-sm font-mono text-slate-700">
+                      {run.customerId ? (
+                        <Link to={`/customers/${run.customerId}`} className="text-teal-600 hover:text-teal-700">{run.meteringPointId}</Link>
+                      ) : (
+                        run.meteringPointId || '-'
+                      )}
+                    </td>
                     <td className="px-4 py-2.5 whitespace-nowrap text-sm text-slate-500">{run.gridAreaCode || '-'}</td>
                     <td className="px-4 py-2.5 whitespace-nowrap text-sm text-slate-500">
                       {new Date(run.executedAt).toLocaleString()}

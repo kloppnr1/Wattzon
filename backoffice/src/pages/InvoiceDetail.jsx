@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { api } from '../api';
 import { useTranslation } from '../i18n/LanguageContext';
 import Breadcrumb from '../components/Breadcrumb';
+import WattzonLoader from '../components/WattzonLoader';
 
 const statusStyles = {
   draft: { dot: 'bg-slate-400', badge: 'bg-slate-50 text-slate-700' },
@@ -81,12 +82,7 @@ export default function InvoiceDetail() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-[3px] border-teal-100 border-t-teal-500 rounded-full animate-spin" />
-          <p className="text-sm text-slate-400 font-medium">{t('invoiceDetail.loading')}</p>
-        </div>
-      </div>
+      <WattzonLoader message={t('invoiceDetail.loading')} />
     );
   }
 

@@ -1000,14 +1000,14 @@ public sealed class SimulationService
                     """, new { PeriodStart = result.PeriodStart, PeriodEnd = result.PeriodEnd });
 
                 var settlementRunId = await conn.QuerySingleAsync<Guid>("""
-                    INSERT INTO settlement.settlement_run (billing_period_id, grid_area_code, version, status, metering_points_count)
+                    INSERT INTO settlement.settlement_run (billing_period_id, grid_area_code, metering_point_id, version, status, metering_points_count)
                     VALUES (
-                        @BillingPeriodId, '344',
+                        @BillingPeriodId, '344', @MeteringPointId,
                         COALESCE((SELECT MAX(version) FROM settlement.settlement_run
                                   WHERE billing_period_id = @BillingPeriodId AND grid_area_code = '344'), 0) + 1,
                         'completed', 1)
                     RETURNING id
-                    """, new { BillingPeriodId = billingPeriodId });
+                    """, new { BillingPeriodId = billingPeriodId, MeteringPointId = gsrn });
 
                 foreach (var line in result.Lines)
                 {
@@ -1179,14 +1179,14 @@ public sealed class SimulationService
                     """, new { PeriodStart = result.PeriodStart, PeriodEnd = result.PeriodEnd });
 
                 var settlementRunId = await conn.QuerySingleAsync<Guid>("""
-                    INSERT INTO settlement.settlement_run (billing_period_id, grid_area_code, version, status, metering_points_count)
+                    INSERT INTO settlement.settlement_run (billing_period_id, grid_area_code, metering_point_id, version, status, metering_points_count)
                     VALUES (
-                        @BillingPeriodId, '344',
+                        @BillingPeriodId, '344', @MeteringPointId,
                         COALESCE((SELECT MAX(version) FROM settlement.settlement_run
                                   WHERE billing_period_id = @BillingPeriodId AND grid_area_code = '344'), 0) + 1,
                         'completed', 1)
                     RETURNING id
-                    """, new { BillingPeriodId = billingPeriodId });
+                    """, new { BillingPeriodId = billingPeriodId, MeteringPointId = gsrn });
 
                 foreach (var line in result.Lines)
                 {
@@ -1660,14 +1660,14 @@ public sealed class SimulationService
                     """, new { PeriodStart = result.PeriodStart, PeriodEnd = result.PeriodEnd });
 
                 var settlementRunId = await conn.QuerySingleAsync<Guid>("""
-                    INSERT INTO settlement.settlement_run (billing_period_id, grid_area_code, version, status, metering_points_count)
+                    INSERT INTO settlement.settlement_run (billing_period_id, grid_area_code, metering_point_id, version, status, metering_points_count)
                     VALUES (
-                        @BillingPeriodId, '344',
+                        @BillingPeriodId, '344', @MeteringPointId,
                         COALESCE((SELECT MAX(version) FROM settlement.settlement_run
                                   WHERE billing_period_id = @BillingPeriodId AND grid_area_code = '344'), 0) + 1,
                         'completed', 1)
                     RETURNING id
-                    """, new { BillingPeriodId = billingPeriodId });
+                    """, new { BillingPeriodId = billingPeriodId, MeteringPointId = gsrn });
 
                 foreach (var line in result.Lines)
                 {
@@ -1853,10 +1853,10 @@ public sealed class SimulationService
             """, new { PeriodStart = result.PeriodStart, PeriodEnd = result.PeriodEnd });
 
         var settlementRunId = await conn.QuerySingleAsync<Guid>("""
-            INSERT INTO settlement.settlement_run (billing_period_id, grid_area_code, version, status, metering_points_count)
-            VALUES (@BillingPeriodId, '344', 1, 'completed', 1)
+            INSERT INTO settlement.settlement_run (billing_period_id, grid_area_code, metering_point_id, version, status, metering_points_count)
+            VALUES (@BillingPeriodId, '344', @MeteringPointId, 1, 'completed', 1)
             RETURNING id
-            """, new { BillingPeriodId = billingPeriodId });
+            """, new { BillingPeriodId = billingPeriodId, MeteringPointId = Gsrn });
 
         foreach (var line in result.Lines)
         {
@@ -2150,14 +2150,14 @@ public sealed class SimulationService
                         """, new { PeriodStart = result.PeriodStart, PeriodEnd = result.PeriodEnd });
 
                     var settlementRunId = await conn.QuerySingleAsync<Guid>("""
-                        INSERT INTO settlement.settlement_run (billing_period_id, grid_area_code, version, status, metering_points_count)
+                        INSERT INTO settlement.settlement_run (billing_period_id, grid_area_code, metering_point_id, version, status, metering_points_count)
                         VALUES (
-                            @BillingPeriodId, '344',
+                            @BillingPeriodId, '344', @MeteringPointId,
                             COALESCE((SELECT MAX(version) FROM settlement.settlement_run
                                       WHERE billing_period_id = @BillingPeriodId AND grid_area_code = '344'), 0) + 1,
                             'completed', 1)
                         RETURNING id
-                        """, new { BillingPeriodId = billingPeriodId });
+                        """, new { BillingPeriodId = billingPeriodId, MeteringPointId = ctx.Gsrn });
 
                     foreach (var line in result.Lines)
                     {
@@ -2381,14 +2381,14 @@ public sealed class SimulationService
                         """, new { PeriodStart = result.PeriodStart, PeriodEnd = result.PeriodEnd });
 
                     var settlementRunId = await conn.QuerySingleAsync<Guid>("""
-                        INSERT INTO settlement.settlement_run (billing_period_id, grid_area_code, version, status, metering_points_count)
+                        INSERT INTO settlement.settlement_run (billing_period_id, grid_area_code, metering_point_id, version, status, metering_points_count)
                         VALUES (
-                            @BillingPeriodId, '344',
+                            @BillingPeriodId, '344', @MeteringPointId,
                             COALESCE((SELECT MAX(version) FROM settlement.settlement_run
                                       WHERE billing_period_id = @BillingPeriodId AND grid_area_code = '344'), 0) + 1,
                             'completed', 1)
                         RETURNING id
-                        """, new { BillingPeriodId = billingPeriodId });
+                        """, new { BillingPeriodId = billingPeriodId, MeteringPointId = ctx.Gsrn });
 
                     foreach (var line in result.Lines)
                     {
@@ -2618,14 +2618,14 @@ public sealed class SimulationService
                         """, new { PeriodStart = ed, PeriodEnd = periodEnd });
 
                     var settlementRunId = await conn.QuerySingleAsync<Guid>("""
-                        INSERT INTO settlement.settlement_run (billing_period_id, grid_area_code, version, status, metering_points_count)
+                        INSERT INTO settlement.settlement_run (billing_period_id, grid_area_code, metering_point_id, version, status, metering_points_count)
                         VALUES (
-                            @BillingPeriodId, '344',
+                            @BillingPeriodId, '344', @MeteringPointId,
                             COALESCE((SELECT MAX(version) FROM settlement.settlement_run
                                       WHERE billing_period_id = @BillingPeriodId AND grid_area_code = '344'), 0) + 1,
                             'completed', 1)
                         RETURNING id
-                        """, new { BillingPeriodId = billingPeriodId });
+                        """, new { BillingPeriodId = billingPeriodId, MeteringPointId = ctx.Gsrn });
 
                     var vatAmount = Math.Round(ctx.AcontoEstimate * 0.25m / 1.25m, 2);
                     await conn.ExecuteAsync("""

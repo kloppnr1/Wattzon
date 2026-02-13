@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api';
 import { useTranslation } from '../i18n/LanguageContext';
+import WattzonLoader from '../components/WattzonLoader';
 
 export default function OutstandingOverview() {
   const { t } = useTranslation();
@@ -21,12 +22,7 @@ export default function OutstandingOverview() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-[3px] border-teal-100 border-t-teal-500 rounded-full animate-spin" />
-          <p className="text-sm text-slate-400 font-medium">{t('outstanding.loading')}</p>
-        </div>
-      </div>
+      <WattzonLoader message={t('outstanding.loading')} />
     );
   }
 

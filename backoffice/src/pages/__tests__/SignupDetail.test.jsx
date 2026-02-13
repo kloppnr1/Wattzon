@@ -242,7 +242,7 @@ describe('SignupDetail - pending step indicator', () => {
     renderSignupDetail();
 
     await waitFor(() => {
-      expect(screen.getByText('SU-2025-0001')).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'SU-2025-0001' })).toBeInTheDocument();
     });
     expect(screen.queryByText(/Awaiting.*\.\.\./)).not.toBeInTheDocument();
   });

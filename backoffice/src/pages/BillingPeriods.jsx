@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api';
 import { useTranslation } from '../i18n/LanguageContext';
+import WattzonLoader from '../components/WattzonLoader';
 
 const PAGE_SIZE = 50;
 
@@ -33,12 +34,7 @@ export default function BillingPeriods() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-[3px] border-teal-100 border-t-teal-500 rounded-full animate-spin" />
-          <p className="text-sm text-slate-400 font-medium">{t('billing.loadingPeriods')}</p>
-        </div>
-      </div>
+      <WattzonLoader message={t('billing.loadingPeriods')} />
     );
   }
 

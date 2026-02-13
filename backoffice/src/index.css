@@ -80,6 +80,34 @@
   /* intentionally empty */
 }
 
+/* Wattzon grid icon — rotating filled quadrant */
+@keyframes wz-rotate {
+  0%   { x: 17; y: 17; }
+  25%  { x: 4;  y: 17; }
+  50%  { x: 4;  y: 4;  }
+  75%  { x: 17; y: 4;  }
+  100% { x: 17; y: 17; }
+}
+
+.wz-icon-animate .wz-icon-fill {
+  animation: wz-rotate 2.4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+/* Sidebar brand hover triggers animation */
+.wz-icon-trigger:hover .wz-icon-fill {
+  animation: wz-rotate 2.4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+/* Splash screen */
+@keyframes wz-splash-fade {
+  0%   { opacity: 1; }
+  100% { opacity: 0; pointer-events: none; }
+}
+
+.wz-splash-exit {
+  animation: wz-splash-fade 0.4s ease-out forwards;
+}
+
 /* Progress bar for loading indicator */
 @keyframes progress-bar {
   0% { width: 0; margin-left: 0; }

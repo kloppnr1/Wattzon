@@ -24,7 +24,8 @@ public record SettlementRunSummary(
     string Status,
     DateTime ExecutedAt,
     DateTime? CompletedAt,
-    int MeteringPointsCount);
+    string MeteringPointId,
+    Guid? CustomerId);
 
 public record SettlementRunDetail(
     Guid Id,
@@ -36,7 +37,8 @@ public record SettlementRunDetail(
     string Status,
     DateTime ExecutedAt,
     DateTime? CompletedAt,
-    int MeteringPointsCount,
+    string MeteringPointId,
+    Guid? CustomerId,
     decimal TotalAmount,
     decimal TotalVat,
     string? ErrorDetails);

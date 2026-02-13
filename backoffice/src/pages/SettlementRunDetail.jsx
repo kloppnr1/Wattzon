@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { api } from '../api';
 import { useTranslation } from '../i18n/LanguageContext';
+import WattzonLoader from '../components/WattzonLoader';
 
 const PAGE_SIZE = 50;
 
@@ -63,12 +64,7 @@ export default function SettlementRunDetail() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-[3px] border-teal-100 border-t-teal-500 rounded-full animate-spin" />
-          <p className="text-sm text-slate-400 font-medium">{t('runDetail.loadingRun')}</p>
-        </div>
-      </div>
+      <WattzonLoader message={t('runDetail.loadingRun')} />
     );
   }
 
@@ -83,19 +79,6 @@ export default function SettlementRunDetail() {
   const lines = linesData?.items ?? [];
   const totalCount = linesData?.totalCount ?? 0;
   const totalPages = Math.ceil(totalCount / PAGE_SIZE);
-
-  // Group lines by metering point
-  const grouped = [];
-  for (const line of lines) {
-    let group = grouped.find(g => g.gsrn === line.meteringPointGsrn);
-    if (!group) {
-      group = { gsrn: line.meteringPointGsrn, lines: [], totalAmount: 0, totalVat: 0 };
-      grouped.push(group);
-    }
-    group.lines.push(line);
-    group.totalAmount += line.totalAmount;
-    group.totalVat += line.vatAmount;
-  }
 
   const chargeTypeLabel = (type) => t('chargeType.' + type) !== 'chargeType.' + type
     ? t('chargeType.' + type)
@@ -124,8 +107,14 @@ export default function SettlementRunDetail() {
       {/* Metrics cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6 animate-fade-in-up" style={{ animationDelay: '60ms' }}>
         <div className="bg-gradient-to-br from-white to-slate-50 rounded-xl p-5 shadow-sm border border-slate-100">
-          <div className="text-sm font-medium text-slate-500 mb-1">{t('runDetail.meteringPoints')}</div>
-          <div className="text-3xl font-bold text-slate-900">{run.meteringPointsCount}</div>
+          <div className="text-sm font-medium text-slate-500 mb-1">{t('runDetail.meteringPoint')}</div>
+          <div className="text-lg font-bold font-mono text-slate-900">
+            {run.customerId ? (
+              <Link to={`/customers/${run.customerId}`} className="text-teal-600 hover:text-teal-700">{run.meteringPointId}</Link>
+            ) : (
+              run.meteringPointId || '-'
+            )}
+          </div>
         </div>
         <div className="bg-gradient-to-br from-white to-teal-50/30 rounded-xl p-5 shadow-sm border border-teal-100/50">
           <div className="text-sm font-medium text-teal-600 mb-1">{t('runDetail.totalAmount')}</div>
@@ -154,6 +143,10 @@ export default function SettlementRunDetail() {
           <div>
             <dt className="text-sm font-medium text-slate-500">{t('runDetail.versionLabel')}</dt>
             <dd className="text-base text-slate-700 mt-1">{run.version}</dd>
+          </div>
+          <div>
+            <dt className="text-sm font-medium text-slate-500">{t('runDetail.meteringPoint')}</dt>
+            <dd className="text-base font-mono text-slate-700 mt-1">{run.meteringPointId || '-'}</dd>
           </div>
           <div>
             <dt className="text-sm font-medium text-slate-500">{t('runDetail.gridArea')}</dt>
@@ -187,50 +180,30 @@ export default function SettlementRunDetail() {
 
         {linesLoading && lines.length === 0 ? (
           <div className="px-4 py-12 text-center text-slate-500">{t('common.loading')}</div>
-        ) : grouped.length === 0 ? (
+        ) : lines.length === 0 ? (
           <div className="px-4 py-12 text-center text-slate-500">{t('runDetail.noLinesFound')}</div>
         ) : (
-          <div className="divide-y divide-slate-200">
-            {grouped.map((group) => (
-              <div key={group.gsrn}>
-                {/* Metering point header */}
-                <div className="px-5 py-3.5 bg-slate-50 border-b border-slate-100">
-                  <span className="text-sm font-semibold text-slate-900">{t('runDetail.colMeteringPoint')}: </span>
-                  <span className="text-sm font-mono text-slate-700">{group.gsrn}</span>
-                </div>
-
-                {/* Charge lines for this metering point */}
-                <div className="overflow-x-auto">
-                <table className="min-w-[600px] w-full">
-                  <thead>
-                    <tr>
-                      <th className="px-4 py-2.5 text-left text-[10px] font-semibold text-slate-600 uppercase tracking-wider">{t('runDetail.colChargeType')}</th>
-                      <th className="px-4 py-2.5 text-right text-[10px] font-semibold text-slate-600 uppercase tracking-wider">{t('runDetail.colKwh')}</th>
-                      <th className="px-4 py-2.5 text-right text-[10px] font-semibold text-slate-600 uppercase tracking-wider">{t('runDetail.colAmount')}</th>
-                      <th className="px-4 py-2.5 text-right text-[10px] font-semibold text-slate-600 uppercase tracking-wider">{t('runDetail.colVat')}</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {group.lines.map((line) => (
-                      <tr key={line.id} className="hover:bg-slate-50 transition-colors">
-                        <td className="px-4 py-2.5 text-sm text-slate-700">{chargeTypeLabel(line.chargeType)}</td>
-                        <td className="px-4 py-2.5 text-right text-sm text-slate-600 tabular-nums">{line.totalKwh.toFixed(3)}</td>
-                        <td className="px-4 py-2.5 text-right text-sm text-slate-900 tabular-nums">{line.totalAmount.toFixed(2)}</td>
-                        <td className="px-4 py-2.5 text-right text-sm text-slate-600 tabular-nums">{line.vatAmount.toFixed(2)}</td>
-                      </tr>
-                    ))}
-                    {/* Subtotal row */}
-                    <tr className="bg-slate-50/80">
-                      <td className="px-4 py-2.5 text-sm font-semibold text-slate-900">{t('runDetail.subtotal')}</td>
-                      <td />
-                      <td className="px-4 py-2.5 text-right text-sm font-semibold text-slate-900 tabular-nums">{group.totalAmount.toFixed(2)} DKK</td>
-                      <td className="px-4 py-2.5 text-right text-sm font-semibold text-slate-600 tabular-nums">{group.totalVat.toFixed(2)} DKK</td>
-                    </tr>
-                  </tbody>
-                </table>
-                </div>
-              </div>
-            ))}
+          <div className="overflow-x-auto">
+            <table className="min-w-[600px] w-full">
+              <thead>
+                <tr className="bg-slate-50 border-b border-slate-200">
+                  <th className="px-4 py-2.5 text-left text-[10px] font-semibold text-slate-600 uppercase tracking-wider">{t('runDetail.colChargeType')}</th>
+                  <th className="px-4 py-2.5 text-right text-[10px] font-semibold text-slate-600 uppercase tracking-wider">{t('runDetail.colKwh')}</th>
+                  <th className="px-4 py-2.5 text-right text-[10px] font-semibold text-slate-600 uppercase tracking-wider">{t('runDetail.colAmount')}</th>
+                  <th className="px-4 py-2.5 text-right text-[10px] font-semibold text-slate-600 uppercase tracking-wider">{t('runDetail.colVat')}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {lines.map((line) => (
+                  <tr key={line.id} className="hover:bg-slate-50 transition-colors">
+                    <td className="px-4 py-2.5 text-sm text-slate-700">{chargeTypeLabel(line.chargeType)}</td>
+                    <td className="px-4 py-2.5 text-right text-sm text-slate-600 tabular-nums">{line.totalKwh.toFixed(3)}</td>
+                    <td className="px-4 py-2.5 text-right text-sm text-slate-900 tabular-nums">{line.totalAmount.toFixed(2)}</td>
+                    <td className="px-4 py-2.5 text-right text-sm text-slate-600 tabular-nums">{line.vatAmount.toFixed(2)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
 

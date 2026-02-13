@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { api } from '../../api';
 import { useTranslation } from '../../i18n/LanguageContext';
 import Breadcrumb from '../../components/Breadcrumb';
+import WattzonLoader from '../../components/WattzonLoader';
 import OverviewTab from './OverviewTab';
 import ContractsMeteringTab from './ContractsMeteringTab';
 import InvoicesTab from './InvoicesTab';
@@ -38,12 +39,7 @@ export default function CustomerDetailPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-[3px] border-teal-100 border-t-teal-500 rounded-full animate-spin" />
-          <p className="text-sm text-slate-400 font-medium">{t('customerDetail.loadingCustomer')}</p>
-        </div>
-      </div>
+      <WattzonLoader message={t('customerDetail.loadingCustomer')} />
     );
   }
   if (error) return <div className="p-8"><div className="bg-rose-50 border border-rose-200 rounded-xl px-4 py-3 text-sm text-rose-600">{error}</div></div>;

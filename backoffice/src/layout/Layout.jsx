@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useTranslation } from '../i18n/LanguageContext';
+import WattzonIcon from '../components/WattzonIcon';
 
 const navSections = [
   {
@@ -139,9 +140,8 @@ export default function Layout() {
             <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
           </svg>
         </button>
-        <div className="w-8 h-8 rounded-[8px] bg-white/95 flex items-center justify-center relative overflow-hidden">
-          <span className="text-[14px] leading-none tracking-tight" style={{ fontFamily: "'Inter', sans-serif", fontWeight: 800, color: '#3d5a6e' }}>Wz</span>
-          <span className="absolute bottom-0 left-[15%] right-[15%] h-[2px] rounded-t-sm" style={{ background: '#e67e22' }} />
+        <div className="w-8 h-8 rounded-[8px] bg-white/12 flex items-center justify-center text-white">
+          <WattzonIcon size={18} />
         </div>
         <div>
           <p className="text-[13px] font-semibold text-white/90 leading-tight" style={{ fontFamily: "'DM Sans', sans-serif" }}>Wattzon</p>
@@ -170,10 +170,9 @@ export default function Layout() {
 
         {/* Brand */}
         <div className="px-5 pt-7 pb-6 relative z-10">
-          <div className="flex items-center gap-3">
-            <div className="w-[42px] h-[42px] rounded-[10px] bg-white/95 flex items-center justify-center relative overflow-hidden flex-shrink-0">
-              <span className="leading-none tracking-tight" style={{ fontFamily: "'Inter', sans-serif", fontWeight: 800, fontSize: '18px', color: '#3d5a6e' }}>Wz</span>
-              <span className="absolute bottom-0 left-[15%] right-[15%] h-[3px] rounded-t-sm" style={{ background: '#e67e22' }} />
+          <div className="flex items-center gap-3 wz-icon-trigger">
+            <div className="w-[42px] h-[42px] rounded-[11px] bg-white/12 flex items-center justify-center flex-shrink-0 text-white/90 transition-all duration-200 hover:scale-105 hover:bg-white/18 cursor-pointer">
+              <WattzonIcon size={22} />
             </div>
             <div>
               <p className="text-[14px] font-semibold text-white/95 leading-tight" style={{ fontFamily: "'DM Sans', sans-serif" }}>Wattzon</p>

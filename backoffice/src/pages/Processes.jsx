@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { api } from '../api';
 import { useTranslation } from '../i18n/LanguageContext';
 import { ConversationTimeline } from './Messages';
+import WattzonLoader from '../components/WattzonLoader';
 
 const STATUSES = [
   'pending',
@@ -162,12 +163,7 @@ export default function Processes() {
         )}
 
         {loading ? (
-          <div className="flex items-center justify-center py-16">
-            <div className="flex flex-col items-center gap-3">
-              <div className="w-8 h-8 border-[3px] border-teal-100 border-t-teal-500 rounded-full animate-spin" />
-              <p className="text-sm text-slate-400 font-medium">{t('processes.loading')}</p>
-            </div>
-          </div>
+          <WattzonLoader message={t('processes.loading')} />
         ) : !error && data?.processes?.length === 0 ? (
           <div className="px-6 py-12 text-center">
             <p className="text-sm text-slate-500">{t('processes.noProcesses')}</p>

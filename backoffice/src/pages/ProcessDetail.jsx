@@ -4,6 +4,7 @@ import { api } from '../api';
 import { useTranslation } from '../i18n/LanguageContext';
 import Breadcrumb from '../components/Breadcrumb';
 import { ConversationTimeline } from './Messages';
+import WattzonLoader from '../components/WattzonLoader';
 
 const statusStyles = {
   pending:               { dot: 'bg-slate-400', badge: 'bg-slate-100 text-slate-600' },
@@ -89,14 +90,7 @@ export default function ProcessDetail() {
 
   if (loading) {
     return (
-      <div className="p-4 sm:p-8 max-w-4xl mx-auto">
-        <div className="flex items-center justify-center py-24">
-          <div className="flex flex-col items-center gap-3">
-            <div className="w-8 h-8 border-[3px] border-teal-100 border-t-teal-500 rounded-full animate-spin" />
-            <p className="text-sm text-slate-400 font-medium">Loading process...</p>
-          </div>
-        </div>
-      </div>
+      <WattzonLoader message={t('processes.loading')} />
     );
   }
 
