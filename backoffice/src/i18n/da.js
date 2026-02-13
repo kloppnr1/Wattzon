@@ -266,7 +266,7 @@ export default {
   'customerDetail.loadingCustomer': 'Indlæser kunde...',
   'customerDetail.notFound': 'Kunde ikke fundet.',
   'customerDetail.tabOverview': 'Overblik',
-  'customerDetail.tabContracts': 'Kontrakter og måling',
+  'customerDetail.tabContracts': 'Kontrakter og målepunkter',
   'customerDetail.tabInvoices': 'Fakturaer',
   'customerDetail.tabPayments': 'Betalinger',
   'customerDetail.tabCharges': 'Afgifter',

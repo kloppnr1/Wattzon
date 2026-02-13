@@ -126,8 +126,8 @@ public static class DatabaseSeeder
         int custIdx = 0;
         int gsrnCounter = 1;
 
-        // 200 customers (mix of private and business)
-        for (int i = 0; i < 200; i++)
+        // 15 customers (mix of private and business)
+        for (int i = 0; i < 15; i++)
         {
             bool isBusiness = i % 6 == 0;
             string name, cprCvr, contactType;
@@ -157,8 +157,8 @@ public static class DatabaseSeeder
             custIdx++;
         }
 
-        // 260 additional customers
-        for (int i = 0; i < 260; i++)
+        // No additional customers (reduced to 15 total)
+        for (int i = 0; i < 0; i++)
         {
             bool isBusiness = i % 4 == 0;
             string name, cprCvr, contactType;
