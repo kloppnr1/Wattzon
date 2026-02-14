@@ -35,19 +35,20 @@ public sealed class SignupRepository : ISignupRepository
     public async Task<Signup> CreateAsync(string signupNumber, string darId, string gsrn,
         string customerName, string customerCprCvr, string customerContactType,
         Guid productId, Guid processRequestId, string type, DateOnly effectiveDate,
-        Guid? correctedFromId, SignupAddressInfo? addressInfo, string? mobile, CancellationToken ct)
+        Guid? correctedFromId, SignupAddressInfo? addressInfo, string? mobile,
+        string billingFrequency, CancellationToken ct)
     {
         const string sql = """
             INSERT INTO portfolio.signup
                 (signup_number, dar_id, gsrn, customer_name, customer_cpr_cvr, customer_contact_type,
-                 product_id, process_request_id, type, effective_date, corrected_from_id, mobile,
+                 product_id, process_request_id, type, effective_date, corrected_from_id, mobile, billing_frequency,
                  billing_dar_id, billing_street, billing_house_number, billing_floor, billing_door, billing_postal_code, billing_city,
                  payer_name, payer_cpr_cvr, payer_contact_type, payer_email, payer_phone,
                  payer_billing_street, payer_billing_house_number, payer_billing_floor,
                  payer_billing_door, payer_billing_postal_code, payer_billing_city)
             VALUES
                 (@SignupNumber, @DarId, @Gsrn, @CustomerName, @CustomerCprCvr, @CustomerContactType,
-                 @ProductId, @ProcessRequestId, @Type, @EffectiveDate, @CorrectedFromId, @Mobile,
+                 @ProductId, @ProcessRequestId, @Type, @EffectiveDate, @CorrectedFromId, @Mobile, @BillingFrequency,
                  @BillingDarId, @BillingStreet, @BillingHouseNumber, @BillingFloor, @BillingDoor, @BillingPostalCode, @BillingCity,
                  @PayerName, @PayerCprCvr, @PayerContactType, @PayerEmail, @PayerPhone,
                  @PayerBillingStreet, @PayerBillingHouseNumber, @PayerBillingFloor,
@@ -64,7 +65,7 @@ public sealed class SignupRepository : ISignupRepository
                 SignupNumber = signupNumber, DarId = darId, Gsrn = gsrn,
                 CustomerName = customerName, CustomerCprCvr = customerCprCvr, CustomerContactType = customerContactType,
                 ProductId = productId, ProcessRequestId = processRequestId, Type = type,
-                EffectiveDate = effectiveDate, CorrectedFromId = correctedFromId, Mobile = mobile,
+                EffectiveDate = effectiveDate, CorrectedFromId = correctedFromId, Mobile = mobile, BillingFrequency = billingFrequency,
                 BillingDarId = addressInfo?.BillingDarId,
                 BillingStreet = addressInfo?.BillingStreet,
                 BillingHouseNumber = addressInfo?.BillingHouseNumber,
@@ -290,7 +291,7 @@ public sealed class SignupRepository : ISignupRepository
                    COALESCE(c.cpr_cvr, s.customer_cpr_cvr) AS cpr_cvr,
                    COALESCE(c.contact_type, s.customer_contact_type) AS contact_type,
                    s.product_id, p.name AS product_name,
-                   s.process_request_id, s.created_at, s.updated_at,
+                   s.process_request_id, s.billing_frequency, s.created_at, s.updated_at,
                    s.corrected_from_id, orig.signup_number AS corrected_from_signup_number
             FROM portfolio.signup s
             LEFT JOIN portfolio.customer c ON c.id = s.customer_id

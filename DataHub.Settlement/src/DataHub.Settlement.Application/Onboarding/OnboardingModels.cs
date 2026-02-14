@@ -33,6 +33,7 @@ public record SignupRequest(
     DateOnly EffectiveDate,
     string? Mobile = null,
     string? Gsrn = null,
+    string? BillingFrequency = null,
     Guid? CorrectedFromId = null,
     // Billing address (customer's postal address — distinct from supply point)
     string? BillingDarId = null,
@@ -89,6 +90,7 @@ public record SignupDetail(
     Guid ProductId,
     string ProductName,
     Guid? ProcessRequestId,
+    string BillingFrequency,
     DateTime CreatedAt,
     DateTime UpdatedAt,
     Guid? CorrectedFromId,

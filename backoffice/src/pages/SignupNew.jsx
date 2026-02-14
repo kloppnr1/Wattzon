@@ -44,8 +44,9 @@ export default function SignupNew() {
     enabled: addressMode === 'search' && !selectedAddress,
   });
 
-  // ── Row 3: Product ──
+  // ── Row 3: Product + Invoicing ──
   const [selectedProduct, setSelectedProduct] = useState(null);
+  const [billingFrequency, setBillingFrequency] = useState('monthly');
 
   // ── Row 4: Customer ──
   const [contactType, setContactType] = useState('private');
@@ -211,6 +212,7 @@ export default function SignupNew() {
         phone,
         mobile,
         productId: selectedProduct,
+        billingFrequency,
         type,
         effectiveDate,
         billingDarId: addr?.darId || undefined,
@@ -526,6 +528,16 @@ export default function SignupNew() {
               {selectedProductObj?.description && (
                 <p className="text-xs text-slate-400 mt-1">{selectedProductObj.description}</p>
               )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-slate-700 mb-1.5">{t('signupNew.invoicingInterval')}</label>
+              <select value={billingFrequency} onChange={(e) => setBillingFrequency(e.target.value)} className={INPUT}>
+                <option value="weekly">{t('signupNew.intervalWeekly')}</option>
+                <option value="monthly">{t('signupNew.intervalMonthly')}</option>
+                <option value="quarterly">{t('signupNew.intervalQuarterly')}</option>
+              </select>
+              <p className="text-[11px] text-slate-400 mt-1 font-medium">{t('signupNew.invoicingIntervalHelper')}</p>
             </div>
 
             {/* ── CUSTOMER ── */}

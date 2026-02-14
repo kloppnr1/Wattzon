@@ -127,7 +127,7 @@ public sealed class EffectuationService
             // 3. Reload signup to get customer_id
             var signup = await conn.QuerySingleOrDefaultAsync<SignupRow>(
                 new CommandDefinition(
-                    "SELECT id, signup_number, customer_id, product_id FROM portfolio.signup WHERE id = @Id",
+                    "SELECT id, signup_number, customer_id, product_id, billing_frequency FROM portfolio.signup WHERE id = @Id",
                     new { Id = signupId }, transaction: tx2, cancellationToken: ct));
 
             if (signup?.CustomerId is null)
@@ -154,7 +154,7 @@ public sealed class EffectuationService
                         CustomerId = customerId.Value,
                         Gsrn = meteringPointId,
                         ProductId = productId,
-                        BillingFrequency = "monthly",
+                        BillingFrequency = signup.BillingFrequency,
                         PaymentModel = "aconto",
                         StartDate = effectiveDate,
                     },
@@ -263,6 +263,6 @@ public sealed class EffectuationService
     }
 
     private record ProcessRow(Guid Id, string Status);
-    private record SignupRow(Guid Id, string? SignupNumber, Guid? CustomerId, Guid? ProductId);
+    private record SignupRow(Guid Id, string? SignupNumber, Guid? CustomerId, Guid? ProductId, string BillingFrequency);
     private record ContractRow(Guid Id, Guid? PayerId);
 }

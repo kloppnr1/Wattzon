@@ -64,7 +64,8 @@ public class ProcessSchedulerTests
         public Task<Signup> CreateAsync(string signupNumber, string darId, string gsrn,
             string customerName, string customerCprCvr, string customerContactType,
             Guid productId, Guid processRequestId, string type, DateOnly effectiveDate,
-            Guid? correctedFromId, SignupAddressInfo? addressInfo, string? mobile, CancellationToken ct)
+            Guid? correctedFromId, SignupAddressInfo? addressInfo, string? mobile,
+            string billingFrequency, CancellationToken ct)
             => throw new NotImplementedException();
         public Task<string> NextSignupNumberAsync(CancellationToken ct)
             => throw new NotImplementedException();

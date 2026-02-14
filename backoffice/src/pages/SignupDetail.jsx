@@ -229,6 +229,7 @@ export default function SignupDetail() {
           <Field label={t('signupDetail.gsrn')} value={<span className="font-mono text-xs bg-slate-100 px-2 py-1 rounded-md text-slate-600 break-all">{signup.gsrn}</span>} />
           <Field label={t('signupDetail.darId')} value={<span className="font-mono text-xs text-slate-400 break-all">{signup.darId}</span>} />
           <Field label={t('signupDetail.product')} value={signup.productName} />
+          <Field label={t('signupDetail.invoicingInterval')} value={<span className="capitalize">{signup.billingFrequency}</span>} />
           <Field label={t('signupDetail.created')} value={new Date(signup.createdAt).toLocaleString('da-DK')} />
         </div>
       </div>
