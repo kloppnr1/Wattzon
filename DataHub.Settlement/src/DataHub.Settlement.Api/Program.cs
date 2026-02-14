@@ -97,6 +97,14 @@ builder.Services.AddSingleton<IPaymentAllocator>(sp =>
     new PaymentAllocator(connectionString, sp.GetRequiredService<ILogger<PaymentAllocator>>()));
 builder.Services.AddSingleton<IPaymentMatchingService, PaymentMatchingService>();
 
+// Settlement engine & data loader (used by settlement preview endpoint)
+builder.Services.AddSingleton<ISettlementEngine>(new SettlementEngine());
+builder.Services.AddSingleton<ISettlementDataLoader>(new SettlementDataLoader(
+    new MeteringDataRepository(connectionString),
+    new SpotPriceRepository(connectionString),
+    new TariffRepository(connectionString)));
+builder.Services.AddSingleton<IMeteringCompletenessChecker>(new MeteringCompletenessChecker(connectionString));
+
 // Services needed for dead-letter retry (reprocessing messages through QueuePollerService)
 builder.Services.AddSingleton<ICimParser, CimJsonParser>();
 builder.Services.AddSingleton<IMessageLog>(new MessageLog(connectionString));
@@ -522,6 +530,96 @@ app.MapGet("/api/metering-points/{gsrn}/tariffs", async (string gsrn, ITariffRep
     }
 
     return Results.Ok(result);
+});
+
+// POST /api/metering-points/{gsrn}/settlement-preview — dry-run settlement (no persistence)
+app.MapPost("/api/metering-points/{gsrn}/settlement-preview", async (
+    string gsrn,
+    SettlementPreviewRequest request,
+    IPortfolioRepository portfolioRepo,
+    ISettlementDataLoader dataLoader,
+    ISettlementEngine engine,
+    IMeteringCompletenessChecker completenessChecker,
+    CancellationToken ct) =>
+{
+    // Look up metering point for grid area / price area
+    var mp = await portfolioRepo.GetMeteringPointByGsrnAsync(gsrn, ct);
+    if (mp is null)
+        return Results.NotFound(new { error = "Metering point not found." });
+
+    // Look up active contract → product for margin/supplement/subscription
+    var contract = await portfolioRepo.GetActiveContractAsync(gsrn, ct);
+    if (contract is null)
+        return Results.BadRequest(new { error = "No active contract for this metering point." });
+
+    var product = await portfolioRepo.GetProductAsync(contract.ProductId, ct);
+    if (product is null)
+        return Results.BadRequest(new { error = "Product not found for contract." });
+
+    // Check metering data completeness
+    var periodStart = request.PeriodStart;
+    var periodEnd = request.PeriodEnd;
+    var start = periodStart.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+    var end = periodEnd.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+
+    var completeness = await completenessChecker.CheckAsync(gsrn, start, end, ct);
+
+    // Load all settlement data
+    var marginDkk = product.MarginOrePerKwh / 100m;
+    var supplementDkk = (product.SupplementOrePerKwh ?? 0m) / 100m;
+
+    SettlementInput input;
+    try
+    {
+        input = await dataLoader.LoadAsync(
+            gsrn, mp.GridAreaCode, mp.PriceArea,
+            periodStart, periodEnd,
+            marginDkk, supplementDkk, product.SubscriptionKrPerMonth, ct);
+    }
+    catch (Exception ex)
+    {
+        return Results.BadRequest(new { error = $"Could not load settlement data: {ex.Message}" });
+    }
+
+    // Run calculation
+    SettlementResult result;
+    try
+    {
+        var settlementRequest = new SettlementRequest(
+            input.MeteringPointId, input.PeriodStart, input.PeriodEnd,
+            input.Consumption, input.SpotPrices, input.GridTariffRates,
+            input.SystemTariffRate, input.TransmissionTariffRate,
+            input.ElectricityTaxRate, input.GridSubscriptionPerMonth,
+            input.MarginPerKwh, input.SupplementPerKwh, input.SupplierSubscriptionPerMonth,
+            input.Elvarme);
+
+        result = engine.Calculate(settlementRequest);
+    }
+    catch (InvalidOperationException ex)
+    {
+        return Results.BadRequest(new { error = ex.Message });
+    }
+
+    return Results.Ok(new
+    {
+        meteringPointId = result.MeteringPointId,
+        periodStart = result.PeriodStart,
+        periodEnd = result.PeriodEnd,
+        totalKwh = result.TotalKwh,
+        lines = result.Lines.Select(l => new { l.ChargeType, l.Kwh, l.Amount }),
+        subtotal = result.Subtotal,
+        vatAmount = result.VatAmount,
+        total = result.Total,
+        completeness = new
+        {
+            expectedHours = completeness.ExpectedHours,
+            receivedHours = completeness.ReceivedHours,
+            isComplete = completeness.IsComplete,
+        },
+        product = new { product.Name, product.MarginOrePerKwh, product.SupplementOrePerKwh, product.SubscriptionKrPerMonth },
+        gridAreaCode = mp.GridAreaCode,
+        priceArea = mp.PriceArea,
+    });
 });
 
 // GET /api/billing/customers/{id}/summary — customer billing summary
@@ -1045,6 +1143,7 @@ app.Run();
 
 record ProcessInitRequest(string Gsrn, DateOnly EffectiveDate);
 record CreditNoteRequest(string? Notes);
+record SettlementPreviewRequest(DateOnly PeriodStart, DateOnly PeriodEnd);
 
 class InboundMessageInfoRow
 {

@@ -344,6 +344,27 @@ export default {
   'customerDetail.ledgerColBalance': 'Saldo',
   'customerDetail.noLedger': 'Ingen kontoposteringer fundet.',
 
+  // ── Settlement Preview ──
+  'settlementPreview.title': 'Afregningseksempel',
+  'settlementPreview.runPreview': 'Kør eksempel',
+  'settlementPreview.periodStart': 'Periodestart',
+  'settlementPreview.periodEnd': 'Periodeslut',
+  'settlementPreview.calculate': 'Beregn',
+  'settlementPreview.calculating': 'Beregner...',
+  'settlementPreview.chargeType': 'Gebyrtype',
+  'settlementPreview.kwh': 'kWh',
+  'settlementPreview.amount': 'Beløb',
+  'settlementPreview.subtotal': 'Subtotal',
+  'settlementPreview.vat': 'Moms (25%)',
+  'settlementPreview.total': 'Total',
+  'settlementPreview.completeness': 'Datakomplethed',
+  'settlementPreview.hoursReceived': '{received} / {expected} timer',
+  'settlementPreview.complete': 'Komplet',
+  'settlementPreview.incomplete': 'Ufuldstændig',
+  'settlementPreview.dryRunNotice': 'Kun forhåndsvisning — gemmes ikke.',
+  'settlementPreview.error': 'Afregningseksempel fejlede',
+  'settlementPreview.noData': 'Ingen forbrugsdata for denne periode.',
+
   // ── Products ──
   'products.title': 'Produkter',
   'products.subtitle': 'Energiprodukter tilgængelige for kundetilmeldinger.',

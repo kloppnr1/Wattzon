@@ -1,6 +1,150 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { api } from '../../api';
 import { useTranslation } from '../../i18n/LanguageContext';
+
+const chargeTypeBadge = {
+  energy: 'bg-orange-50 text-orange-700',
+  grid_tariff: 'bg-blue-50 text-blue-700',
+  system_tariff: 'bg-indigo-50 text-indigo-700',
+  transmission_tariff: 'bg-violet-50 text-violet-700',
+  electricity_tax: 'bg-amber-50 text-amber-700',
+  grid_subscription: 'bg-teal-50 text-teal-700',
+  supplier_subscription: 'bg-emerald-50 text-emerald-700',
+  production_credit: 'bg-lime-50 text-lime-700',
+};
+
+function getDefaultPeriod() {
+  const now = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const end = new Date(now.getFullYear(), now.getMonth(), 1);
+  const fmt = (d) => d.toISOString().slice(0, 10);
+  return { start: fmt(start), end: fmt(end) };
+}
+
+function SettlementPreviewPanel({ gsrn, t }) {
+  const defaultPeriod = getDefaultPeriod();
+  const [periodStart, setPeriodStart] = useState(defaultPeriod.start);
+  const [periodEnd, setPeriodEnd] = useState(defaultPeriod.end);
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState(null);
+  const [error, setError] = useState(null);
+
+  const runPreview = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    setResult(null);
+    try {
+      const data = await api.getSettlementPreview(gsrn, periodStart, periodEnd);
+      setResult(data);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [gsrn, periodStart, periodEnd]);
+
+  return (
+    <div className="mt-3 bg-white rounded-lg border border-slate-200 overflow-hidden">
+      <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <div className="w-1 h-3.5 rounded-full bg-amber-400" />
+          <h4 className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{t('settlementPreview.title')}</h4>
+        </div>
+        <span className="text-[10px] text-slate-400 italic">{t('settlementPreview.dryRunNotice')}</span>
+      </div>
+      <div className="px-4 py-3">
+        <div className="flex items-end gap-3 mb-3">
+          <div>
+            <label className="block text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-1">{t('settlementPreview.periodStart')}</label>
+            <input type="date" value={periodStart} onChange={e => setPeriodStart(e.target.value)}
+              className="border border-slate-200 rounded px-2 py-1 text-sm text-slate-700 focus:outline-none focus:ring-1 focus:ring-teal-400" />
+          </div>
+          <div>
+            <label className="block text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-1">{t('settlementPreview.periodEnd')}</label>
+            <input type="date" value={periodEnd} onChange={e => setPeriodEnd(e.target.value)}
+              className="border border-slate-200 rounded px-2 py-1 text-sm text-slate-700 focus:outline-none focus:ring-1 focus:ring-teal-400" />
+          </div>
+          <button onClick={runPreview} disabled={loading}
+            className="px-3 py-1.5 text-xs font-medium rounded bg-teal-600 text-white hover:bg-teal-700 disabled:opacity-50 transition-colors">
+            {loading ? t('settlementPreview.calculating') : t('settlementPreview.calculate')}
+          </button>
+        </div>
+
+        {error && (
+          <div className="mb-3 px-3 py-2 bg-red-50 border border-red-200 rounded text-sm text-red-700">
+            {t('settlementPreview.error')}: {error}
+          </div>
+        )}
+
+        {result && (
+          <div className="animate-fade-in-up">
+            {/* Completeness indicator */}
+            <div className="mb-3 flex items-center gap-2">
+              <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">{t('settlementPreview.completeness')}:</span>
+              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium ${
+                result.completeness.isComplete ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'
+              }`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${result.completeness.isComplete ? 'bg-emerald-400' : 'bg-amber-400'}`} />
+                {result.completeness.receivedHours} / {result.completeness.expectedHours} {t('settlementPreview.hoursReceived').split('{')[0].trim() || 'hours'}
+              </span>
+              <span className={`text-[11px] font-medium ${result.completeness.isComplete ? 'text-emerald-600' : 'text-amber-600'}`}>
+                {result.completeness.isComplete ? t('settlementPreview.complete') : t('settlementPreview.incomplete')}
+              </span>
+            </div>
+
+            {result.totalKwh === 0 ? (
+              <div className="py-4 text-center text-sm text-slate-400">{t('settlementPreview.noData')}</div>
+            ) : (
+              <table className="w-full">
+                <thead>
+                  <tr className="bg-slate-50">
+                    <th className="px-3 py-2 text-left text-[10px] font-semibold text-slate-600 uppercase tracking-wider">{t('settlementPreview.chargeType')}</th>
+                    <th className="px-3 py-2 text-right text-[10px] font-semibold text-slate-600 uppercase tracking-wider">{t('settlementPreview.kwh')}</th>
+                    <th className="px-3 py-2 text-right text-[10px] font-semibold text-slate-600 uppercase tracking-wider">{t('settlementPreview.amount')}</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {result.lines.map((line) => (
+                    <tr key={line.chargeType} className="hover:bg-slate-50/50">
+                      <td className="px-3 py-2">
+                        <span className={`inline-flex px-2 py-0.5 rounded-full text-[11px] font-medium ${chargeTypeBadge[line.chargeType] || 'bg-slate-100 text-slate-600'}`}>
+                          {t(`chargeType.${line.chargeType}`)}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2 text-right font-mono text-xs text-slate-600">
+                        {line.kwh != null ? Number(line.kwh).toFixed(2) : '\u2014'}
+                      </td>
+                      <td className="px-3 py-2 text-right font-mono text-xs text-slate-700 font-medium">
+                        {Number(line.amount).toFixed(2)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot className="border-t-2 border-slate-200">
+                  <tr>
+                    <td className="px-3 py-1.5 text-xs font-medium text-slate-500">{t('settlementPreview.subtotal')}</td>
+                    <td />
+                    <td className="px-3 py-1.5 text-right font-mono text-xs text-slate-700">{Number(result.subtotal).toFixed(2)}</td>
+                  </tr>
+                  <tr>
+                    <td className="px-3 py-1.5 text-xs font-medium text-slate-500">{t('settlementPreview.vat')}</td>
+                    <td />
+                    <td className="px-3 py-1.5 text-right font-mono text-xs text-slate-700">{Number(result.vatAmount).toFixed(2)}</td>
+                  </tr>
+                  <tr className="bg-slate-50">
+                    <td className="px-3 py-2 text-sm font-bold text-slate-800">{t('settlementPreview.total')}</td>
+                    <td />
+                    <td className="px-3 py-2 text-right font-mono text-sm font-bold text-slate-800">{Number(result.total).toFixed(2)} DKK</td>
+                  </tr>
+                </tfoot>
+              </table>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 const tariffTypeLabels = {
   grid: 'tariffType.grid',
@@ -289,6 +433,9 @@ export default function ContractsMeteringTab({ customer }) {
                           })}
                         </div>
                       )}
+
+                      {/* Settlement Preview */}
+                      <SettlementPreviewPanel gsrn={mp.gsrn} t={t} />
                     </div>
                   )}
                 </div>

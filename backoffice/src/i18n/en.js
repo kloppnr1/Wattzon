@@ -344,6 +344,27 @@ export default {
   'customerDetail.ledgerColBalance': 'Balance',
   'customerDetail.noLedger': 'No ledger entries found.',
 
+  // ── Settlement Preview ──
+  'settlementPreview.title': 'Settlement Preview',
+  'settlementPreview.runPreview': 'Run Preview',
+  'settlementPreview.periodStart': 'Period Start',
+  'settlementPreview.periodEnd': 'Period End',
+  'settlementPreview.calculate': 'Calculate',
+  'settlementPreview.calculating': 'Calculating...',
+  'settlementPreview.chargeType': 'Charge Type',
+  'settlementPreview.kwh': 'kWh',
+  'settlementPreview.amount': 'Amount',
+  'settlementPreview.subtotal': 'Subtotal',
+  'settlementPreview.vat': 'VAT (25%)',
+  'settlementPreview.total': 'Total',
+  'settlementPreview.completeness': 'Data Completeness',
+  'settlementPreview.hoursReceived': '{received} / {expected} hours',
+  'settlementPreview.complete': 'Complete',
+  'settlementPreview.incomplete': 'Incomplete',
+  'settlementPreview.dryRunNotice': 'Preview only — not persisted.',
+  'settlementPreview.error': 'Settlement preview failed',
+  'settlementPreview.noData': 'No consumption data for this period.',
+
   // ── Products ──
   'products.title': 'Products',
   'products.subtitle': 'Energy products available for customer signups.',

@@ -92,6 +92,13 @@ export const api = {
   // Metering Point Tariffs
   getMeteringPointTariffs: (gsrn) => request(`/metering-points/${gsrn}/tariffs`),
 
+  // Settlement Preview (dry-run, no persistence)
+  getSettlementPreview: (gsrn, periodStart, periodEnd) =>
+    request(`/metering-points/${gsrn}/settlement-preview`, {
+      method: 'POST',
+      body: JSON.stringify({ periodStart, periodEnd }),
+    }),
+
   // Customer Processes
   getCustomerProcesses: (customerId) => request(`/customers/${customerId}/processes`),
 
