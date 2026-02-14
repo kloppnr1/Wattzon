@@ -133,7 +133,7 @@ public class CorrectionWorkflowTests
             input.SupplierSubscriptionPerMonth, input.Elvarme);
 
         var result = engine.Calculate(request);
-        await resultStore.StoreAsync(Gsrn, "344", result, ct);
+        await resultStore.StoreAsync(Gsrn, "344", result, "monthly", ct);
 
         // Verify original settlement exists
         await using var assertConn = new NpgsqlConnection(TestDatabase.ConnectionString);

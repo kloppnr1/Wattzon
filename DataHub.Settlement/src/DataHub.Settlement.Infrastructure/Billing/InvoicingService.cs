@@ -122,7 +122,7 @@ public sealed class InvoicingService : BackgroundService
             return today > quarterEnd;
         }
 
-        // Monthly: due once the period has ended
+        // Weekly and monthly: due once the period has ended
         return periodEnd <= today;
     }
 
