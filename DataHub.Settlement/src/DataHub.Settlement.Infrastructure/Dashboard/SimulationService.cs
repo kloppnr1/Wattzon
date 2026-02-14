@@ -1004,7 +1004,7 @@ public sealed class SimulationService
                     VALUES (
                         @BillingPeriodId, '344', @MeteringPointId,
                         COALESCE((SELECT MAX(version) FROM settlement.settlement_run
-                                  WHERE billing_period_id = @BillingPeriodId AND grid_area_code = '344'), 0) + 1,
+                                  WHERE metering_point_id = @MeteringPointId AND billing_period_id = @BillingPeriodId), 0) + 1,
                         'completed', 1)
                     RETURNING id
                     """, new { BillingPeriodId = billingPeriodId, MeteringPointId = gsrn });
@@ -1183,7 +1183,7 @@ public sealed class SimulationService
                     VALUES (
                         @BillingPeriodId, '344', @MeteringPointId,
                         COALESCE((SELECT MAX(version) FROM settlement.settlement_run
-                                  WHERE billing_period_id = @BillingPeriodId AND grid_area_code = '344'), 0) + 1,
+                                  WHERE metering_point_id = @MeteringPointId AND billing_period_id = @BillingPeriodId), 0) + 1,
                         'completed', 1)
                     RETURNING id
                     """, new { BillingPeriodId = billingPeriodId, MeteringPointId = gsrn });
@@ -1664,7 +1664,7 @@ public sealed class SimulationService
                     VALUES (
                         @BillingPeriodId, '344', @MeteringPointId,
                         COALESCE((SELECT MAX(version) FROM settlement.settlement_run
-                                  WHERE billing_period_id = @BillingPeriodId AND grid_area_code = '344'), 0) + 1,
+                                  WHERE metering_point_id = @MeteringPointId AND billing_period_id = @BillingPeriodId), 0) + 1,
                         'completed', 1)
                     RETURNING id
                     """, new { BillingPeriodId = billingPeriodId, MeteringPointId = gsrn });
@@ -1854,7 +1854,11 @@ public sealed class SimulationService
 
         var settlementRunId = await conn.QuerySingleAsync<Guid>("""
             INSERT INTO settlement.settlement_run (billing_period_id, grid_area_code, metering_point_id, version, status, metering_points_count)
-            VALUES (@BillingPeriodId, '344', @MeteringPointId, 1, 'completed', 1)
+            VALUES (
+                @BillingPeriodId, '344', @MeteringPointId,
+                COALESCE((SELECT MAX(version) FROM settlement.settlement_run
+                          WHERE metering_point_id = @MeteringPointId AND billing_period_id = @BillingPeriodId), 0) + 1,
+                'completed', 1)
             RETURNING id
             """, new { BillingPeriodId = billingPeriodId, MeteringPointId = Gsrn });
 
@@ -2154,7 +2158,7 @@ public sealed class SimulationService
                         VALUES (
                             @BillingPeriodId, '344', @MeteringPointId,
                             COALESCE((SELECT MAX(version) FROM settlement.settlement_run
-                                      WHERE billing_period_id = @BillingPeriodId AND grid_area_code = '344'), 0) + 1,
+                                      WHERE metering_point_id = @MeteringPointId AND billing_period_id = @BillingPeriodId), 0) + 1,
                             'completed', 1)
                         RETURNING id
                         """, new { BillingPeriodId = billingPeriodId, MeteringPointId = ctx.Gsrn });
@@ -2385,7 +2389,7 @@ public sealed class SimulationService
                         VALUES (
                             @BillingPeriodId, '344', @MeteringPointId,
                             COALESCE((SELECT MAX(version) FROM settlement.settlement_run
-                                      WHERE billing_period_id = @BillingPeriodId AND grid_area_code = '344'), 0) + 1,
+                                      WHERE metering_point_id = @MeteringPointId AND billing_period_id = @BillingPeriodId), 0) + 1,
                             'completed', 1)
                         RETURNING id
                         """, new { BillingPeriodId = billingPeriodId, MeteringPointId = ctx.Gsrn });
@@ -2622,7 +2626,7 @@ public sealed class SimulationService
                         VALUES (
                             @BillingPeriodId, '344', @MeteringPointId,
                             COALESCE((SELECT MAX(version) FROM settlement.settlement_run
-                                      WHERE billing_period_id = @BillingPeriodId AND grid_area_code = '344'), 0) + 1,
+                                      WHERE metering_point_id = @MeteringPointId AND billing_period_id = @BillingPeriodId), 0) + 1,
                             'completed', 1)
                         RETURNING id
                         """, new { BillingPeriodId = billingPeriodId, MeteringPointId = ctx.Gsrn });

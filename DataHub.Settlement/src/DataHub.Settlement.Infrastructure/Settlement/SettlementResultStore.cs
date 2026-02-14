@@ -44,7 +44,11 @@ public sealed class SettlementResultStore : ISettlementResultStore
             var settlementRunId = await conn.QuerySingleAsync<Guid>(
                 new CommandDefinition("""
                     INSERT INTO settlement.settlement_run (billing_period_id, grid_area_code, metering_point_id, version, status, metering_points_count)
-                    VALUES (@BillingPeriodId, @GridAreaCode, @MeteringPointId, 1, 'completed', 1)
+                    VALUES (
+                        @BillingPeriodId, @GridAreaCode, @MeteringPointId,
+                        COALESCE((SELECT MAX(version) FROM settlement.settlement_run
+                                  WHERE metering_point_id = @MeteringPointId AND billing_period_id = @BillingPeriodId), 0) + 1,
+                        'completed', 1)
                     RETURNING id
                     """,
                     new { BillingPeriodId = billingPeriodId, GridAreaCode = gridAreaCode, MeteringPointId = gsrn },
