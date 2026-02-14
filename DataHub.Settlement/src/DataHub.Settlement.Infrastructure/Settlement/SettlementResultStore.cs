@@ -20,7 +20,7 @@ public sealed class SettlementResultStore : ISettlementResultStore
         _connectionString = connectionString;
     }
 
-    public async Task StoreAsync(string gsrn, string gridAreaCode, SettlementResult result, CancellationToken ct)
+    public async Task StoreAsync(string gsrn, string gridAreaCode, SettlementResult result, string billingFrequency, CancellationToken ct)
     {
         await using var conn = new NpgsqlConnection(_connectionString);
         await conn.OpenAsync(ct);
@@ -34,11 +34,11 @@ public sealed class SettlementResultStore : ISettlementResultStore
             var billingPeriodId = await conn.QuerySingleAsync<Guid>(
                 new CommandDefinition("""
                     INSERT INTO settlement.billing_period (period_start, period_end, frequency)
-                    VALUES (@PeriodStart, @PeriodEnd, 'monthly')
-                    ON CONFLICT (period_start, period_end) DO UPDATE SET frequency = 'monthly'
+                    VALUES (@PeriodStart, @PeriodEnd, @Frequency)
+                    ON CONFLICT (period_start, period_end) DO UPDATE SET frequency = EXCLUDED.frequency
                     RETURNING id
                     """,
-                    new { PeriodStart = result.PeriodStart, PeriodEnd = result.PeriodEnd },
+                    new { PeriodStart = result.PeriodStart, PeriodEnd = result.PeriodEnd, Frequency = billingFrequency },
                     cancellationToken: ct));
 
             var settlementRunId = await conn.QuerySingleAsync<Guid>(

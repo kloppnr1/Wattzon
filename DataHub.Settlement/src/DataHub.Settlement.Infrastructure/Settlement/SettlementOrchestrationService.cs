@@ -120,7 +120,7 @@ public sealed class SettlementOrchestrationService : BackgroundService
             input.SupplierSubscriptionPerMonth, input.Elvarme);
 
         var result = _engine.Calculate(request);
-        await _resultStore.StoreAsync(process.Gsrn, "344", result, ct);
+        await _resultStore.StoreAsync(process.Gsrn, "344", result, contract.BillingFrequency, ct);
 
         _logger.LogInformation("Settlement completed for GSRN {Gsrn}: {PeriodStart} to {PeriodEnd}, total {Total} DKK",
             process.Gsrn, periodStart, periodEnd, result.Total);

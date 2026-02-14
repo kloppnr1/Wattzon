@@ -162,7 +162,7 @@ public class SettlementOrchestrationTests
         public int StoreCount { get; private set; }
         public string? LastGsrn { get; private set; }
 
-        public Task StoreAsync(string gsrn, string gridAreaCode, SettlementResult result, CancellationToken ct)
+        public Task StoreAsync(string gsrn, string gridAreaCode, SettlementResult result, string billingFrequency, CancellationToken ct)
         {
             StoreCount++;
             LastGsrn = gsrn;

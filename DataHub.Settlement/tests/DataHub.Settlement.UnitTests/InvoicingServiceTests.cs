@@ -83,4 +83,34 @@ public class InvoicingServiceTests
 
         InvoicingService.IsPeriodDue("quarterly", periodEnd, today).Should().BeFalse();
     }
+
+    [Fact]
+    public void Weekly_due_after_sunday()
+    {
+        // Week Mon Jan 6 – Sun Jan 12, today is Mon Jan 13 — due
+        var periodEnd = new DateOnly(2025, 1, 12); // Sunday
+        var today = new DateOnly(2025, 1, 13);
+
+        InvoicingService.IsPeriodDue("weekly", periodEnd, today).Should().BeTrue();
+    }
+
+    [Fact]
+    public void Weekly_due_on_sunday()
+    {
+        // Week Mon Jan 6 – Sun Jan 12, today is Sun Jan 12 — due (periodEnd <= today)
+        var periodEnd = new DateOnly(2025, 1, 12); // Sunday
+        var today = new DateOnly(2025, 1, 12);
+
+        InvoicingService.IsPeriodDue("weekly", periodEnd, today).Should().BeTrue();
+    }
+
+    [Fact]
+    public void Weekly_not_due_before_period_end()
+    {
+        // Week Mon Jan 6 – Sun Jan 12, today is Fri Jan 10 — not due
+        var periodEnd = new DateOnly(2025, 1, 12); // Sunday
+        var today = new DateOnly(2025, 1, 10);
+
+        InvoicingService.IsPeriodDue("weekly", periodEnd, today).Should().BeFalse();
+    }
 }
