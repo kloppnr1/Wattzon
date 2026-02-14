@@ -51,8 +51,8 @@ export const api = {
   getBillingPeriods: ({ page, pageSize } = {}) =>
     request(`/billing/periods${qs({ page, pageSize })}`),
   getBillingPeriod: (id) => request(`/billing/periods/${id}`),
-  getSettlementRuns: ({ billingPeriodId, page, pageSize } = {}) =>
-    request(`/billing/runs${qs({ billingPeriodId, page, pageSize })}`),
+  getSettlementRuns: ({ billingPeriodId, status, meteringPointId, gridAreaCode, fromDate, toDate, page, pageSize } = {}) =>
+    request(`/billing/runs${qs({ billingPeriodId, status, meteringPointId, gridAreaCode, fromDate, toDate, page, pageSize })}`),
   getSettlementRun: (id) => request(`/billing/runs/${id}`),
   getSettlementLines: (runId, { page, pageSize } = {}) =>
     request(`/billing/runs/${runId}/lines${qs({ page, pageSize })}`),
@@ -117,8 +117,8 @@ export const api = {
   getDataDeliveries: () => request(`/messages/deliveries`),
 
   // Invoices
-  getInvoices: ({ customerId, status, invoiceType, fromDate, toDate, page, pageSize } = {}) =>
-    request(`/billing/invoices${qs({ customerId, status, invoiceType, fromDate, toDate, page, pageSize })}`),
+  getInvoices: ({ customerId, status, invoiceType, fromDate, toDate, search, page, pageSize } = {}) =>
+    request(`/billing/invoices${qs({ customerId, status, invoiceType, fromDate, toDate, search, page, pageSize })}`),
   getInvoice: (id) => request(`/billing/invoices/${id}`),
   getOverdueInvoices: () => request('/billing/invoices/overdue'),
   sendInvoice: (id) => request(`/billing/invoices/${id}/send`, { method: 'POST' }),

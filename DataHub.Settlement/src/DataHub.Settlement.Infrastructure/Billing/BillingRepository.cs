@@ -63,9 +63,11 @@ public sealed class BillingRepository : IBillingRepository
             """;
 
         const string runsSql = """
-            SELECT sr.id, sr.billing_period_id, sr.grid_area_code, sr.version, sr.status, sr.executed_at, sr.completed_at,
+            SELECT sr.id, sr.billing_period_id, bp.period_start, bp.period_end,
+                   sr.grid_area_code, sr.version, sr.status, sr.executed_at, sr.completed_at,
                    sr.metering_point_id, ct.customer_id
             FROM settlement.settlement_run sr
+            JOIN settlement.billing_period bp ON sr.billing_period_id = bp.id
             LEFT JOIN portfolio.contract ct ON sr.metering_point_id = ct.gsrn
             WHERE sr.billing_period_id = @BillingPeriodId
             ORDER BY sr.executed_at DESC
@@ -80,6 +82,8 @@ public sealed class BillingRepository : IBillingRepository
         var runList = runs.Select(r => new SettlementRunSummary(
             r.Id,
             r.BillingPeriodId,
+            DateOnly.FromDateTime(r.PeriodStart),
+            DateOnly.FromDateTime(r.PeriodEnd),
             r.GridAreaCode,
             r.Version,
             r.Status,
@@ -97,38 +101,64 @@ public sealed class BillingRepository : IBillingRepository
             runList);
     }
 
-    public async Task<PagedResult<SettlementRunSummary>> GetSettlementRunsAsync(Guid? billingPeriodId, int page, int pageSize, CancellationToken ct)
+    public async Task<PagedResult<SettlementRunSummary>> GetSettlementRunsAsync(Guid? billingPeriodId, string? status, string? meteringPointId, string? gridAreaCode, DateOnly? fromDate, DateOnly? toDate, int page, int pageSize, CancellationToken ct)
     {
         var offset = (page - 1) * pageSize;
 
         var sql = """
             WITH counted AS (
-                SELECT sr.id, sr.billing_period_id, sr.grid_area_code, sr.version, sr.status, sr.executed_at, sr.completed_at,
+                SELECT sr.id, sr.billing_period_id, bp.period_start, bp.period_end,
+                       sr.grid_area_code, sr.version, sr.status, sr.executed_at, sr.completed_at,
                        sr.metering_point_id, COUNT(*) OVER() AS total_count
                 FROM settlement.settlement_run sr
+                JOIN settlement.billing_period bp ON sr.billing_period_id = bp.id
+                WHERE 1=1
             """;
 
         if (billingPeriodId.HasValue)
-            sql += " WHERE sr.billing_period_id = @BillingPeriodId\n";
+            sql += " AND sr.billing_period_id = @BillingPeriodId\n";
+        if (!string.IsNullOrEmpty(status))
+            sql += " AND sr.status = @Status\n";
+        if (!string.IsNullOrEmpty(meteringPointId))
+            sql += " AND sr.metering_point_id = @MeteringPointId\n";
+        if (!string.IsNullOrEmpty(gridAreaCode))
+            sql += " AND sr.grid_area_code = @GridAreaCode\n";
+        if (fromDate.HasValue)
+            sql += " AND bp.period_start >= @FromDate\n";
+        if (toDate.HasValue)
+            sql += " AND bp.period_end <= @ToDate\n";
 
         sql += """
                 ORDER BY sr.executed_at DESC
                 LIMIT @PageSize OFFSET @Offset
             )
-            SELECT c.id, c.billing_period_id, c.grid_area_code, c.version, c.status, c.executed_at, c.completed_at, c.total_count,
+            SELECT c.id, c.billing_period_id, c.period_start, c.period_end,
+                   c.grid_area_code, c.version, c.status, c.executed_at, c.completed_at, c.total_count,
                    c.metering_point_id, ct.customer_id
             FROM counted c
             LEFT JOIN portfolio.contract ct ON c.metering_point_id = ct.gsrn
             """;
 
         await using var conn = new NpgsqlConnection(_connectionString);
-        var rows = await conn.QueryAsync<SettlementRunRow>(sql, new { BillingPeriodId = billingPeriodId, PageSize = pageSize, Offset = offset });
+        var rows = await conn.QueryAsync<SettlementRunRow>(sql, new
+        {
+            BillingPeriodId = billingPeriodId,
+            Status = status,
+            MeteringPointId = meteringPointId,
+            GridAreaCode = gridAreaCode,
+            FromDate = fromDate,
+            ToDate = toDate,
+            PageSize = pageSize,
+            Offset = offset
+        });
         var rowList = rows.ToList();
 
         var totalCount = rowList.FirstOrDefault()?.TotalCount ?? 0;
         var items = rowList.Select(r => new SettlementRunSummary(
             r.Id,
             r.BillingPeriodId,
+            DateOnly.FromDateTime(r.PeriodStart),
+            DateOnly.FromDateTime(r.PeriodEnd),
             r.GridAreaCode,
             r.Version,
             r.Status,
@@ -317,6 +347,8 @@ internal class SettlementRunRow
 {
     public Guid Id { get; set; }
     public Guid BillingPeriodId { get; set; }
+    public DateTime PeriodStart { get; set; }
+    public DateTime PeriodEnd { get; set; }
     public string GridAreaCode { get; set; } = null!;
     public int Version { get; set; }
     public string Status { get; set; } = null!;

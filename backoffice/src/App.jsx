@@ -10,15 +10,13 @@ import SignupDetail from './pages/SignupDetail';
 import CustomerList from './pages/CustomerList';
 import CustomerDetail from './pages/CustomerDetail';
 import Products from './pages/Products';
-import BillingPeriods from './pages/BillingPeriods';
-import BillingPeriodDetail from './pages/BillingPeriodDetail';
+import Settlement from './pages/Settlement';
 import SettlementRunDetail from './pages/SettlementRunDetail';
 import SpotPrices from './pages/SpotPrices';
 import Messages from './pages/Messages';
 import InboundMessageDetail from './pages/InboundMessageDetail';
 import OutboundRequestDetail from './pages/OutboundRequestDetail';
 import DeadLetterDetail from './pages/DeadLetterDetail';
-import Corrections from './pages/Corrections';
 import CorrectionDetail from './pages/CorrectionDetail';
 import Processes from './pages/Processes';
 import ProcessDetail from './pages/ProcessDetail';
@@ -88,10 +86,8 @@ export default function App() {
             <Route path="/customers/:id" element={<CustomerDetail />} />
             <Route path="/products" element={<Products />} />
             <Route path="/spot-prices" element={<SpotPrices />} />
-            <Route path="/billing" element={<BillingPeriods />} />
-            <Route path="/billing/periods/:id" element={<BillingPeriodDetail />} />
+            <Route path="/settlement" element={<Settlement />} />
             <Route path="/billing/runs/:id" element={<SettlementRunDetail />} />
-            <Route path="/billing/corrections" element={<Corrections />} />
             <Route path="/billing/corrections/:batchId" element={<CorrectionDetail />} />
             <Route path="/invoices" element={<InvoiceList />} />
             <Route path="/invoices/:id" element={<InvoiceDetail />} />

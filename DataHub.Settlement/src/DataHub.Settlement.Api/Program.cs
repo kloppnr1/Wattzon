@@ -434,12 +434,12 @@ app.MapGet("/api/billing/periods/{id:guid}", async (Guid id, IBillingRepository 
     return detail is not null ? Results.Ok(detail) : Results.NotFound();
 });
 
-// GET /api/billing/runs — paginated settlement runs (optional billing period filter)
-app.MapGet("/api/billing/runs", async (Guid? billingPeriodId, int? page, int? pageSize, IBillingRepository repo, CancellationToken ct) =>
+// GET /api/billing/runs — paginated settlement runs with optional filters
+app.MapGet("/api/billing/runs", async (Guid? billingPeriodId, string? status, string? meteringPointId, string? gridAreaCode, DateOnly? fromDate, DateOnly? toDate, int? page, int? pageSize, IBillingRepository repo, CancellationToken ct) =>
 {
     var p = Math.Max(page ?? 1, 1);
     var ps = Math.Clamp(pageSize ?? 50, 1, 200);
-    var result = await repo.GetSettlementRunsAsync(billingPeriodId, p, ps, ct);
+    var result = await repo.GetSettlementRunsAsync(billingPeriodId, status, meteringPointId, gridAreaCode, fromDate, toDate, p, ps, ct);
     return Results.Ok(result);
 });
 
@@ -908,16 +908,16 @@ app.MapGet("/api/billing/aconto/{gsrn}", async (
 
 // --- Invoices ---
 
-// GET /api/billing/invoices — paginated invoices with filters
+// GET /api/billing/invoices — paginated invoices with filters and search
 app.MapGet("/api/billing/invoices", async (
     Guid? customerId, string? status, string? invoiceType,
-    DateOnly? fromDate, DateOnly? toDate,
+    DateOnly? fromDate, DateOnly? toDate, string? search,
     int? page, int? pageSize,
     IInvoiceRepository repo, CancellationToken ct) =>
 {
     var p = Math.Max(page ?? 1, 1);
     var ps = Math.Clamp(pageSize ?? 50, 1, 200);
-    var result = await repo.GetPagedAsync(customerId, status, invoiceType, fromDate, toDate, p, ps, ct);
+    var result = await repo.GetPagedAsync(customerId, status, invoiceType, fromDate, toDate, search, p, ps, ct);
     return Results.Ok(result);
 });
 

@@ -45,6 +45,7 @@ export default function InvoiceList() {
   const [invoiceType, setInvoiceType] = useState('');
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
+  const [search, setSearch] = useState('');
 
   const fetchPage = useCallback((p) => {
     setError(null);
@@ -53,15 +54,16 @@ export default function InvoiceList() {
       invoiceType: invoiceType || undefined,
       fromDate: fromDate || undefined,
       toDate: toDate || undefined,
+      search: search || undefined,
       page: p,
       pageSize: PAGE_SIZE,
     })
       .then(setData)
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
-  }, [status, invoiceType, fromDate, toDate]);
+  }, [status, invoiceType, fromDate, toDate, search]);
 
-  useEffect(() => { setPage(1); }, [status, invoiceType, fromDate, toDate]);
+  useEffect(() => { setPage(1); }, [status, invoiceType, fromDate, toDate, search]);
   useEffect(() => { fetchPage(page); }, [page, fetchPage]);
 
   const invoices = data?.items ?? [];
@@ -83,7 +85,14 @@ export default function InvoiceList() {
 
       {/* Filters */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 mb-6 animate-fade-in-up" style={{ animationDelay: '40ms' }}>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+          <input
+            type="text"
+            placeholder={t('invoices.searchPlaceholder')}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="px-3 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-400"
+          />
           <select
             value={status}
             onChange={(e) => setStatus(e.target.value)}
@@ -158,6 +167,7 @@ export default function InvoiceList() {
             <thead>
               <tr className="bg-slate-50 border-b border-slate-200">
                 <th className="px-4 py-2.5 text-left text-[10px] font-semibold text-slate-600 uppercase tracking-wider">{t('invoices.colNumber')}</th>
+                <th className="px-4 py-2.5 text-left text-[10px] font-semibold text-slate-600 uppercase tracking-wider">{t('invoices.colCustomer')}</th>
                 <th className="px-4 py-2.5 text-left text-[10px] font-semibold text-slate-600 uppercase tracking-wider">{t('invoices.colType')}</th>
                 <th className="px-4 py-2.5 text-left text-[10px] font-semibold text-slate-600 uppercase tracking-wider">{t('invoices.colPeriod')}</th>
                 <th className="px-4 py-2.5 text-left text-[10px] font-semibold text-slate-600 uppercase tracking-wider">{t('invoices.colStatus')}</th>
@@ -169,7 +179,7 @@ export default function InvoiceList() {
             <tbody className="divide-y divide-slate-100">
               {invoices.length === 0 ? (
                 <tr>
-                  <td colSpan="7" className="px-4 py-12 text-center text-slate-500">
+                  <td colSpan="8" className="px-4 py-12 text-center text-slate-500">
                     {t('invoices.noInvoices')}
                   </td>
                 </tr>
@@ -180,6 +190,13 @@ export default function InvoiceList() {
                       <Link to={`/invoices/${inv.id}`} className="text-teal-600 font-medium hover:text-teal-700 text-sm">
                         {inv.invoiceNumber || inv.id.substring(0, 8) + '...'}
                       </Link>
+                    </td>
+                    <td className="px-4 py-2.5 whitespace-nowrap text-sm text-slate-700">
+                      {inv.customerId ? (
+                        <Link to={`/customers/${inv.customerId}`} className="text-teal-600 hover:text-teal-700">{inv.customerName}</Link>
+                      ) : (
+                        inv.customerName || '-'
+                      )}
                     </td>
                     <td className="px-4 py-2.5 whitespace-nowrap">
                       <span className={`inline-flex px-2 py-0.5 rounded-full text-[11px] font-medium ${typeStyles[inv.invoiceType] || typeStyles.settlement}`}>

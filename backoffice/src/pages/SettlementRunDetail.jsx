@@ -88,9 +88,7 @@ export default function SettlementRunDetail() {
     <div className="p-4 sm:p-8 max-w-6xl mx-auto">
       {/* Breadcrumb */}
       <div className="mb-4 flex items-center gap-2 text-sm text-slate-500">
-        <Link to="/billing" className="hover:text-teal-600">{t('runDetail.breadcrumbBilling')}</Link>
-        <span>/</span>
-        <Link to={`/billing/periods/${run.billingPeriodId}`} className="hover:text-teal-600">{t('runDetail.breadcrumbPeriod')}</Link>
+        <Link to="/settlement" className="hover:text-teal-600">{t('settlement.title')}</Link>
         <span>/</span>
         <span className="text-slate-900 font-medium">{t('runDetail.breadcrumbRun', { version: run.version })}</span>
       </div>

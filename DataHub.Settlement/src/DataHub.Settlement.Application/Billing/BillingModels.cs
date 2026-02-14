@@ -19,6 +19,8 @@ public record BillingPeriodDetail(
 public record SettlementRunSummary(
     Guid Id,
     Guid BillingPeriodId,
+    DateOnly PeriodStart,
+    DateOnly PeriodEnd,
     string GridAreaCode,
     int Version,
     string Status,

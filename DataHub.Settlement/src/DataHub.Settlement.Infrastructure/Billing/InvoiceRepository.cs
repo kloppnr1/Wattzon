@@ -119,7 +119,7 @@ public sealed class InvoiceRepository : IInvoiceRepository
 
     public async Task<PagedResult<InvoiceSummary>> GetPagedAsync(
         Guid? customerId, string? status, string? invoiceType,
-        DateOnly? fromDate, DateOnly? toDate,
+        DateOnly? fromDate, DateOnly? toDate, string? search,
         int page, int pageSize, CancellationToken ct)
     {
         var conditions = new List<string>();
@@ -128,6 +128,7 @@ public sealed class InvoiceRepository : IInvoiceRepository
         if (!string.IsNullOrEmpty(invoiceType)) conditions.Add("i.invoice_type = @InvoiceType");
         if (fromDate.HasValue) conditions.Add("i.period_start >= @FromDate");
         if (toDate.HasValue) conditions.Add("i.period_end <= @ToDate");
+        if (!string.IsNullOrEmpty(search)) conditions.Add("(i.invoice_number ILIKE @Search OR c.name ILIKE @Search)");
 
         var where = conditions.Count > 0 ? "WHERE " + string.Join(" AND ", conditions) : "";
 
@@ -150,6 +151,7 @@ public sealed class InvoiceRepository : IInvoiceRepository
             new CommandDefinition(sql,
                 new { CustomerId = customerId, Status = status, InvoiceType = invoiceType,
                       FromDate = fromDate, ToDate = toDate,
+                      Search = string.IsNullOrEmpty(search) ? null : $"%{search}%",
                       Offset = (page - 1) * pageSize, PageSize = pageSize },
                 cancellationToken: ct))).ToList();
 
