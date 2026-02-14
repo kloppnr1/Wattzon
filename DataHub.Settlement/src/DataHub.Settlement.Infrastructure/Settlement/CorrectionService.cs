@@ -90,7 +90,7 @@ public sealed class CorrectionService : ICorrectionService
 
         // 7. Find original_run_id by querying settlement runs covering this GSRN + period
         Guid? originalRunId = null;
-        var runs = await _billingRepo.GetSettlementRunsAsync(null, 1, 200, ct);
+        var runs = await _billingRepo.GetSettlementRunsAsync(null, null, null, null, null, null, 1, 200, ct);
         foreach (var run in runs.Items)
         {
             var runDetail = await _billingRepo.GetSettlementRunAsync(run.Id, ct);
