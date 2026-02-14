@@ -271,7 +271,8 @@ public class SignupValidationTests
         public Task<Signup> CreateAsync(string signupNumber, string darId, string gsrn,
             string customerName, string customerCprCvr, string customerContactType,
             Guid productId, Guid processRequestId, string type, DateOnly effectiveDate,
-            Guid? correctedFromId, SignupAddressInfo? addressInfo, string? mobile, CancellationToken ct)
+            Guid? correctedFromId, SignupAddressInfo? addressInfo, string? mobile,
+            string billingFrequency, CancellationToken ct)
             => Task.FromResult(new Signup(Guid.NewGuid(), signupNumber, darId, gsrn, null, productId, processRequestId, type, effectiveDate, "registered", null, correctedFromId));
 
         public Task<string> NextSignupNumberAsync(CancellationToken ct)

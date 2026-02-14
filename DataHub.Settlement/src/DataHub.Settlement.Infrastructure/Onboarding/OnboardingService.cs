@@ -159,6 +159,11 @@ public sealed class OnboardingService : IOnboardingService
         // 8. Validate effective date per BRS-001/BRS-009 timing rules
         ValidateEffectiveDate(request.Type, request.EffectiveDate);
 
+        // 8b. Validate billing frequency
+        var billingFrequency = request.BillingFrequency ?? "monthly";
+        if (billingFrequency is not ("weekly" or "monthly" or "quarterly"))
+            throw new ValidationException($"Invalid billing frequency '{billingFrequency}'. Must be 'weekly', 'monthly', or 'quarterly'.");
+
         // 9. Map type to process type
         var processType = request.Type == "switch" ? "supplier_switch" : "move_in";
 
@@ -182,7 +187,7 @@ public sealed class OnboardingService : IOnboardingService
             signupNumber, request.DarId ?? "", gsrn,
             request.CustomerName, request.CprCvr, dbContactType,
             request.ProductId, process.Id, request.Type, request.EffectiveDate,
-            request.CorrectedFromId, addressInfo, request.Mobile, ct);
+            request.CorrectedFromId, addressInfo, request.Mobile, billingFrequency, ct);
 
         _logger.LogInformation(
             "Signup {SignupNumber} created for GSRN {Gsrn}, type={Type}, effective={EffectiveDate}{Correction}",
