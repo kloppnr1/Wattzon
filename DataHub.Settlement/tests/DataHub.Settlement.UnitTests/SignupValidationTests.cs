@@ -36,12 +36,13 @@ public class SignupValidationTests
         string customerName = "John Doe",
         string cprCvr = "1234567890",
         string contactType = "private",
-        string? mobile = "12345678") =>
+        string? mobile = "12345678",
+        string? billingFrequency = null) =>
         new(DarId: null, CustomerName: customerName, CprCvr: cprCvr,
             ContactType: contactType, Email: "j@d.dk", Phone: "12345678",
             ProductId: InMemoryPortfolioRepo.DefaultProductId, Type: type,
             EffectiveDate: effectiveDate ?? new DateOnly(2026, 3, 1),
-            Gsrn: gsrn, Mobile: mobile);
+            Gsrn: gsrn, Mobile: mobile, BillingFrequency: billingFrequency);
 
     // ── Move-in effective date (BRS-009) ──
 
@@ -206,6 +207,49 @@ public class SignupValidationTests
         var result = await sut.CreateSignupAsync(request, CancellationToken.None);
 
         result.Should().NotBeNull();
+    }
+
+    // ── Billing frequency validation ──
+
+    [Theory]
+    [InlineData("weekly")]
+    [InlineData("monthly")]
+    [InlineData("quarterly")]
+    public async Task Accepts_valid_billing_frequency(string frequency)
+    {
+        var sut = CreateSut();
+        var request = MakeRequest(billingFrequency: frequency);
+
+        var result = await sut.CreateSignupAsync(request, CancellationToken.None);
+
+        result.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task Defaults_to_monthly_when_billing_frequency_is_null()
+    {
+        var sut = CreateSut();
+        var request = MakeRequest(billingFrequency: null);
+
+        var result = await sut.CreateSignupAsync(request, CancellationToken.None);
+
+        result.Should().NotBeNull();
+    }
+
+    [Theory]
+    [InlineData("daily")]
+    [InlineData("yearly")]
+    [InlineData("biweekly")]
+    [InlineData("")]
+    public async Task Rejects_invalid_billing_frequency(string frequency)
+    {
+        var sut = CreateSut();
+        var request = MakeRequest(billingFrequency: frequency);
+
+        var act = () => sut.CreateSignupAsync(request, CancellationToken.None);
+
+        await act.Should().ThrowAsync<ValidationException>()
+            .WithMessage("*billing frequency*");
     }
 
     // ── Stubs ──
