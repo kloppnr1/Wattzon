@@ -68,10 +68,16 @@ public sealed class CorrectionService : ICorrectionService
         var systemRates = await _tariffRepo.GetRatesAsync(gridAreaCode, "system", request.PeriodStart, ct);
         var transmissionRates = await _tariffRepo.GetRatesAsync(gridAreaCode, "transmission", request.PeriodStart, ct);
 
-        var electricityTaxRate = await _tariffRepo.GetElectricityTaxAsync(request.PeriodStart, ct) ?? 0m;
+        if (systemRates.Count == 0)
+            throw new InvalidOperationException($"No system tariff rates found for grid area {gridAreaCode} on {request.PeriodStart}.");
+        if (transmissionRates.Count == 0)
+            throw new InvalidOperationException($"No transmission tariff rates found for grid area {gridAreaCode} on {request.PeriodStart}.");
 
-        var systemTariffRate = systemRates.Count > 0 ? systemRates[0].PricePerKwh : 0m;
-        var transmissionTariffRate = transmissionRates.Count > 0 ? transmissionRates[0].PricePerKwh : 0m;
+        var electricityTaxRate = await _tariffRepo.GetElectricityTaxAsync(request.PeriodStart, ct)
+            ?? throw new InvalidOperationException($"No electricity tax rate found for {request.PeriodStart}.");
+
+        var systemTariffRate = systemRates[0].PricePerKwh;
+        var transmissionTariffRate = transmissionRates[0].PricePerKwh;
 
         // 6. Build CorrectionRequest and calculate
         var correctionRequest = new CorrectionRequest(
@@ -89,24 +95,14 @@ public sealed class CorrectionService : ICorrectionService
 
         var result = _engine.Calculate(correctionRequest);
 
-        // 7. Find original_run_id by querying settlement runs covering this GSRN + period
+        // 7. Find original_run_id by querying settlement runs for this GSRN covering the period
         Guid? originalRunId = null;
-        var runs = await _billingRepo.GetSettlementRunsAsync(null, null, null, null, null, null, 1, 200, ct);
-        foreach (var run in runs.Items)
-        {
-            var runDetail = await _billingRepo.GetSettlementRunAsync(run.Id, ct);
-            if (runDetail is not null &&
-                runDetail.PeriodStart <= request.PeriodStart &&
-                runDetail.PeriodEnd >= request.PeriodEnd)
-            {
-                var lines = await _billingRepo.GetSettlementLinesAsync(run.Id, 1, 1000, ct);
-                if (lines.Items.Any(l => l.MeteringPointGsrn == request.MeteringPointId))
-                {
-                    originalRunId = run.Id;
-                    break;
-                }
-            }
-        }
+        var runs = await _billingRepo.GetSettlementRunsAsync(
+            billingPeriodId: null, status: null, meteringPointId: request.MeteringPointId,
+            gridAreaCode: null, fromDate: request.PeriodStart, toDate: request.PeriodEnd,
+            page: 1, pageSize: 1, ct);
+        if (runs.Items.Count > 0)
+            originalRunId = runs.Items[0].Id;
 
         // 8. Store correction
         var batchId = Guid.NewGuid();

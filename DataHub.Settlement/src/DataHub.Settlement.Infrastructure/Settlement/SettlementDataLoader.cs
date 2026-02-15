@@ -42,15 +42,23 @@ public sealed class SettlementDataLoader : ISettlementDataLoader
 
         var systemRates = await systemRatesTask;
         var transmissionRates = await transmissionRatesTask;
+        var electricityTax = await elTaxTask;
+
+        if (systemRates.Count == 0)
+            throw new InvalidOperationException($"No system tariff rates found for grid area {gridAreaCode} on {midDate}. Settlement cannot proceed without Energinet system tariff.");
+        if (transmissionRates.Count == 0)
+            throw new InvalidOperationException($"No transmission tariff rates found for grid area {gridAreaCode} on {midDate}. Settlement cannot proceed without Energinet transmission tariff.");
+        if (electricityTax is null)
+            throw new InvalidOperationException($"No electricity tax rate found for {midDate}. Settlement cannot proceed without statutory electricity tax.");
 
         return new SettlementInput(
             gsrn, periodStart, periodEnd,
             await consumptionTask,
             await spotPricesTask,
             await ratesTask,
-            SystemTariffRate: systemRates.Count > 0 ? systemRates[0].PricePerKwh : 0.054m,
-            TransmissionTariffRate: transmissionRates.Count > 0 ? transmissionRates[0].PricePerKwh : 0.049m,
-            ElectricityTaxRate: await elTaxTask ?? 0m,
+            SystemTariffRate: systemRates[0].PricePerKwh,
+            TransmissionTariffRate: transmissionRates[0].PricePerKwh,
+            ElectricityTaxRate: electricityTax.Value,
             GridSubscriptionPerMonth: await gridSubTask ?? 0m,
             MarginPerKwh: marginPerKwh,
             SupplementPerKwh: supplementPerKwh,
