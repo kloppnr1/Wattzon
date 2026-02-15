@@ -9,6 +9,7 @@ using DataHub.Settlement.Application.Portfolio;
 using DataHub.Settlement.Application.Settlement;
 using DataHub.Settlement.Application.Tariff;
 using DataHub.Settlement.Domain;
+using DataHub.Settlement.Infrastructure.Parsing;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
@@ -524,7 +525,7 @@ public sealed class QueuePollerService : BackgroundService
             }
             else if (change.NewGridAreaCode is not null)
             {
-                var priceArea = change.NewGridAreaCode.StartsWith("7") ? "DK2" : "DK1";
+                var priceArea = CimJsonParser.GridAreaToPriceArea.GetValueOrDefault(change.NewGridAreaCode, "DK1");
                 await _portfolioRepo.UpdateMeteringPointGridAreaAsync(
                     change.Gsrn, change.NewGridAreaCode, priceArea, ct);
 
@@ -551,7 +552,7 @@ public sealed class QueuePollerService : BackgroundService
 
             await _portfolioRepo.EnsureGridAreaAsync(
                 tariffData.GridAreaCode, tariffData.ChargeOwnerId,
-                $"Grid {tariffData.GridAreaCode}", tariffData.GridAreaCode.StartsWith("7") ? "DK2" : "DK1", ct);
+                $"Grid {tariffData.GridAreaCode}", CimJsonParser.GridAreaToPriceArea.GetValueOrDefault(tariffData.GridAreaCode, "DK1"), ct);
 
             await _tariffRepo.SeedGridTariffAsync(
                 tariffData.GridAreaCode, tariffData.TariffType, tariffData.ValidFrom, tariffData.Rates, ct);

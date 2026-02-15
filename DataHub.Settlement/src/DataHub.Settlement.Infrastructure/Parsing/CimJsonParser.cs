@@ -86,7 +86,7 @@ public sealed class CimJsonParser : ICimParser
         ["E02"] = "non_profiled",
     };
 
-    private static readonly Dictionary<string, string> GridAreaToPriceArea = new()
+    internal static readonly Dictionary<string, string> GridAreaToPriceArea = new()
     {
         ["344"] = "DK1",
         ["347"] = "DK1",

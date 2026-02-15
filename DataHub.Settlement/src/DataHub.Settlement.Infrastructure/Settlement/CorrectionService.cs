@@ -56,9 +56,10 @@ public sealed class CorrectionService : ICorrectionService
 
         // 4. Look up metering point for grid area and price area
         var meteringPoint = (await _portfolioRepo.GetMeteringPointsForCustomerAsync(contract.CustomerId, ct))
-            .FirstOrDefault(mp => mp.Gsrn == request.MeteringPointId);
-        var gridAreaCode = meteringPoint?.GridAreaCode ?? "543";
-        var priceArea = meteringPoint?.PriceArea ?? "DK1";
+            .FirstOrDefault(mp => mp.Gsrn == request.MeteringPointId)
+            ?? throw new InvalidOperationException($"Metering point {request.MeteringPointId} not found for customer {contract.CustomerId}.");
+        var gridAreaCode = meteringPoint.GridAreaCode;
+        var priceArea = meteringPoint.PriceArea;
 
         // 5. Load spot prices
         var spotPrices = await _spotPriceRepo.GetPricesAsync(priceArea, from, to, ct);
