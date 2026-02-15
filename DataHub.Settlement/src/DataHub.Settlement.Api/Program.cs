@@ -595,7 +595,7 @@ app.MapPost("/api/metering-points/{gsrn}/settlement-preview", async (
 
         result = engine.Calculate(settlementRequest);
     }
-    catch (InvalidOperationException ex)
+    catch (Exception ex) when (ex is InvalidOperationException or ArgumentException)
     {
         return Results.BadRequest(new { error = ex.Message });
     }
