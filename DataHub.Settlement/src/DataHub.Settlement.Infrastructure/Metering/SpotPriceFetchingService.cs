@@ -50,7 +50,11 @@ public sealed class SpotPriceFetchingService : BackgroundService
             {
                 await RunOnceAsync(stoppingToken);
             }
-            catch (Exception ex) when (ex is not OperationCanceledException)
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+            {
+                throw; // Normal shutdown — let it propagate
+            }
+            catch (Exception ex)
             {
                 _logger.LogError(ex, "Error fetching spot prices, will retry in {Interval}", PollInterval);
             }
@@ -99,6 +103,11 @@ public sealed class SpotPriceFetchingService : BackgroundService
             {
                 _logger.LogWarning(ex,
                     "HTTP error fetching spot prices for {PriceArea}, will retry next cycle", priceArea);
+            }
+            catch (TaskCanceledException ex) when (!ct.IsCancellationRequested)
+            {
+                _logger.LogWarning(ex,
+                    "Timeout fetching spot prices for {PriceArea}, will retry next cycle", priceArea);
             }
         }
 

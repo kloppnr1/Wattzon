@@ -72,7 +72,8 @@ public sealed class EnergiDataServiceClient : ISpotPriceProvider
                   $"&end={to:yyyy-MM-dd}" +
                   $"&filter={encodedFilter}" +
                   $"&sort=HourUTC%20asc" +
-                  $"&columns=HourUTC,PriceArea,SpotPriceDKK";
+                  $"&columns=HourUTC,PriceArea,SpotPriceDKK" +
+                  $"&limit=0";
 
         _logger.LogInformation(
             "Fetching {Dataset} prices for {PriceArea} from {From} to {To}",
@@ -109,7 +110,8 @@ public sealed class EnergiDataServiceClient : ISpotPriceProvider
                   $"&end={to:yyyy-MM-dd}" +
                   $"&filter={encodedFilter}" +
                   $"&sort=TimeUTC%20asc" +
-                  $"&columns=TimeUTC,PriceArea,DayAheadPriceDKK";
+                  $"&columns=TimeUTC,PriceArea,DayAheadPriceDKK" +
+                  $"&limit=0";
 
         _logger.LogInformation(
             "Fetching {Dataset} prices for {PriceArea} from {From} to {To}",

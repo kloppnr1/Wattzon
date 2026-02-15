@@ -127,6 +127,44 @@ public class SpotPriceFetchingServiceTests
             "subsequent runs should skip the earliest-date check");
     }
 
+    [Fact]
+    public async Task Survives_timeout_on_first_price_area_and_continues_to_second()
+    {
+        _repository.LatestDates["DK1"] = DateOnly.FromDateTime(DateTime.UtcNow).AddDays(-1);
+        _repository.LatestDates["DK2"] = DateOnly.FromDateTime(DateTime.UtcNow).AddDays(-1);
+        _repository.EarliestDates["DK1"] = new DateOnly(2025, 9, 1);
+        _repository.EarliestDates["DK2"] = new DateOnly(2025, 9, 1);
+
+        // DK1 will throw a timeout (TaskCanceledException), DK2 should still be fetched
+        var timeoutProvider = new TimeoutOnFirstCallProvider();
+        var sut = new SpotPriceFetchingService(
+            timeoutProvider, _repository, NullLogger<SpotPriceFetchingService>.Instance);
+
+        await sut.RunOnceAsync(CancellationToken.None);
+
+        // DK1 timed out, but DK2 should have been fetched
+        timeoutProvider.SuccessfulCalls.Should().ContainSingle()
+            .Which.PriceArea.Should().Be("DK2");
+    }
+
+    [Fact]
+    public async Task Survives_http_error_on_first_price_area_and_continues_to_second()
+    {
+        _repository.LatestDates["DK1"] = DateOnly.FromDateTime(DateTime.UtcNow).AddDays(-1);
+        _repository.LatestDates["DK2"] = DateOnly.FromDateTime(DateTime.UtcNow).AddDays(-1);
+        _repository.EarliestDates["DK1"] = new DateOnly(2025, 9, 1);
+        _repository.EarliestDates["DK2"] = new DateOnly(2025, 9, 1);
+
+        var errorProvider = new HttpErrorOnFirstCallProvider();
+        var sut = new SpotPriceFetchingService(
+            errorProvider, _repository, NullLogger<SpotPriceFetchingService>.Instance);
+
+        await sut.RunOnceAsync(CancellationToken.None);
+
+        errorProvider.SuccessfulCalls.Should().ContainSingle()
+            .Which.PriceArea.Should().Be("DK2");
+    }
+
     // ── Fakes ──
 
     private sealed class FakeSpotPriceProvider : ISpotPriceProvider
@@ -137,6 +175,43 @@ public class SpotPriceFetchingServiceTests
             string priceArea, DateOnly from, DateOnly to, CancellationToken ct)
         {
             Calls.Add((priceArea, from, to));
+            return Task.FromResult<IReadOnlyList<SpotPriceRow>>([]);
+        }
+    }
+
+    private sealed class TimeoutOnFirstCallProvider : ISpotPriceProvider
+    {
+        private bool _firstCall = true;
+        public List<(string PriceArea, DateOnly From, DateOnly To)> SuccessfulCalls { get; } = [];
+
+        public Task<IReadOnlyList<SpotPriceRow>> FetchPricesAsync(
+            string priceArea, DateOnly from, DateOnly to, CancellationToken ct)
+        {
+            if (_firstCall)
+            {
+                _firstCall = false;
+                throw new TaskCanceledException("The request was canceled due to the configured HttpClient.Timeout",
+                    new TimeoutException());
+            }
+            SuccessfulCalls.Add((priceArea, from, to));
+            return Task.FromResult<IReadOnlyList<SpotPriceRow>>([]);
+        }
+    }
+
+    private sealed class HttpErrorOnFirstCallProvider : ISpotPriceProvider
+    {
+        private bool _firstCall = true;
+        public List<(string PriceArea, DateOnly From, DateOnly To)> SuccessfulCalls { get; } = [];
+
+        public Task<IReadOnlyList<SpotPriceRow>> FetchPricesAsync(
+            string priceArea, DateOnly from, DateOnly to, CancellationToken ct)
+        {
+            if (_firstCall)
+            {
+                _firstCall = false;
+                throw new HttpRequestException("Service unavailable", null, System.Net.HttpStatusCode.ServiceUnavailable);
+            }
+            SuccessfulCalls.Add((priceArea, from, to));
             return Task.FromResult<IReadOnlyList<SpotPriceRow>>([]);
         }
     }
