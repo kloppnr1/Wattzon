@@ -23,8 +23,8 @@ public class SettlementDataLoaderTests
         ]);
         var tariffRepo = new InMemoryTariffRepository(
             gridRates: [new TariffRateRow(1, 0.06m)],
-            systemRates: [new TariffRateRow(0, 0.054m)],
-            transmissionRates: [new TariffRateRow(0, 0.049m)],
+            systemRates: [new TariffRateRow(1, 0.054m)],
+            transmissionRates: [new TariffRateRow(1, 0.049m)],
             electricityTax: 0.008m,
             gridSubscription: 49.00m);
 
@@ -53,8 +53,8 @@ public class SettlementDataLoaderTests
         var spotPriceRepo = new InMemorySpotPriceRepository([]);
         var tariffRepo = new InMemoryTariffRepository(
             gridRates: [],
-            systemRates: [new TariffRateRow(0, 0.054m)],
-            transmissionRates: [new TariffRateRow(0, 0.049m)],
+            systemRates: [new TariffRateRow(1, 0.054m)],
+            transmissionRates: [new TariffRateRow(1, 0.049m)],
             electricityTax: 0.008m,
             gridSubscription: 0m);
 
