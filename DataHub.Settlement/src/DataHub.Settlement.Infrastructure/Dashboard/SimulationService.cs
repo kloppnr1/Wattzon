@@ -989,7 +989,7 @@ public sealed class SimulationService
             await conn.OpenAsync(ct);
 
             // Advisory lock prevents concurrent MAX(version) race without serializable isolation
-            await conn.ExecuteAsync("SELECT pg_advisory_lock(8675309)");
+            await conn.ExecuteAsync("SELECT pg_advisory_lock(hashtext(@Key))", new { Key = gsrn });
             try
             {
                 var billingPeriodId = await conn.QuerySingleAsync<Guid>("""
@@ -1027,7 +1027,7 @@ public sealed class SimulationService
             }
             finally
             {
-                await conn.ExecuteAsync("SELECT pg_advisory_unlock(8675309)");
+                await conn.ExecuteAsync("SELECT pg_advisory_unlock(hashtext(@Key))", new { Key = gsrn });
             }
         }
 
@@ -1168,7 +1168,7 @@ public sealed class SimulationService
         await using (var conn = new NpgsqlConnection(_connectionString))
         {
             await conn.OpenAsync(ct);
-            await conn.ExecuteAsync("SELECT pg_advisory_lock(8675309)");
+            await conn.ExecuteAsync("SELECT pg_advisory_lock(hashtext(@Key))", new { Key = gsrn });
             try
             {
                 var billingPeriodId = await conn.QuerySingleAsync<Guid>("""
@@ -1206,7 +1206,7 @@ public sealed class SimulationService
             }
             finally
             {
-                await conn.ExecuteAsync("SELECT pg_advisory_unlock(8675309)");
+                await conn.ExecuteAsync("SELECT pg_advisory_unlock(hashtext(@Key))", new { Key = gsrn });
             }
         }
 
@@ -1649,7 +1649,7 @@ public sealed class SimulationService
         await using (var conn = new NpgsqlConnection(_connectionString))
         {
             await conn.OpenAsync(ct);
-            await conn.ExecuteAsync("SELECT pg_advisory_lock(8675309)");
+            await conn.ExecuteAsync("SELECT pg_advisory_lock(hashtext(@Key))", new { Key = gsrn });
             try
             {
                 var billingPeriodId = await conn.QuerySingleAsync<Guid>("""
@@ -1687,7 +1687,7 @@ public sealed class SimulationService
             }
             finally
             {
-                await conn.ExecuteAsync("SELECT pg_advisory_unlock(8675309)");
+                await conn.ExecuteAsync("SELECT pg_advisory_unlock(hashtext(@Key))", new { Key = gsrn });
             }
         }
 
@@ -2143,7 +2143,7 @@ public sealed class SimulationService
             await using (var conn = new NpgsqlConnection(_connectionString))
             {
                 await conn.OpenAsync(ct);
-                await conn.ExecuteAsync("SELECT pg_advisory_lock(8675309)");
+                await conn.ExecuteAsync("SELECT pg_advisory_lock(hashtext(@Key))", new { Key = gsrn });
                 try
                 {
                     var billingPeriodId = await conn.QuerySingleAsync<Guid>("""
@@ -2181,7 +2181,7 @@ public sealed class SimulationService
                 }
                 finally
                 {
-                    await conn.ExecuteAsync("SELECT pg_advisory_unlock(8675309)");
+                    await conn.ExecuteAsync("SELECT pg_advisory_unlock(hashtext(@Key))", new { Key = gsrn });
                 }
             }
 
@@ -2374,7 +2374,7 @@ public sealed class SimulationService
             await using (var conn = new NpgsqlConnection(_connectionString))
             {
                 await conn.OpenAsync(ct);
-                await conn.ExecuteAsync("SELECT pg_advisory_lock(8675309)");
+                await conn.ExecuteAsync("SELECT pg_advisory_lock(hashtext(@Key))", new { Key = gsrn });
                 try
                 {
                     var billingPeriodId = await conn.QuerySingleAsync<Guid>("""
@@ -2412,7 +2412,7 @@ public sealed class SimulationService
                 }
                 finally
                 {
-                    await conn.ExecuteAsync("SELECT pg_advisory_unlock(8675309)");
+                    await conn.ExecuteAsync("SELECT pg_advisory_unlock(hashtext(@Key))", new { Key = gsrn });
                 }
             }
 
@@ -2611,7 +2611,7 @@ public sealed class SimulationService
             await using (var conn = new NpgsqlConnection(_connectionString))
             {
                 await conn.OpenAsync(ct);
-                await conn.ExecuteAsync("SELECT pg_advisory_lock(8675309)");
+                await conn.ExecuteAsync("SELECT pg_advisory_lock(hashtext(@Key))", new { Key = gsrn });
                 try
                 {
                     var billingPeriodId = await conn.QuerySingleAsync<Guid>("""
@@ -2645,7 +2645,7 @@ public sealed class SimulationService
                 }
                 finally
                 {
-                    await conn.ExecuteAsync("SELECT pg_advisory_unlock(8675309)");
+                    await conn.ExecuteAsync("SELECT pg_advisory_unlock(hashtext(@Key))", new { Key = gsrn });
                 }
             }
 
