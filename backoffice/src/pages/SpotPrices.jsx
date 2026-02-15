@@ -19,6 +19,70 @@ function defaultTo() {
   return formatDate(d);
 }
 
+function freshnessInfo(lastFetchedAt, latestDate, t) {
+  if (!lastFetchedAt) return { label: t('spotPrices.monitor.noData'), color: 'slate', dot: 'bg-slate-400' };
+
+  const now = new Date();
+  const fetched = new Date(lastFetchedAt);
+  const diffMs = now - fetched;
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+
+  if (diffHours < 2) return { label: t('spotPrices.monitor.fresh', { mins: diffMins }), color: 'emerald', dot: 'bg-emerald-500' };
+  if (diffHours < 6) return { label: t('spotPrices.monitor.recent', { hours: diffHours }), color: 'amber', dot: 'bg-amber-500' };
+  return { label: t('spotPrices.monitor.stale', { hours: diffHours }), color: 'rose', dot: 'bg-rose-500' };
+}
+
+function AreaStatusCard({ area, t, lang }) {
+  const freshness = freshnessInfo(area.lastFetchedAt, area.latestDate, t);
+  const borderColor = {
+    emerald: 'border-emerald-200',
+    amber: 'border-amber-200',
+    rose: 'border-rose-200',
+    slate: 'border-slate-200',
+  }[freshness.color];
+
+  return (
+    <div className={`bg-white rounded-xl p-4 shadow-sm border ${borderColor}`}>
+      <div className="flex items-center justify-between mb-3">
+        <span className="text-sm font-bold text-slate-800">{area.priceArea}</span>
+        <span className="flex items-center gap-1.5">
+          <span className={`w-2 h-2 rounded-full ${freshness.dot} animate-pulse`} />
+          <span className={`text-xs font-medium text-${freshness.color}-700`}>{freshness.label}</span>
+        </span>
+      </div>
+      <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+        <div>
+          <span className="text-slate-400">{t('spotPrices.monitor.coverage')}</span>
+          <div className="font-medium text-slate-700 font-mono">
+            {area.earliestDate ?? '—'} <span className="text-slate-300">→</span> {area.latestDate ?? '—'}
+          </div>
+        </div>
+        <div>
+          <span className="text-slate-400">{t('spotPrices.monitor.lastFetch')}</span>
+          <div className="font-medium text-slate-700 font-mono">
+            {area.lastFetchedAt
+              ? new Date(area.lastFetchedAt).toLocaleString(lang === 'da' ? 'da-DK' : 'en-GB', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+              : '—'}
+          </div>
+        </div>
+        <div>
+          <span className="text-slate-400">{t('spotPrices.monitor.totalRecords')}</span>
+          <div className="font-semibold text-slate-800">{area.totalCount.toLocaleString(lang === 'da' ? 'da-DK' : 'en')}</div>
+        </div>
+        <div>
+          <span className="text-slate-400">{t('spotPrices.monitor.last24h')} / {t('spotPrices.monitor.last7d')}</span>
+          <div className="font-semibold text-slate-800">
+            {area.last24hCount.toLocaleString(lang === 'da' ? 'da-DK' : 'en')}
+            <span className="text-slate-300 mx-1">/</span>
+            {area.last7dCount.toLocaleString(lang === 'da' ? 'da-DK' : 'en')}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function SpotPrices() {
   const { t, lang } = useTranslation();
   const [priceArea, setPriceArea] = useState('DK1');
@@ -27,6 +91,7 @@ export default function SpotPrices() {
   const [page, setPage] = useState(1);
   const [data, setData] = useState(null);
   const [latest, setLatest] = useState(null);
+  const [status, setStatus] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -36,8 +101,9 @@ export default function SpotPrices() {
     Promise.all([
       api.getSpotPrices({ priceArea, from, to, page: p, pageSize: PAGE_SIZE }),
       api.getSpotPriceLatest(),
+      api.getSpotPriceStatus(),
     ])
-      .then(([prices, lat]) => { setData(prices); setLatest(lat); })
+      .then(([prices, lat, st]) => { setData(prices); setLatest(lat); setStatus(st); })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
   }, [priceArea, from, to]);
@@ -59,6 +125,7 @@ export default function SpotPrices() {
   const maxPrice = data?.maxPrice ?? 0;
 
   const latestDate = priceArea === 'DK1' ? latest?.dk1 : latest?.dk2;
+  const areas = status?.areas ?? [];
 
   if (loading && !data) {
     return (
@@ -80,6 +147,18 @@ export default function SpotPrices() {
         <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">{t('spotPrices.title')}</h1>
         <p className="text-base text-slate-500 mt-1">{t('spotPrices.subtitle')}</p>
       </div>
+
+      {/* Monitoring panel */}
+      {areas.length > 0 && (
+        <div className="mb-6 animate-fade-in-up" style={{ animationDelay: '40ms' }}>
+          <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">{t('spotPrices.monitor.title')}</div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {areas.map(area => (
+              <AreaStatusCard key={area.priceArea} area={area} t={t} lang={lang} />
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Filters */}
       <div className="flex flex-col sm:flex-row flex-wrap items-start sm:items-end gap-4 mb-6 animate-fade-in-up" style={{ animationDelay: '60ms' }}>

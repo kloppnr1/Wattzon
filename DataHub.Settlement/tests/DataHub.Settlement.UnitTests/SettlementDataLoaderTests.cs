@@ -89,6 +89,7 @@ public class SettlementDataLoaderTests
         public Task<SpotPricePagedResult> GetPricesPagedAsync(string priceArea, DateTime from, DateTime to, int page, int pageSize, CancellationToken ct) => Task.FromResult(new SpotPricePagedResult(prices, prices.Count, 0m, 0m, 0m));
         public Task<DateOnly?> GetLatestPriceDateAsync(string priceArea, CancellationToken ct) => Task.FromResult<DateOnly?>(null);
         public Task<DateOnly?> GetEarliestPriceDateAsync(string priceArea, CancellationToken ct) => Task.FromResult<DateOnly?>(null);
+        public Task<SpotPriceAreaStatus> GetAreaStatusAsync(string priceArea, CancellationToken ct) => Task.FromResult(new SpotPriceAreaStatus(priceArea, null, null, null, 0, 0, 0));
     }
 
     private sealed class InMemoryTariffRepository(

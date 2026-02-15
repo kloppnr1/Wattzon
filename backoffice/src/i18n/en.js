@@ -470,6 +470,16 @@ export default {
   'spotPrices.colResolution': 'Resolution',
   'spotPrices.noPrices': 'No spot prices found for this period.',
   'spotPrices.showingPrices': 'prices',
+  'spotPrices.monitor.title': 'Data Feed Status',
+  'spotPrices.monitor.noData': 'No data',
+  'spotPrices.monitor.fresh': 'Updated {mins} min ago',
+  'spotPrices.monitor.recent': 'Updated {hours}h ago',
+  'spotPrices.monitor.stale': 'Stale — {hours}h since last fetch',
+  'spotPrices.monitor.coverage': 'Coverage',
+  'spotPrices.monitor.lastFetch': 'Last fetched',
+  'spotPrices.monitor.totalRecords': 'Total records',
+  'spotPrices.monitor.last24h': '24h',
+  'spotPrices.monitor.last7d': '7d',
 
   // ── Messages ──
   'messages.title': 'Messages',

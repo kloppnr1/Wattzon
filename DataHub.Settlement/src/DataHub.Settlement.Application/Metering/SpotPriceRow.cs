@@ -12,3 +12,12 @@ public record SpotPricePagedResult(
     decimal AvgPrice,
     decimal MinPrice,
     decimal MaxPrice);
+
+public record SpotPriceAreaStatus(
+    string PriceArea,
+    DateOnly? EarliestDate,
+    DateOnly? LatestDate,
+    DateTime? LastFetchedAt,
+    int TotalCount,
+    int Last24HCount,
+    int Last7DCount);

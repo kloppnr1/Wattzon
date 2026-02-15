@@ -8,4 +8,5 @@ public interface ISpotPriceRepository
     Task<SpotPricePagedResult> GetPricesPagedAsync(string priceArea, DateTime from, DateTime to, int page, int pageSize, CancellationToken ct);
     Task<DateOnly?> GetLatestPriceDateAsync(string priceArea, CancellationToken ct);
     Task<DateOnly?> GetEarliestPriceDateAsync(string priceArea, CancellationToken ct);
+    Task<SpotPriceAreaStatus> GetAreaStatusAsync(string priceArea, CancellationToken ct);
 }

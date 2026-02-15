@@ -252,5 +252,8 @@ public class SpotPriceFetchingServiceTests
             EarliestDates.TryGetValue(priceArea, out var date);
             return Task.FromResult<DateOnly?>(date == default ? null : date);
         }
+
+        public Task<SpotPriceAreaStatus> GetAreaStatusAsync(string priceArea, CancellationToken ct)
+            => Task.FromResult(new SpotPriceAreaStatus(priceArea, null, null, null, 0, 0, 0));
     }
 }

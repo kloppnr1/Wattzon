@@ -84,6 +84,7 @@ export const api = {
   getSpotPrices: ({ priceArea, from, to, page, pageSize } = {}) =>
     request(`/metering/spot-prices${qs({ priceArea, from, to, page, pageSize })}`),
   getSpotPriceLatest: () => request(`/metering/spot-prices/latest`),
+  getSpotPriceStatus: () => request(`/metering/spot-prices/status`),
 
   // Aconto Payments
   getAcontoPayments: (gsrn, { from, to } = {}) =>
