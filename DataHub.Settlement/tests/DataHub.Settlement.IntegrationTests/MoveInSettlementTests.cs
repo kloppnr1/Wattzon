@@ -200,8 +200,8 @@ public class MoveInSettlementTests
             _ => 0.06m,
         })).ToList();
         await _tariffRepo.SeedGridTariffAsync("344", "grid", new DateOnly(2025, 1, 1), gridRates, ct);
-        await _tariffRepo.SeedGridTariffAsync("344", "system", new DateOnly(2025, 1, 1), [new TariffRateRow(0, 0.054m)], ct);
-        await _tariffRepo.SeedGridTariffAsync("344", "transmission", new DateOnly(2025, 1, 1), [new TariffRateRow(0, 0.049m)], ct);
+        await _tariffRepo.SeedGridTariffAsync("344", "system", new DateOnly(2025, 1, 1), [new TariffRateRow(1, 0.054m)], ct);
+        await _tariffRepo.SeedGridTariffAsync("344", "transmission", new DateOnly(2025, 1, 1), [new TariffRateRow(1, 0.049m)], ct);
         await _tariffRepo.SeedSubscriptionAsync("344", "grid", 49.00m, new DateOnly(2025, 1, 1), ct);
         await _tariffRepo.SeedElectricityTaxAsync(0.008m, new DateOnly(2025, 1, 1), ct);
     }
