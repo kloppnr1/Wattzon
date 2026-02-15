@@ -39,7 +39,6 @@ public static class DatabaseSeeder
         await conn.ExecuteAsync("DELETE FROM metering.metering_data_history");
         await conn.ExecuteAsync("DELETE FROM metering.annual_consumption_tracker");
         await conn.ExecuteAsync("DELETE FROM metering.metering_data");
-        await conn.ExecuteAsync("DELETE FROM metering.spot_price");
         await conn.ExecuteAsync("DELETE FROM portfolio.payer");
         await conn.ExecuteAsync("DELETE FROM portfolio.customer");
 

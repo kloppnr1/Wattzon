@@ -5,24 +5,29 @@ using Microsoft.Extensions.Logging;
 namespace DataHub.Settlement.Infrastructure.Metering;
 
 /// <summary>
-/// Background service that periodically fetches day-ahead spot prices from Energi Data Service
-/// and stores them in the database.
+/// Background service that fetches day-ahead spot prices from Energi Data Service.
 ///
-/// Runs on startup (to backfill any missing data) and then once per hour.
-/// Day-ahead prices for the next day are typically published around 13:00 CET.
-///
-/// Uses incremental fetching: only requests data for periods not already present in the database.
+/// Schedule:
+/// - Runs at startup to backfill any missing data.
+/// - Targets 13:15 CET daily (shortly after prices are published ~13:00 CET).
+/// - If tomorrow's data is obtained, sleeps until next day's 13:15 CET.
+/// - If tomorrow's data is missing, retries every 15 minutes until success.
 /// </summary>
 public sealed class SpotPriceFetchingService : BackgroundService
 {
     private static readonly string[] PriceAreas = ["DK1", "DK2"];
-    private static readonly TimeSpan PollInterval = TimeSpan.FromHours(1);
+    private static readonly TimeSpan RetryInterval = TimeSpan.FromMinutes(15);
+
+    // Target fetch time: 13:15 CET (12:15 UTC in winter, 11:15 UTC in summer)
+    private static readonly TimeOnly TargetTimeCet = new(13, 15);
 
     // How many days ahead to fetch (day-ahead = tomorrow)
     private const int DaysAhead = 2;
 
     // Initial backfill: 1 month before the hourly→quarter-hour cutover (Oct 1 2025)
     private static readonly DateOnly InitialBackfillFrom = new(2025, 9, 1);
+
+    private static readonly TimeZoneInfo CetZone = TimeZoneInfo.FindSystemTimeZoneById("Central European Standard Time");
 
     private readonly ISpotPriceProvider _provider;
     private readonly ISpotPriceRepository _repository;
@@ -44,29 +49,55 @@ public sealed class SpotPriceFetchingService : BackgroundService
     {
         _logger.LogInformation("SpotPriceFetchingService started");
 
+        // Initial fetch on startup
+        var hasTomorrow = false;
+        try
+        {
+            hasTomorrow = await RunOnceAsync(stoppingToken);
+        }
+        catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error during initial spot price fetch");
+        }
+
         while (!stoppingToken.IsCancellationRequested)
         {
+            var delay = hasTomorrow
+                ? GetDelayUntilNextTarget()
+                : RetryInterval;
+
+            _logger.LogInformation(
+                "Next spot price fetch in {Delay} (hasTomorrow={HasTomorrow})",
+                delay, hasTomorrow);
+
+            await Task.Delay(delay, stoppingToken);
+
             try
             {
-                await RunOnceAsync(stoppingToken);
+                hasTomorrow = await RunOnceAsync(stoppingToken);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
-                throw; // Normal shutdown — let it propagate
+                throw;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error fetching spot prices, will retry in {Interval}", PollInterval);
+                _logger.LogError(ex, "Error fetching spot prices, will retry in {Interval}", RetryInterval);
+                hasTomorrow = false;
             }
-
-            await Task.Delay(PollInterval, stoppingToken);
         }
     }
 
-    internal async Task RunOnceAsync(CancellationToken ct)
+    internal async Task<bool> RunOnceAsync(CancellationToken ct)
     {
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
         var to = today.AddDays(DaysAhead);
+        var tomorrow = today.AddDays(1);
+        var hasTomorrow = false;
 
         foreach (var priceArea in PriceAreas)
         {
@@ -112,14 +143,34 @@ public sealed class SpotPriceFetchingService : BackgroundService
         }
 
         _initialLoadDone = true;
+
+        // Check if we have tomorrow's data across both areas
+        var latestDk1 = await _repository.GetLatestPriceDateAsync("DK1", ct);
+        var latestDk2 = await _repository.GetLatestPriceDateAsync("DK2", ct);
+        hasTomorrow = latestDk1.HasValue && latestDk1.Value >= tomorrow
+                   && latestDk2.HasValue && latestDk2.Value >= tomorrow;
+
+        return hasTomorrow;
+    }
+
+    /// <summary>
+    /// Calculates the delay until the next 13:15 CET. If it's already past 13:15 CET today,
+    /// targets tomorrow's 13:15 CET.
+    /// </summary>
+    private TimeSpan GetDelayUntilNextTarget()
+    {
+        var nowUtc = DateTime.UtcNow;
+        var nowCet = TimeZoneInfo.ConvertTimeFromUtc(nowUtc, CetZone);
+        var targetToday = nowCet.Date + TargetTimeCet.ToTimeSpan();
+
+        var targetCet = nowCet < targetToday ? targetToday : targetToday.AddDays(1);
+        var targetUtc = TimeZoneInfo.ConvertTimeToUtc(targetCet, CetZone);
+
+        return targetUtc - nowUtc;
     }
 
     /// <summary>
     /// Determines the start date for fetching based on what's already in the database.
-    /// - No data at all → full backfill from <see cref="InitialBackfillFrom"/>.
-    /// - First run, earliest data starts after backfill date → backfill from start.
-    /// - Otherwise → incremental from the latest date in DB (re-fetches that day
-    ///   in case it's incomplete, e.g. not all day-ahead hours published yet).
     /// </summary>
     internal async Task<DateOnly> DetermineFromDateAsync(string priceArea, CancellationToken ct)
     {

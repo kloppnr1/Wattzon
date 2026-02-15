@@ -226,7 +226,7 @@ public sealed class SimulationService
 
         await onStepCompleted(new SimulationStep(1, "Seed Reference Data",
             "Seeded grid area 344, 24 tariff rates, 744 spot prices, electricity tax"));
-        await Task.Delay(1200, ct);
+        // await Task.Delay(1200, ct);
 
         // ── Step 2: Create Customer & Product ──
         var customer = await portfolio.CreateCustomerAsync(customerName, "0101901234", "private", null, ct);
@@ -234,7 +234,7 @@ public sealed class SimulationService
 
         await onStepCompleted(new SimulationStep(2, "Create Customer & Product",
             $"Customer '{customer.Name}' and product '{product.Name}' created"));
-        await Task.Delay(800, ct);
+        // await Task.Delay(800, ct);
 
         // ── Step 3: Create Metering Point ──
         var mp = new MeteringPoint(Gsrn, "E17", "flex", "344", "5790000392261", "DK1", "connected");
@@ -253,7 +253,7 @@ public sealed class SimulationService
             await onStepCompleted(new SimulationStep(3, "Create Metering Point",
                 $"GSRN {Gsrn} with contract (no supply period yet)"));
         }
-        await Task.Delay(1000, ct);
+        // await Task.Delay(1000, ct);
 
         return new CommonSetup(portfolio, tariffRepo, spotPriceRepo, meteringRepo,
             processRepo, stateMachine, customer, product);
@@ -272,14 +272,14 @@ public sealed class SimulationService
 
         await onStepCompleted(new SimulationStep(4, "Submit BRS-001",
             $"Process {processRequest.Id:N} created and sent to DataHub"));
-        await Task.Delay(2500, ct);
+        // await Task.Delay(2500, ct);
 
         // ── Step 5: DataHub Acknowledges ──
         await setup.StateMachine.MarkAcknowledgedAsync(processRequest.Id, ct);
 
         await onStepCompleted(new SimulationStep(5, "DataHub Acknowledges",
             "Process acknowledged and moved to effectuation_pending"));
-        await Task.Delay(2000, ct);
+        // await Task.Delay(2000, ct);
 
         // ── Step 6: Receive RSM-022 ──
         await using (var msgConn = new NpgsqlConnection(_connectionString))
@@ -297,14 +297,14 @@ public sealed class SimulationService
 
         await onStepCompleted(new SimulationStep(6, "Receive RSM-022",
             "Inbound RSM-022 recorded, metering point activated"));
-        await Task.Delay(1000, ct);
+        // await Task.Delay(1000, ct);
 
         // ── Step 7: Complete Process ──
         await setup.StateMachine.MarkCompletedAsync(processRequest.Id, ct);
 
         await onStepCompleted(new SimulationStep(7, "Complete Process",
             "Supplier switch process completed"));
-        await Task.Delay(3000, ct);
+        // await Task.Delay(3000, ct);
 
         // ── Step 8: Receive RSM-012 ──
         // In production, RSM-012 arrives once per day (~02:00), covering the previous 24 hours.
@@ -331,21 +331,21 @@ public sealed class SimulationService
 
         await onStepCompleted(new SimulationStep(8, "Receive RSM-012",
             "31 daily RSM-012 deliveries — 744 hourly readings (409.200 kWh)"));
-        await Task.Delay(1500, ct);
+        // await Task.Delay(1500, ct);
 
         // ── Step 9: Run Settlement ──
         var result = await RunSettlementAsync(setup, start, start.AddMonths(1), ct);
 
         await onStepCompleted(new SimulationStep(9, "Run Settlement",
             $"Settlement complete — subtotal {result.Subtotal:N2} DKK, VAT {result.VatAmount:N2} DKK, total {result.Total:N2} DKK"));
-        await Task.Delay(1500, ct);
+        // await Task.Delay(1500, ct);
 
         // ── Step 10: Incoming BRS-001 (Another Supplier) ──
         await setup.StateMachine.MarkOffboardingAsync(processRequest.Id, ct);
 
         await onStepCompleted(new SimulationStep(10, "Incoming BRS-001",
             "Another supplier requested the metering point — offboarding started"));
-        await Task.Delay(2000, ct);
+        // await Task.Delay(2000, ct);
 
         // ── Step 11: Receive Final RSM-012 ──
         var finalStart = new DateTime(2025, 2, 1, 0, 0, 0, DateTimeKind.Utc);
@@ -368,7 +368,7 @@ public sealed class SimulationService
 
         await onStepCompleted(new SimulationStep(11, "Receive Final RSM-012",
             "360 hourly readings (Feb 1-16), final metering data before departure"));
-        await Task.Delay(1500, ct);
+        // await Task.Delay(1500, ct);
 
         // ── Step 12: Run Final Settlement ──
         var febPrices = GenerateSpotPrices("DK2", finalStart, 360);
@@ -418,14 +418,14 @@ public sealed class SimulationService
 
         await onStepCompleted(new SimulationStep(4, "Submit BRS-001",
             $"Process {processRequest.Id:N} sent (correlation: corr-rej-001)"));
-        await Task.Delay(2500, ct);
+        // await Task.Delay(2500, ct);
 
         // ── Step 5: DataHub Rejects ──
         await setup.StateMachine.MarkRejectedAsync(processRequest.Id, "E16: Customer not found at metering point", ct);
 
         await onStepCompleted(new SimulationStep(5, "DataHub Rejects",
             "E16: Customer not found at metering point"));
-        await Task.Delay(2000, ct);
+        // await Task.Delay(2000, ct);
 
         // ── Step 6: Retry with New BRS-001 ──
         var retryRequest = await setup.StateMachine.CreateRequestAsync(Gsrn, "supplier_switch", new DateOnly(2025, 1, 1), ct);
@@ -433,14 +433,14 @@ public sealed class SimulationService
 
         await onStepCompleted(new SimulationStep(6, "Retry with New BRS-001",
             $"New process {retryRequest.Id:N} sent (correlation: corr-rej-002)"));
-        await Task.Delay(2500, ct);
+        // await Task.Delay(2500, ct);
 
         // ── Step 7: DataHub Acknowledges Retry ──
         await setup.StateMachine.MarkAcknowledgedAsync(retryRequest.Id, ct);
 
         await onStepCompleted(new SimulationStep(7, "DataHub Acknowledges Retry",
             "Retry acknowledged, moved to effectuation_pending"));
-        await Task.Delay(2000, ct);
+        // await Task.Delay(2000, ct);
 
         // ── Step 8: Process Completes ──
         await setup.StateMachine.MarkCompletedAsync(retryRequest.Id, ct);
@@ -468,7 +468,7 @@ public sealed class SimulationService
 
         await onStepCompleted(new SimulationStep(4, "Activate Metering Point",
             "BRS-001 sent, acknowledged, completed — supply active from 2025-01-01"));
-        await Task.Delay(1500, ct);
+        // await Task.Delay(1500, ct);
 
         // ── Step 5 (4): Estimate Q1 Aconto ──
         var expectedPrice = AcontoEstimator.CalculateExpectedPricePerKwh(
@@ -485,7 +485,7 @@ public sealed class SimulationService
 
         await onStepCompleted(new SimulationStep(5, "Estimate Q1 Aconto",
             $"Quarterly estimate: {quarterlyEstimate:N2} DKK (paid upfront for Q1)"));
-        await Task.Delay(1200, ct);
+        // await Task.Delay(1200, ct);
 
         // ── Step 6: Receive January Metering ──
         // In production, RSM-012 arrives once per day (~02:00), covering the previous 24 hours.
@@ -495,7 +495,7 @@ public sealed class SimulationService
 
         await onStepCompleted(new SimulationStep(6, "Receive January Metering",
             $"31 daily RSM-012 deliveries — 744 hourly readings ({744 * 0.55m:N1} kWh total)"));
-        await Task.Delay(1000, ct);
+        // await Task.Delay(1000, ct);
 
         // ── Step 7: Receive February Metering ──
         var febStart = new DateTime(2025, 2, 1, 0, 0, 0, DateTimeKind.Utc);
@@ -507,7 +507,7 @@ public sealed class SimulationService
 
         await onStepCompleted(new SimulationStep(7, "Receive February Metering",
             $"28 daily RSM-012 deliveries — 672 hourly readings ({672 * 0.55m:N1} kWh total)"));
-        await Task.Delay(1000, ct);
+        // await Task.Delay(1000, ct);
 
         // ── Step 8: Receive March Metering ──
         var marStart = new DateTime(2025, 3, 1, 0, 0, 0, DateTimeKind.Utc);
@@ -519,7 +519,7 @@ public sealed class SimulationService
 
         await onStepCompleted(new SimulationStep(8, "Receive March Metering",
             $"31 daily RSM-012 deliveries — 744 hourly readings ({744 * 0.55m:N1} kWh total)"));
-        await Task.Delay(1000, ct);
+        // await Task.Delay(1000, ct);
 
         // ── Step 9: Run Q1 Settlement ──
         var q1End = new DateTime(2025, 4, 1, 0, 0, 0, DateTimeKind.Utc);
@@ -560,14 +560,14 @@ public sealed class SimulationService
 
         await onStepCompleted(new SimulationStep(9, "Run Q1 Settlement",
             $"Q1 actual: {q1Total:N2} DKK (Jan {janResult.Total:N2} + Feb {febResult.Total:N2} + Mar {marResult.Total:N2})"));
-        await Task.Delay(1500, ct);
+        // await Task.Delay(1500, ct);
 
         // ── Step 10: Aconto Reconciliation ──
         var difference = q1Total - quarterlyEstimate;
 
         await onStepCompleted(new SimulationStep(10, "Aconto Reconciliation",
             $"Aconto paid {quarterlyEstimate:N2} DKK, actual {q1Total:N2} DKK, difference {difference:N2} DKK"));
-        await Task.Delay(1200, ct);
+        // await Task.Delay(1200, ct);
 
         // ── Step 11: Estimate Q2 + Combined Invoice ──
         var q1TotalKwh = janResult.TotalKwh + febResult.TotalKwh + marResult.TotalKwh;
@@ -591,21 +591,21 @@ public sealed class SimulationService
 
         await onStepCompleted(new SimulationStep(4, "Submit BRS-001",
             $"Process {processRequest.Id:N} sent (correlation: corr-cancel-001)"));
-        await Task.Delay(2500, ct);
+        // await Task.Delay(2500, ct);
 
         // ── Step 5: DataHub Acknowledges ──
         await setup.StateMachine.MarkAcknowledgedAsync(processRequest.Id, ct);
 
         await onStepCompleted(new SimulationStep(5, "DataHub Acknowledges",
             "Process acknowledged, moved to effectuation_pending"));
-        await Task.Delay(2000, ct);
+        // await Task.Delay(2000, ct);
 
         // ── Step 6: Cancel Before Effectuation ──
         await setup.StateMachine.MarkCancelledAsync(processRequest.Id, "Customer changed their mind", ct);
 
         await onStepCompleted(new SimulationStep(6, "Cancel Before Effectuation",
             "BRS-003 sent, process cancelled before effectuation"));
-        await Task.Delay(2000, ct);
+        // await Task.Delay(2000, ct);
 
         // ── Step 7: Verify Clean State ──
         var supplyPeriods = await setup.Portfolio.GetSupplyPeriodsAsync(Gsrn, ct);
@@ -628,14 +628,14 @@ public sealed class SimulationService
 
         await onStepCompleted(new SimulationStep(4, "Submit BRS-009",
             $"Process {processRequest.Id:N} created and sent to DataHub"));
-        await Task.Delay(2500, ct);
+        // await Task.Delay(2500, ct);
 
         // ── Step 5: DataHub Acknowledges ──
         await setup.StateMachine.MarkAcknowledgedAsync(processRequest.Id, ct);
 
         await onStepCompleted(new SimulationStep(5, "DataHub Acknowledges",
             "Process acknowledged and moved to effectuation_pending"));
-        await Task.Delay(2000, ct);
+        // await Task.Delay(2000, ct);
 
         // ── Step 6: Receive RSM-022 ──
         await using (var msgConn = new NpgsqlConnection(_connectionString))
@@ -654,14 +654,14 @@ public sealed class SimulationService
 
         await onStepCompleted(new SimulationStep(6, "Receive RSM-022",
             "Inbound RSM-022 recorded, supply period created, metering point activated"));
-        await Task.Delay(1000, ct);
+        // await Task.Delay(1000, ct);
 
         // ── Step 7: Complete Process ──
         await setup.StateMachine.MarkCompletedAsync(processRequest.Id, ct);
 
         await onStepCompleted(new SimulationStep(7, "Complete Process",
             "Move-in process completed"));
-        await Task.Delay(3000, ct);
+        // await Task.Delay(3000, ct);
 
         // ── Step 8: Receive RSM-012 ──
         var rows = GenerateMeteringData(start, 744, 0.55m, "msg-rsm012-movein");
@@ -681,7 +681,7 @@ public sealed class SimulationService
 
         await onStepCompleted(new SimulationStep(8, "Receive RSM-012",
             "31 daily RSM-012 deliveries — 744 hourly readings (409.200 kWh)"));
-        await Task.Delay(1500, ct);
+        // await Task.Delay(1500, ct);
 
         // ── Step 9: Run Settlement ──
         var result = await RunSettlementAsync(setup, start, start.AddMonths(1), ct);
@@ -706,7 +706,7 @@ public sealed class SimulationService
 
         await onStepCompleted(new SimulationStep(4, "Establish Supply",
             "BRS-001 sent, acknowledged, completed — supply active from 2025-01-01"));
-        await Task.Delay(1500, ct);
+        // await Task.Delay(1500, ct);
 
         // ── Step 5: Receive January RSM-012 ──
         var janRows = GenerateMeteringData(start, 744, 0.55m, "msg-rsm012-moveout-jan");
@@ -723,14 +723,14 @@ public sealed class SimulationService
 
         await onStepCompleted(new SimulationStep(5, "Receive January RSM-012",
             "744 hourly readings (409.200 kWh)"));
-        await Task.Delay(1000, ct);
+        // await Task.Delay(1000, ct);
 
         // ── Step 6: Run January Settlement ──
         var janResult = await RunSettlementAsync(setup, start, start.AddMonths(1), ct);
 
         await onStepCompleted(new SimulationStep(6, "Run January Settlement",
             $"Total: {janResult.Total:N2} DKK"));
-        await Task.Delay(1500, ct);
+        // await Task.Delay(1500, ct);
 
         // ── Step 7: Submit BRS-010 (Move Out) ──
         var moveOutProcess = await setup.StateMachine.CreateRequestAsync(Gsrn, "move_out", new DateOnly(2025, 2, 16), ct);
@@ -738,7 +738,7 @@ public sealed class SimulationService
 
         await onStepCompleted(new SimulationStep(7, "Submit BRS-010",
             $"Move-out process {moveOutProcess.Id:N} sent to DataHub"));
-        await Task.Delay(2500, ct);
+        // await Task.Delay(2500, ct);
 
         // ── Step 8: DataHub Acknowledges + Complete ──
         await setup.StateMachine.MarkAcknowledgedAsync(moveOutProcess.Id, ct);
@@ -746,7 +746,7 @@ public sealed class SimulationService
 
         await onStepCompleted(new SimulationStep(8, "DataHub Acknowledges",
             "Move-out acknowledged and completed"));
-        await Task.Delay(2000, ct);
+        // await Task.Delay(2000, ct);
 
         // ── Step 9: Receive Final RSM-012 ──
         var finalStart = new DateTime(2025, 2, 1, 0, 0, 0, DateTimeKind.Utc);
@@ -767,7 +767,7 @@ public sealed class SimulationService
 
         await onStepCompleted(new SimulationStep(9, "Receive Final RSM-012",
             "360 hourly readings (Feb 1-16), final metering data before move-out"));
-        await Task.Delay(1500, ct);
+        // await Task.Delay(1500, ct);
 
         // ── Step 10: Final Settlement + Deactivate ──
         var finalEnd = finalStart.AddHours(360);
@@ -869,7 +869,7 @@ public sealed class SimulationService
 
         await onStepCompleted(new SimulationStep(1, "Seed Reference Data",
             "Grid area 344, tariffs, spot prices ready"));
-        await Task.Delay(800, ct);
+        // await Task.Delay(800, ct);
 
         // ── Step 2: Create Customer & Metering Point ──
         var customer = await portfolio.CreateCustomerAsync(customerName, "0101901234", "private", null, ct);
@@ -898,7 +898,7 @@ public sealed class SimulationService
 
         await onStepCompleted(new SimulationStep(2, "Create Customer & Metering Point",
             $"{customerName}, GSRN {gsrn}, contract + supply from 2025-01-01"));
-        await Task.Delay(800, ct);
+        // await Task.Delay(800, ct);
 
         // ── Step 3: Submit BRS-001 ──
         var uid = Guid.NewGuid().ToString("N")[..8];
@@ -908,14 +908,14 @@ public sealed class SimulationService
 
         await onStepCompleted(new SimulationStep(3, "Submit BRS-001",
             $"Process {processRequest.Id:N} sent"));
-        await Task.Delay(1500, ct);
+        // await Task.Delay(1500, ct);
 
         // ── Step 4: DataHub Acknowledges ──
         await stateMachine.MarkAcknowledgedAsync(processRequest.Id, ct);
 
         await onStepCompleted(new SimulationStep(4, "DataHub Acknowledges",
             "Process acknowledged → effectuation_pending"));
-        await Task.Delay(1200, ct);
+        // await Task.Delay(1200, ct);
 
         // ── Step 5: Receive RSM-022 ──
         var msgId022 = $"msg-rsm022-ops-{uid}";
@@ -934,14 +934,14 @@ public sealed class SimulationService
 
         await onStepCompleted(new SimulationStep(5, "Receive RSM-022",
             "Metering point activated"));
-        await Task.Delay(1000, ct);
+        // await Task.Delay(1000, ct);
 
         // ── Step 6: Complete Process ──
         await stateMachine.MarkCompletedAsync(processRequest.Id, ct);
 
         await onStepCompleted(new SimulationStep(6, "Complete Process",
             "Supplier switch completed"));
-        await Task.Delay(1500, ct);
+        // await Task.Delay(1500, ct);
 
         // ── Step 7: Receive RSM-012 ──
         var start = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc);
@@ -963,7 +963,7 @@ public sealed class SimulationService
 
         await onStepCompleted(new SimulationStep(7, "Receive RSM-012",
             "744 hourly readings (409.200 kWh)"));
-        await Task.Delay(1000, ct);
+        // await Task.Delay(1000, ct);
 
         // ── Step 8: Run Settlement ──
         var periodEnd = start.AddMonths(1);
@@ -1067,7 +1067,7 @@ public sealed class SimulationService
         var monthName = nextMonthStart.ToString("MMMM yyyy");
         await onStepCompleted(new SimulationStep(1, "Seed Spot Prices",
             $"Seeded {hoursInMonth} spot prices for {monthName}"));
-        await Task.Delay(1000, ct);
+        // await Task.Delay(1000, ct);
 
         // ── Step 2: Generate + store hourly readings ──
         var uid = Guid.NewGuid().ToString("N")[..8];
@@ -1147,7 +1147,7 @@ public sealed class SimulationService
 
         await onStepCompleted(new SimulationStep(1, "Load Data",
             $"Period {periodStart} to {periodEnd}: {consumption.Count} readings, {spotPrices.Count} prices"));
-        await Task.Delay(1000, ct);
+        // await Task.Delay(1000, ct);
 
         // ── Step 2: Calculate settlement ──
         var engine = new SettlementEngine();
@@ -1162,7 +1162,7 @@ public sealed class SimulationService
 
         await onStepCompleted(new SimulationStep(2, "Calculate Settlement",
             $"Subtotal {result.Subtotal:N2}, VAT {result.VatAmount:N2}, total {result.Total:N2} DKK"));
-        await Task.Delay(1000, ct);
+        // await Task.Delay(1000, ct);
 
         // ── Step 3: Store settlement ──
         await using (var conn = new NpgsqlConnection(_connectionString))
@@ -1243,7 +1243,7 @@ public sealed class SimulationService
 
         await onStepCompleted(new SimulationStep(1, "Start Offboarding",
             $"Process {processId:N} marked as offboarding"));
-        await Task.Delay(1200, ct);
+        // await Task.Delay(1200, ct);
 
         // ── Step 2: Seed spot prices + receive final metering ──
         DateTime? latestTimestamp;
@@ -1290,7 +1290,7 @@ public sealed class SimulationService
         var departureEnd = departureStart.AddHours(finalHours);
         await onStepCompleted(new SimulationStep(2, "Final Metering Data",
             $"{finalHours} hourly readings ({finalHours * 0.55m:N1} kWh), departure period"));
-        await Task.Delay(1000, ct);
+        // await Task.Delay(1000, ct);
 
         // ── Step 3: Run final settlement ──
         var contract = await portfolio.GetActiveContractAsync(gsrn, ct)
@@ -1319,7 +1319,7 @@ public sealed class SimulationService
 
         await onStepCompleted(new SimulationStep(3, "Final Settlement",
             $"Total due: {finalResult.TotalDue:N2} DKK"));
-        await Task.Delay(1000, ct);
+        // await Task.Delay(1000, ct);
 
         // ── Step 4: End supply + contract + deactivate ──
         var departureDate = DateOnly.FromDateTime(departureEnd);
@@ -1329,7 +1329,7 @@ public sealed class SimulationService
 
         await onStepCompleted(new SimulationStep(4, "Deactivate",
             $"Supply ended, contract closed, metering point deactivated"));
-        await Task.Delay(800, ct);
+        // await Task.Delay(800, ct);
 
         // ── Step 5: Mark process as final_settled ──
         await stateMachine.MarkFinalSettledAsync(processId, ct);
@@ -1370,7 +1370,7 @@ public sealed class SimulationService
 
         await onStepCompleted(new SimulationStep(1, "Estimate Aconto",
             $"Quarterly estimate: {quarterlyEstimate:N2} DKK (4,000 kWh/year)"));
-        await Task.Delay(1000, ct);
+        // await Task.Delay(1000, ct);
 
         // ── Step 2: Record aconto payment ──
         // Determine quarter start from latest metering data
@@ -1392,7 +1392,7 @@ public sealed class SimulationService
 
         await onStepCompleted(new SimulationStep(2, "Record Payment",
             $"Aconto payment of {quarterlyEstimate:N2} DKK recorded for {qStartDate}–{qEndDate}"));
-        await Task.Delay(1000, ct);
+        // await Task.Delay(1000, ct);
 
         // ── Step 3: Receive 2 more months of metering data ──
         var month1Start = quarterStart;
@@ -1415,7 +1415,7 @@ public sealed class SimulationService
         var totalNewKwh = (month1Hours + month2Hours) * 0.55m;
         await onStepCompleted(new SimulationStep(3, "Receive Metering",
             $"2 months: {month1Hours + month2Hours} readings ({totalNewKwh:N1} kWh)"));
-        await Task.Delay(1000, ct);
+        // await Task.Delay(1000, ct);
 
         // ── Step 4: Reconcile — actual vs aconto ──
         // We now have 3 months: original month (already in DB) + 2 new months
@@ -1527,7 +1527,7 @@ public sealed class SimulationService
 
         await onStepCompleted(new SimulationStep(1, "Seed Reference Data",
             "Grid area 344, tariffs, spot prices ready"));
-        await Task.Delay(800, ct);
+        // await Task.Delay(800, ct);
 
         // ── Step 2: Create Customer & Metering Point ──
         var customer = await portfolio.CreateCustomerAsync(customerName, "0101901234", "private", null, ct);
@@ -1550,7 +1550,7 @@ public sealed class SimulationService
 
         await onStepCompleted(new SimulationStep(2, "Create Customer & Metering Point",
             $"{customerName}, GSRN {gsrn}, contract (no supply yet — awaiting move-in)"));
-        await Task.Delay(800, ct);
+        // await Task.Delay(800, ct);
 
         // ── Step 3: Submit BRS-009 ──
         var uid = Guid.NewGuid().ToString("N")[..8];
@@ -1560,14 +1560,14 @@ public sealed class SimulationService
 
         await onStepCompleted(new SimulationStep(3, "Submit BRS-009",
             $"Process {processRequest.Id:N} sent"));
-        await Task.Delay(1500, ct);
+        // await Task.Delay(1500, ct);
 
         // ── Step 4: DataHub Acknowledges ──
         await stateMachine.MarkAcknowledgedAsync(processRequest.Id, ct);
 
         await onStepCompleted(new SimulationStep(4, "DataHub Acknowledges",
             "Process acknowledged → effectuation_pending"));
-        await Task.Delay(1200, ct);
+        // await Task.Delay(1200, ct);
 
         // ── Step 5: Receive RSM-022 + Create Supply ──
         var msgId022 = $"msg-rsm022-movein-{uid}";
@@ -1596,14 +1596,14 @@ public sealed class SimulationService
 
         await onStepCompleted(new SimulationStep(5, "Receive RSM-022",
             "Supply period created, metering point activated"));
-        await Task.Delay(1000, ct);
+        // await Task.Delay(1000, ct);
 
         // ── Step 6: Complete Process ──
         await stateMachine.MarkCompletedAsync(processRequest.Id, ct);
 
         await onStepCompleted(new SimulationStep(6, "Complete Process",
             "Move-in completed"));
-        await Task.Delay(1500, ct);
+        // await Task.Delay(1500, ct);
 
         // ── Step 7: Receive RSM-012 ──
         var start = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc);
@@ -1625,7 +1625,7 @@ public sealed class SimulationService
 
         await onStepCompleted(new SimulationStep(7, "Receive RSM-012",
             "744 hourly readings (409.200 kWh)"));
-        await Task.Delay(1000, ct);
+        // await Task.Delay(1000, ct);
 
         // ── Step 8: Run Settlement ──
         var periodEnd = start.AddMonths(1);
@@ -1721,7 +1721,7 @@ public sealed class SimulationService
 
         await onStepCompleted(new SimulationStep(1, "Submit BRS-010",
             $"Move-out process {moveOutProcess.Id:N} sent, acknowledged, completed"));
-        await Task.Delay(1500, ct);
+        // await Task.Delay(1500, ct);
 
         // ── Step 2: Final Metering ──
         DateTime? latestTimestamp;
@@ -1766,7 +1766,7 @@ public sealed class SimulationService
         var departureEnd = departureStart.AddHours(finalHours);
         await onStepCompleted(new SimulationStep(2, "Final Metering Data",
             $"{finalHours} hourly readings ({finalHours * 0.55m:N1} kWh), departure period"));
-        await Task.Delay(1000, ct);
+        // await Task.Delay(1000, ct);
 
         // ── Step 3: Run final settlement ──
         var contract = await portfolio.GetActiveContractAsync(gsrn, ct)
@@ -1795,7 +1795,7 @@ public sealed class SimulationService
 
         await onStepCompleted(new SimulationStep(3, "Final Settlement",
             $"Total due: {finalResult.TotalDue:N2} DKK"));
-        await Task.Delay(1000, ct);
+        // await Task.Delay(1000, ct);
 
         // ── Step 4: End supply + contract + deactivate ──
         var departureDate = DateOnly.FromDateTime(departureEnd);
@@ -1805,14 +1805,14 @@ public sealed class SimulationService
 
         await onStepCompleted(new SimulationStep(4, "Deactivate",
             "Supply ended, contract closed, metering point deactivated"));
-        await Task.Delay(800, ct);
+        // await Task.Delay(800, ct);
 
         // ── Step 5: Mark process as offboarding ──
         await stateMachine.MarkOffboardingAsync(moveOutProcess.Id, ct);
 
         await onStepCompleted(new SimulationStep(5, "Offboarding",
             "Process marked as offboarding"));
-        await Task.Delay(800, ct);
+        // await Task.Delay(800, ct);
 
         // ── Step 6: Mark process as final_settled ──
         await stateMachine.MarkFinalSettledAsync(moveOutProcess.Id, ct);

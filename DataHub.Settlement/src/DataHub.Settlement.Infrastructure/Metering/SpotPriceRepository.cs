@@ -132,40 +132,33 @@ public sealed class SpotPriceRepository : ISpotPriceRepository
         return result.HasValue ? DateOnly.FromDateTime(result.Value) : null;
     }
 
-    public async Task<SpotPriceAreaStatus> GetAreaStatusAsync(string priceArea, CancellationToken ct)
+    public async Task<SpotPriceStatus> GetStatusAsync(CancellationToken ct)
     {
         const string sql = """
             SELECT
-                MIN("timestamp") AS EarliestTs,
                 MAX("timestamp") AS LatestTs,
-                MAX(fetched_at) AS LastFetchedAt,
-                COUNT(*) AS TotalCount,
-                COUNT(*) FILTER (WHERE "timestamp" >= @Since24H) AS Last24HCount,
-                COUNT(*) FILTER (WHERE "timestamp" >= @Since7D) AS Last7DCount
+                MAX(fetched_at) AS LastFetchedAt
             FROM metering.spot_price
-            WHERE price_area = @PriceArea
             """;
-
-        var now = DateTime.UtcNow;
 
         await using var conn = new NpgsqlConnection(_connectionString);
         await conn.OpenAsync(ct);
 
-        var row = await conn.QuerySingleAsync<(DateTime? EarliestTs, DateTime? LatestTs, DateTime? LastFetchedAt, int TotalCount, int Last24HCount, int Last7DCount)>(
-            new CommandDefinition(sql, new
-            {
-                PriceArea = priceArea,
-                Since24H = now.AddHours(-24),
-                Since7D = now.AddDays(-7),
-            }, cancellationToken: ct));
+        var row = await conn.QuerySingleAsync<(DateTime? LatestTs, DateTime? LastFetchedAt)>(
+            new CommandDefinition(sql, cancellationToken: ct));
 
-        return new SpotPriceAreaStatus(
-            priceArea,
-            row.EarliestTs.HasValue ? DateOnly.FromDateTime(row.EarliestTs.Value) : null,
-            row.LatestTs.HasValue ? DateOnly.FromDateTime(row.LatestTs.Value) : null,
-            row.LastFetchedAt,
-            row.TotalCount,
-            row.Last24HCount,
-            row.Last7DCount);
+        var now = DateTime.UtcNow;
+        var tomorrow = DateOnly.FromDateTime(now).AddDays(1);
+        var latestDate = row.LatestTs.HasValue ? DateOnly.FromDateTime(row.LatestTs.Value) : (DateOnly?)null;
+        var hasTomorrow = latestDate.HasValue && latestDate.Value >= tomorrow;
+
+        // CET is UTC+1 (or UTC+2 in summer). Use 14:00 UTC as a rough proxy for 15:00 CET.
+        var status = hasTomorrow
+            ? "ok"
+            : now.Hour >= 14
+                ? "alert"
+                : "warning";
+
+        return new SpotPriceStatus(latestDate, row.LastFetchedAt, hasTomorrow, status);
     }
 }

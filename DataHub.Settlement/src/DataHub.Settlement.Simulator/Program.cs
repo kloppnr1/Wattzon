@@ -15,12 +15,12 @@ app.Use(async (context, next) =>
     await next();
 });
 
-// Background timer: check pending effectuations every 5 seconds
+// Background timer: check pending effectuations every second
 _ = Task.Run(async () =>
 {
     while (true)
     {
-        await Task.Delay(5_000);
+        await Task.Delay(1_000);
         state.FlushReadyEffectuations();
         state.FlushDailyTimeseries();
     }
@@ -71,12 +71,8 @@ app.MapPost("/v1.0/cim/requestchangeofsupplier", async (HttpRequest request) =>
 
     if (gsrn is not null && state.IsGsrnActive(gsrn))
     {
-        _ = Task.Run(async () =>
-        {
-            await Task.Delay(15_000);
-            state.EnqueueMessage("MasterData", "RSM-001", correlationId,
-                BuildRsm001ResponseJson(correlationId, false, "E16", "Supplier already holds this metering point"));
-        });
+        state.EnqueueMessage("MasterData", "RSM-001", correlationId,
+            BuildRsm001ResponseJson(correlationId, false, "E16", "Supplier already holds this metering point"));
 
         return Results.Ok(new
         {
@@ -96,32 +92,20 @@ app.MapPost("/v1.0/cim/requestchangeofsupplier", async (HttpRequest request) =>
         ? ed : DateOnly.FromDateTime(DateTime.UtcNow);
     var gsrnForCapture = gsrn ?? "571313100000012345";
 
-    // RSM-001 response (acknowledgment) after 15s delay, then schedule effectuation
-    _ = Task.Run(async () =>
-    {
-        await Task.Delay(15_000);
-        state.EnqueueMessage("MasterData", "RSM-001", correlationId,
-            BuildRsm001ResponseJson(correlationId, true));
+    // RSM-001 response (acknowledgment), then schedule effectuation
+    state.EnqueueMessage("MasterData", "RSM-001", correlationId,
+        BuildRsm001ResponseJson(correlationId, true));
 
-        // Schedule RSM-022 after RSM-001 is on the queue so the poller processes them in order
-        state.ScheduleEffectuation(gsrnForCapture, correlationId, effectiveDate);
-    });
+    // Schedule RSM-022 after RSM-001 is on the queue so the poller processes them in order
+    state.ScheduleEffectuation(gsrnForCapture, correlationId, effectiveDate);
 
-    // RSM-028 (customer data, no CPR per BRS-001 spec) after 16s delay
-    _ = Task.Run(async () =>
-    {
-        await Task.Delay(16_000);
-        state.EnqueueMessage("MasterData", "RSM-028", correlationId,
-            ScenarioLoader.BuildRsm028Json(gsrnForCapture, "Simulated Customer", "0000000000", includeCpr: false));
-    });
+    // RSM-028 (customer data, no CPR per BRS-001 spec)
+    state.EnqueueMessage("MasterData", "RSM-028", correlationId,
+        ScenarioLoader.BuildRsm028Json(gsrnForCapture, "Simulated Customer", "0000000000", includeCpr: false));
 
-    // RSM-031 (price attachments) after 17s delay
-    _ = Task.Run(async () =>
-    {
-        await Task.Delay(17_000);
-        state.EnqueueMessage("MasterData", "RSM-031", correlationId,
-            ScenarioLoader.BuildRsm031Json(gsrnForCapture, effectiveDateStr));
-    });
+    // RSM-031 (price attachments)
+    state.EnqueueMessage("MasterData", "RSM-031", correlationId,
+        ScenarioLoader.BuildRsm031Json(gsrnForCapture, effectiveDateStr));
 
     return Results.Ok(new
     {
@@ -140,12 +124,8 @@ app.MapPost("/v1.0/cim/requestendofsupply", async (HttpRequest request) =>
 
     if (gsrn is not null && !state.IsGsrnActive(gsrn))
     {
-        _ = Task.Run(async () =>
-        {
-            await Task.Delay(15_000);
-            state.EnqueueMessage("MasterData", "RSM-005", correlationId,
-                ScenarioLoader.BuildRsm005ResponseJson(correlationId, false, "E16", "No active supply for this metering point"));
-        });
+        state.EnqueueMessage("MasterData", "RSM-005", correlationId,
+            ScenarioLoader.BuildRsm005ResponseJson(correlationId, false, "E16", "No active supply for this metering point"));
 
         return Results.Ok(new
         {
@@ -159,13 +139,9 @@ app.MapPost("/v1.0/cim/requestendofsupply", async (HttpRequest request) =>
     if (gsrn is not null)
         state.DeactivateGsrn(gsrn);
 
-    // RSM-005 response (no RSM-022 for end-of-supply) after 15s delay
-    _ = Task.Run(async () =>
-    {
-        await Task.Delay(15_000);
-        state.EnqueueMessage("MasterData", "RSM-005", correlationId,
-            ScenarioLoader.BuildRsm005ResponseJson(correlationId, true));
-    });
+    // RSM-005 response (no RSM-022 for end-of-supply)
+    state.EnqueueMessage("MasterData", "RSM-005", correlationId,
+        ScenarioLoader.BuildRsm005ResponseJson(correlationId, true));
 
     return Results.Ok(new
     {
@@ -187,12 +163,8 @@ app.MapPost("/v1.0/cim/requestcancelchangeofsupplier", async (HttpRequest reques
     if (gsrn is not null)
         state.CancelEffectuation(gsrn);
 
-    _ = Task.Run(async () =>
-    {
-        await Task.Delay(15_000);
-        state.EnqueueMessage("MasterData", "RSM-001", correlationId,
-            BuildRsm001ResponseJson(correlationId, true));
-    });
+    state.EnqueueMessage("MasterData", "RSM-001", correlationId,
+        BuildRsm001ResponseJson(correlationId, true));
 
     return Results.Ok(new
     {
@@ -239,37 +211,25 @@ app.MapPost("/admin/brs044", async (HttpRequest request) =>
         ? brs044Ed : DateOnly.FromDateTime(DateTime.UtcNow);
     state.ScheduleEffectuation(gsrn, correlationId, brs044EffectiveDate);
 
-    // RSM-028 after 2s (customer data, no CPR)
-    _ = Task.Run(async () =>
-    {
-        await Task.Delay(2_000);
-        state.EnqueueMessage("MasterData", "RSM-028", correlationId,
-            ScenarioLoader.BuildRsm028Json(gsrn, customerName, "0000000000", includeCpr: false));
-    });
+    // RSM-028 (customer data, no CPR)
+    state.EnqueueMessage("MasterData", "RSM-028", correlationId,
+        ScenarioLoader.BuildRsm028Json(gsrn, customerName, "0000000000", includeCpr: false));
 
-    // RSM-031 after 3s (price attachments)
-    _ = Task.Run(async () =>
-    {
-        await Task.Delay(3_000);
-        state.EnqueueMessage("MasterData", "RSM-031", correlationId,
-            ScenarioLoader.BuildRsm031Json(gsrn, effectiveDateStr));
-    });
+    // RSM-031 (price attachments)
+    state.EnqueueMessage("MasterData", "RSM-031", correlationId,
+        ScenarioLoader.BuildRsm031Json(gsrn, effectiveDateStr));
 
-    // RSM-012 after 4s (metering data — only for retroactive switches)
+    // RSM-012 (metering data — only for retroactive switches)
     if (DateOnly.TryParse(effectiveDateStr.Split('T')[0], out var ed) && ed < DateOnly.FromDateTime(DateTime.UtcNow))
     {
-        _ = Task.Run(async () =>
+        var start = new DateTimeOffset(ed.Year, ed.Month, ed.Day, 0, 0, 0, TimeSpan.Zero);
+        var end = DateTimeOffset.UtcNow.Date;
+        var hours = (int)(end - start).TotalHours;
+        if (hours > 0)
         {
-            await Task.Delay(4_000);
-            var start = new DateTimeOffset(ed.Year, ed.Month, ed.Day, 0, 0, 0, TimeSpan.Zero);
-            var end = DateTimeOffset.UtcNow.Date;
-            var hours = (int)(end - start).TotalHours;
-            if (hours > 0)
-            {
-                state.EnqueueMessage("Timeseries", "RSM-012", correlationId,
-                    ScenarioLoader.BuildRsm012Json(gsrn, start, new DateTimeOffset(end, TimeSpan.Zero), hours));
-            }
-        });
+            state.EnqueueMessage("Timeseries", "RSM-012", correlationId,
+                ScenarioLoader.BuildRsm012Json(gsrn, start, new DateTimeOffset(end, TimeSpan.Zero), hours));
+        }
     }
 
     return Results.Ok(new

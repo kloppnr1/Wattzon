@@ -78,7 +78,7 @@ public sealed class QueuePollerService : BackgroundService
         _effectuationService = effectuationService;
         _metrics = metrics ?? new SettlementMetrics();
         _logger = logger;
-        _pollInterval = pollInterval ?? TimeSpan.FromSeconds(5);
+        _pollInterval = pollInterval ?? TimeSpan.FromSeconds(1);
     }
 
     private static readonly TimeSpan PerQueueTimeout = TimeSpan.FromSeconds(30);

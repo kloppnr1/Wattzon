@@ -874,44 +874,16 @@ app.MapGet("/api/metering/spot-prices", async (
     });
 });
 
-// GET /api/metering/spot-prices/latest — latest price date per area
-app.MapGet("/api/metering/spot-prices/latest", async (ISpotPriceRepository repo, CancellationToken ct) =>
-{
-    var dk1 = await repo.GetLatestPriceDateAsync("DK1", ct);
-    var dk2 = await repo.GetLatestPriceDateAsync("DK2", ct);
-    return Results.Ok(new { dk1, dk2 });
-});
-
-// GET /api/metering/spot-prices/status — monitoring status per price area
+// GET /api/metering/spot-prices/status — unified spot price status
 app.MapGet("/api/metering/spot-prices/status", async (ISpotPriceRepository repo, CancellationToken ct) =>
 {
-    var dk1 = await repo.GetAreaStatusAsync("DK1", ct);
-    var dk2 = await repo.GetAreaStatusAsync("DK2", ct);
+    var status = await repo.GetStatusAsync(ct);
     return Results.Ok(new
     {
-        areas = new[]
-        {
-            new
-            {
-                priceArea = dk1.PriceArea,
-                earliestDate = dk1.EarliestDate,
-                latestDate = dk1.LatestDate,
-                lastFetchedAt = dk1.LastFetchedAt,
-                totalCount = dk1.TotalCount,
-                last24hCount = dk1.Last24HCount,
-                last7dCount = dk1.Last7DCount,
-            },
-            new
-            {
-                priceArea = dk2.PriceArea,
-                earliestDate = dk2.EarliestDate,
-                latestDate = dk2.LatestDate,
-                lastFetchedAt = dk2.LastFetchedAt,
-                totalCount = dk2.TotalCount,
-                last24hCount = dk2.Last24HCount,
-                last7dCount = dk2.Last7DCount,
-            },
-        },
+        latestDate = status.LatestDate,
+        lastFetchedAt = status.LastFetchedAt,
+        hasTomorrow = status.HasTomorrow,
+        status = status.Status,
     });
 });
 
