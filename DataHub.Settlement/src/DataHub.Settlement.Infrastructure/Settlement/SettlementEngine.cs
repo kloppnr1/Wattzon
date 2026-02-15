@@ -54,10 +54,12 @@ public sealed class SettlementEngine : ISettlementEngine
 
                 // Grid tariff: kWh × grid_rate[hour_of_day]
                 var hourNumber = row.Timestamp.Hour + 1;
-                if (gridRateByHour.TryGetValue(hourNumber, out var gridRate))
+                if (!gridRateByHour.TryGetValue(hourNumber, out var gridRate))
                 {
-                    gridTariffTotal += billableKwh * gridRate;
+                    throw new InvalidOperationException(
+                        $"Missing grid tariff rate for hour {hourNumber} on metering point {request.MeteringPointId}. Settlement cannot proceed with incomplete tariff data.");
                 }
+                gridTariffTotal += billableKwh * gridRate;
             }
             else if (netKwh < 0)
             {

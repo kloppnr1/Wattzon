@@ -29,6 +29,7 @@ public sealed class SettlementResultStore : ISettlementResultStore
         await conn.ExecuteAsync("SELECT pg_advisory_lock(hashtext(@Key))",
             new { Key = $"{gsrn}:{result.PeriodStart}:{result.PeriodEnd}" });
 
+        await using var tx = await conn.BeginTransactionAsync(ct);
         try
         {
             var billingPeriodId = await conn.QuerySingleAsync<Guid>(
@@ -39,7 +40,7 @@ public sealed class SettlementResultStore : ISettlementResultStore
                     RETURNING id
                     """,
                     new { PeriodStart = result.PeriodStart, PeriodEnd = result.PeriodEnd, Frequency = billingFrequency },
-                    cancellationToken: ct));
+                    transaction: tx, cancellationToken: ct));
 
             var settlementRunId = await conn.QuerySingleAsync<Guid>(
                 new CommandDefinition("""
@@ -52,10 +53,15 @@ public sealed class SettlementResultStore : ISettlementResultStore
                     RETURNING id
                     """,
                     new { BillingPeriodId = billingPeriodId, GridAreaCode = gridAreaCode, MeteringPointId = gsrn },
-                    cancellationToken: ct));
+                    transaction: tx, cancellationToken: ct));
 
-            foreach (var line in result.Lines)
+            // Allocate total VAT proportionally across lines so SUM(per-line VAT) = result.VatAmount exactly.
+            // Without this, independently rounding each line's VAT causes off-by-penny discrepancies.
+            var lineVatAmounts = AllocateVatToLines(result.Lines, result.Subtotal, result.VatAmount);
+
+            for (var i = 0; i < result.Lines.Count; i++)
             {
+                var line = result.Lines[i];
                 await conn.ExecuteAsync(
                     new CommandDefinition("""
                         INSERT INTO settlement.settlement_line (settlement_run_id, metering_point_id, charge_type, total_kwh, total_amount, vat_amount, currency)
@@ -68,15 +74,54 @@ public sealed class SettlementResultStore : ISettlementResultStore
                             line.ChargeType,
                             TotalKwh = line.Kwh ?? 0m,
                             TotalAmount = line.Amount,
-                            VatAmount = Math.Round(line.Amount * 0.25m, 2),
+                            VatAmount = lineVatAmounts[i],
                         },
-                        cancellationToken: ct));
+                        transaction: tx, cancellationToken: ct));
             }
+
+            await tx.CommitAsync(ct);
+        }
+        catch
+        {
+            await tx.RollbackAsync(ct);
+            throw;
         }
         finally
         {
             await conn.ExecuteAsync("SELECT pg_advisory_unlock(hashtext(@Key))",
                 new { Key = $"{gsrn}:{result.PeriodStart}:{result.PeriodEnd}" });
         }
+    }
+
+    /// <summary>
+    /// Allocates total VAT proportionally across settlement lines, ensuring the sum equals totalVat exactly.
+    /// The last line absorbs any rounding remainder to prevent off-by-penny discrepancies.
+    /// </summary>
+    private static decimal[] AllocateVatToLines(IReadOnlyList<SettlementLine> lines, decimal subtotal, decimal totalVat)
+    {
+        var vatAmounts = new decimal[lines.Count];
+
+        if (subtotal == 0m || lines.Count == 0)
+        {
+            for (var i = 0; i < lines.Count; i++)
+                vatAmounts[i] = 0m;
+            return vatAmounts;
+        }
+
+        var allocated = 0m;
+        for (var i = 0; i < lines.Count; i++)
+        {
+            if (i == lines.Count - 1)
+            {
+                vatAmounts[i] = totalVat - allocated;
+            }
+            else
+            {
+                vatAmounts[i] = Math.Round(lines[i].Amount / subtotal * totalVat, 2);
+                allocated += vatAmounts[i];
+            }
+        }
+
+        return vatAmounts;
     }
 }
