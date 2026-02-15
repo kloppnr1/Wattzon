@@ -123,18 +123,21 @@ public sealed class TariffRepository : ITariffRepository
 
         await using var conn = new NpgsqlConnection(_connectionString);
         await conn.OpenAsync(ct);
+        await using var tx = await conn.BeginTransactionAsync(ct);
 
         await conn.ExecuteAsync(new CommandDefinition(closePrevious,
             new { GridAreaCode = gridAreaCode, TariffType = tariffType, ValidFrom = validFrom },
-            cancellationToken: ct));
+            transaction: tx, cancellationToken: ct));
 
         var tariffId = await conn.QuerySingleAsync<Guid>(
             new CommandDefinition(insertTariff,
                 new { GridAreaCode = gridAreaCode, TariffType = tariffType, ValidFrom = validFrom },
-                cancellationToken: ct));
+                transaction: tx, cancellationToken: ct));
 
         var rateParams = rates.Select(r => new { GridTariffId = tariffId, r.HourNumber, r.PricePerKwh });
-        await conn.ExecuteAsync(new CommandDefinition(insertRate, rateParams, cancellationToken: ct));
+        await conn.ExecuteAsync(new CommandDefinition(insertRate, rateParams, transaction: tx, cancellationToken: ct));
+
+        await tx.CommitAsync(ct);
     }
 
     public async Task SeedSubscriptionAsync(
