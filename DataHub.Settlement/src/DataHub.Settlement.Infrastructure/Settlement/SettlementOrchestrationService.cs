@@ -1,6 +1,7 @@
 using DataHub.Settlement.Application.Lifecycle;
 using DataHub.Settlement.Application.Portfolio;
 using DataHub.Settlement.Application.Settlement;
+using DataHub.Settlement.Domain;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
@@ -16,6 +17,7 @@ public sealed class SettlementOrchestrationService : BackgroundService
     private readonly ISettlementDataLoader _dataLoader;
     private readonly ISettlementEngine _engine;
     private readonly ISettlementResultStore _resultStore;
+    private readonly IClock _clock;
     private readonly ILogger<SettlementOrchestrationService> _logger;
 
     public SettlementOrchestrationService(
@@ -25,6 +27,7 @@ public sealed class SettlementOrchestrationService : BackgroundService
         ISettlementDataLoader dataLoader,
         ISettlementEngine engine,
         ISettlementResultStore resultStore,
+        IClock clock,
         ILogger<SettlementOrchestrationService> logger)
     {
         _processRepo = processRepo;
@@ -33,6 +36,7 @@ public sealed class SettlementOrchestrationService : BackgroundService
         _dataLoader = dataLoader;
         _engine = engine;
         _resultStore = resultStore;
+        _clock = clock;
         _logger = logger;
     }
 
@@ -74,26 +78,11 @@ public sealed class SettlementOrchestrationService : BackgroundService
     {
         if (!process.EffectiveDate.HasValue) return;
 
-        var periodStart = process.EffectiveDate.Value;
-
-        // Get contract first — we need billing_frequency to calculate the period end
+        // Get contract first — we need billing_frequency to calculate billing periods
         var contract = await _portfolioRepo.GetActiveContractAsync(process.Gsrn, ct);
         if (contract is null)
         {
             _logger.LogWarning("GSRN {Gsrn}: no active contract found, skipping settlement", process.Gsrn);
-            return;
-        }
-
-        var periodEnd = BillingPeriodCalculator.GetFirstPeriodEnd(periodStart, contract.BillingFrequency);
-        var startDt = periodStart.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
-        var endDt = periodEnd.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
-
-        // Check metering completeness
-        var completeness = await _completenessChecker.CheckAsync(process.Gsrn, startDt, endDt, ct);
-        if (!completeness.IsComplete)
-        {
-            _logger.LogDebug("GSRN {Gsrn}: metering incomplete ({Received}/{Expected})",
-                process.Gsrn, completeness.ReceivedHours, completeness.ExpectedHours);
             return;
         }
 
@@ -111,26 +100,61 @@ public sealed class SettlementOrchestrationService : BackgroundService
             return;
         }
 
-        // Load data and calculate
-        var input = await _dataLoader.LoadAsync(
-            process.Gsrn, mp.GridAreaCode, mp.PriceArea,
-            periodStart, periodEnd,
-            product.MarginOrePerKwh / 100m,
-            (product.SupplementOrePerKwh ?? 0m) / 100m,
-            product.SubscriptionKrPerMonth,
-            ct);
+        var today = _clock.Today;
+        var periodStart = process.EffectiveDate.Value;
 
-        var request = new SettlementRequest(
-            input.MeteringPointId, input.PeriodStart, input.PeriodEnd,
-            input.Consumption, input.SpotPrices, input.GridTariffRates,
-            input.SystemTariffRate, input.TransmissionTariffRate, input.ElectricityTaxRate,
-            input.GridSubscriptionPerMonth, input.MarginPerKwh, input.SupplementPerKwh,
-            input.SupplierSubscriptionPerMonth, input.Elvarme);
+        // Iterate over all billing periods from the effective date forward.
+        // Settle the first unsettled period that has complete metering data.
+        while (true)
+        {
+            var periodEnd = BillingPeriodCalculator.GetFirstPeriodEnd(periodStart, contract.BillingFrequency);
 
-        var result = _engine.Calculate(request);
-        await _resultStore.StoreAsync(process.Gsrn, mp.GridAreaCode, result, contract.BillingFrequency, ct);
+            // Don't settle periods that haven't closed yet
+            if (periodEnd >= today)
+                break;
 
-        _logger.LogInformation("Settlement completed for GSRN {Gsrn}: {PeriodStart} to {PeriodEnd}, total {Total} DKK",
-            process.Gsrn, periodStart, periodEnd, result.Total);
+            // Skip periods that already have a settlement run
+            if (await _resultStore.HasSettlementRunAsync(process.Gsrn, periodStart, periodEnd, ct))
+            {
+                periodStart = periodEnd.AddDays(1);
+                continue;
+            }
+
+            var startDt = periodStart.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+            var endDt = periodEnd.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+
+            // Check metering completeness
+            var completeness = await _completenessChecker.CheckAsync(process.Gsrn, startDt, endDt, ct);
+            if (!completeness.IsComplete)
+            {
+                _logger.LogDebug("GSRN {Gsrn}: metering incomplete for {PeriodStart}–{PeriodEnd} ({Received}/{Expected})",
+                    process.Gsrn, periodStart, periodEnd, completeness.ReceivedHours, completeness.ExpectedHours);
+                break; // Can't settle future periods if the current one is incomplete
+            }
+
+            // Load data and calculate
+            var input = await _dataLoader.LoadAsync(
+                process.Gsrn, mp.GridAreaCode, mp.PriceArea,
+                periodStart, periodEnd,
+                product.MarginOrePerKwh / 100m,
+                (product.SupplementOrePerKwh ?? 0m) / 100m,
+                product.SubscriptionKrPerMonth,
+                ct);
+
+            var request = new SettlementRequest(
+                input.MeteringPointId, input.PeriodStart, input.PeriodEnd,
+                input.Consumption, input.SpotPrices, input.GridTariffRates,
+                input.SystemTariffRate, input.TransmissionTariffRate, input.ElectricityTaxRate,
+                input.GridSubscriptionPerMonth, input.MarginPerKwh, input.SupplementPerKwh,
+                input.SupplierSubscriptionPerMonth, input.Elvarme);
+
+            var result = _engine.Calculate(request);
+            await _resultStore.StoreAsync(process.Gsrn, mp.GridAreaCode, result, contract.BillingFrequency, ct);
+
+            _logger.LogInformation("Settlement completed for GSRN {Gsrn}: {PeriodStart} to {PeriodEnd}, total {Total} DKK",
+                process.Gsrn, periodStart, periodEnd, result.Total);
+
+            periodStart = periodEnd.AddDays(1);
+        }
     }
 }

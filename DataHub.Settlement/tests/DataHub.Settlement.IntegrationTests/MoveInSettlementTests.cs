@@ -54,9 +54,10 @@ public class MoveInSettlementTests
         var ct = CancellationToken.None;
 
         // The effective date is 7 days ago (max retroactive for BRS-009 move-in)
-        var today = new DateOnly(2025, 2, 15);
-        var effectiveDate = today.AddDays(-7); // 2025-02-08
+        var effectiveDate = new DateOnly(2025, 2, 8);
         var settlementPeriodEnd = new DateOnly(2025, 2, 28); // monthly billing ends at calendar month end
+        // Today must be AFTER period end so the orchestration service considers the period closed
+        var today = new DateOnly(2025, 3, 1);
         var clock = new TestClock { Today = today };
 
         // ──── 0. CLEANUP ────
@@ -146,6 +147,7 @@ public class MoveInSettlementTests
         var orchestration = new SettlementOrchestrationService(
             _processRepo, _portfolio,
             completenessChecker, dataLoader, engine, resultStore,
+            clock,
             NullLogger<SettlementOrchestrationService>.Instance);
 
         await orchestration.RunTickAsync(ct);

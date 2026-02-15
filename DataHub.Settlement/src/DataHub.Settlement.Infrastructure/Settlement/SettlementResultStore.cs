@@ -93,6 +93,23 @@ public sealed class SettlementResultStore : ISettlementResultStore
         }
     }
 
+    public async Task<bool> HasSettlementRunAsync(string gsrn, DateOnly periodStart, DateOnly periodEnd, CancellationToken ct)
+    {
+        await using var conn = new NpgsqlConnection(_connectionString);
+        return await conn.ExecuteScalarAsync<bool>(
+            new CommandDefinition("""
+                SELECT EXISTS(
+                    SELECT 1 FROM settlement.settlement_run sr
+                    JOIN settlement.billing_period bp ON bp.id = sr.billing_period_id
+                    WHERE sr.metering_point_id = @Gsrn
+                    AND bp.period_start = @PeriodStart
+                    AND bp.period_end = @PeriodEnd
+                )
+                """,
+                new { Gsrn = gsrn, PeriodStart = periodStart, PeriodEnd = periodEnd },
+                cancellationToken: ct));
+    }
+
     /// <summary>
     /// Allocates total VAT proportionally across settlement lines, ensuring the sum equals totalVat exactly.
     /// The last line absorbs any rounding remainder to prevent off-by-penny discrepancies.
