@@ -81,6 +81,8 @@ public sealed class QueuePollerService : BackgroundService
         _pollInterval = pollInterval ?? TimeSpan.FromSeconds(5);
     }
 
+    private static readonly TimeSpan PerQueueTimeout = TimeSpan.FromSeconds(30);
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         _logger.LogInformation("Queue poller starting — polling {QueueCount} queues", AllQueues.Length);
@@ -91,8 +93,18 @@ public sealed class QueuePollerService : BackgroundService
 
             foreach (var queue in AllQueues)
             {
-                var processed = await PollQueueAsync(queue, stoppingToken);
-                if (processed) anyProcessed = true;
+                try
+                {
+                    using var queueCts = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken);
+                    queueCts.CancelAfter(PerQueueTimeout);
+                    var processed = await PollQueueAsync(queue, queueCts.Token);
+                    if (processed) anyProcessed = true;
+                }
+                catch (OperationCanceledException) when (!stoppingToken.IsCancellationRequested)
+                {
+                    _logger.LogWarning("Queue {Queue} poll timed out after {Timeout}s — skipping to next queue",
+                        queue, PerQueueTimeout.TotalSeconds);
+                }
             }
 
             if (!anyProcessed)
