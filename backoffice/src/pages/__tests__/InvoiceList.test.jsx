@@ -26,7 +26,7 @@ function makeInvoice(overrides = {}) {
   return {
     id: 'inv-001',
     invoiceNumber: 'INV-2025-0001',
-    invoiceType: 'settlement',
+    invoiceType: 'invoice',
     status: 'sent',
     periodStart: '2025-01-01',
     periodEnd: '2025-01-31',
@@ -46,7 +46,7 @@ describe('InvoiceList', () => {
     api.getInvoices.mockResolvedValue({
       items: [
         makeInvoice(),
-        makeInvoice({ id: 'inv-002', invoiceNumber: 'INV-2025-0002', invoiceType: 'aconto', status: 'paid', totalInclVat: 8000, amountOutstanding: 0 }),
+        makeInvoice({ id: 'inv-002', invoiceNumber: 'INV-2025-0002', invoiceType: 'credit_note', status: 'paid', totalInclVat: 8000, amountOutstanding: 0 }),
       ],
       totalCount: 2,
     });
@@ -62,8 +62,8 @@ describe('InvoiceList', () => {
     // Verify the table row badge text exists (at least 2: dropdown option + badge)
     expect(screen.getAllByText('Sent').length).toBeGreaterThanOrEqual(2);
     expect(screen.getAllByText('Paid').length).toBeGreaterThanOrEqual(2);
-    expect(screen.getAllByText('Settlement').length).toBeGreaterThanOrEqual(2);
-    expect(screen.getAllByText('Aconto').length).toBeGreaterThanOrEqual(2);
+    expect(screen.getAllByText('Invoice').length).toBeGreaterThanOrEqual(2);
+    expect(screen.getAllByText('Credit note').length).toBeGreaterThanOrEqual(2);
   });
 
   it('shows empty state when no invoices', async () => {

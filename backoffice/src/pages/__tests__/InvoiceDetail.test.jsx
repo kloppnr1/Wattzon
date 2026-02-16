@@ -33,7 +33,7 @@ function makeInvoice(overrides = {}) {
     invoice: {
       id: 'inv-001',
       invoiceNumber: 'INV-2025-0001',
-      invoiceType: 'settlement',
+      invoiceType: 'invoice',
       status: 'draft',
       periodStart: '2025-01-01',
       periodEnd: '2025-01-31',
@@ -69,7 +69,7 @@ describe('InvoiceDetail', () => {
       expect(screen.getAllByText('INV-2025-0001')).toHaveLength(2);
     });
     expect(screen.getByText('Draft')).toBeInTheDocument();
-    expect(screen.getByText('Settlement')).toBeInTheDocument();
+    expect(screen.getByText('Invoice')).toBeInTheDocument();
   });
 
   it('summary cards show subtotal, VAT, total, outstanding', async () => {
