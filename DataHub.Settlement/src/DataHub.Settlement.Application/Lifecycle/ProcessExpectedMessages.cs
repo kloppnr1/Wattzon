@@ -1,3 +1,5 @@
+using DataHub.Settlement.Application.DataHub;
+
 namespace DataHub.Settlement.Application.Lifecycle;
 
 /// <summary>
@@ -9,10 +11,10 @@ public static class ProcessExpectedMessages
     private static readonly IReadOnlyDictionary<string, IReadOnlyList<string>> ExpectedByType =
         new Dictionary<string, IReadOnlyList<string>>
         {
-            ["supplier_switch"] = new[] { "RSM-001", "RSM-028", "RSM-031", "RSM-022" },
-            ["move_in"]         = new[] { "RSM-001", "RSM-028", "RSM-031", "RSM-022" },
-            ["end_of_supply"]   = new[] { "RSM-005" },
-            ["move_out"]        = new[] { "RSM-005" },
+            [ProcessTypes.SupplierSwitch] = new[] { RsmMessageTypes.Request, RsmMessageTypes.CustomerData, RsmMessageTypes.PriceAttachments, RsmMessageTypes.MasterData },
+            [ProcessTypes.MoveIn]         = new[] { RsmMessageTypes.Request, RsmMessageTypes.CustomerData, RsmMessageTypes.PriceAttachments, RsmMessageTypes.MasterData },
+            [ProcessTypes.EndOfSupply]    = new[] { RsmMessageTypes.EndOfSupply },
+            [ProcessTypes.MoveOut]        = new[] { RsmMessageTypes.EndOfSupply },
         };
 
     public static IReadOnlyList<string> For(string processType)

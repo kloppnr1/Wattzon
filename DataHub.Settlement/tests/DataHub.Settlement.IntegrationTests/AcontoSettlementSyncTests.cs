@@ -76,7 +76,7 @@ public class AcontoSettlementSyncTests : IClassFixture<TestDatabase>
 
         // Create and complete process
         var sm = new ProcessStateMachine(_processRepo, clock);
-        var process = await sm.CreateRequestAsync(gsrn, "supplier_switch", effectiveDate, ct);
+        var process = await sm.CreateRequestAsync(gsrn, ProcessTypes.SupplierSwitch, effectiveDate, ct);
         await sm.MarkSentAsync(process.Id, "corr-postpay-1", ct);
         await sm.MarkAcknowledgedAsync(process.Id, ct);
         await sm.MarkCompletedAsync(process.Id, ct);
@@ -155,7 +155,7 @@ public class AcontoSettlementSyncTests : IClassFixture<TestDatabase>
 
         // Create and complete process
         var sm = new ProcessStateMachine(_processRepo, clock);
-        var process = await sm.CreateRequestAsync(gsrn, "supplier_switch", effectiveDate, ct);
+        var process = await sm.CreateRequestAsync(gsrn, ProcessTypes.SupplierSwitch, effectiveDate, ct);
         await sm.MarkSentAsync(process.Id, "corr-aconto-1", ct);
         await sm.MarkAcknowledgedAsync(process.Id, ct);
         await sm.MarkCompletedAsync(process.Id, ct);

@@ -39,7 +39,7 @@ public class ProcessSchedulerTests
         _clock.Today = new DateOnly(2025, 2, 1);
         var sm = new ProcessStateMachine(_processRepo, _clock);
 
-        var request = await sm.CreateRequestAsync("571313100000012345", "supplier_switch",
+        var request = await sm.CreateRequestAsync("571313100000012345", ProcessTypes.SupplierSwitch,
             new DateOnly(2025, 2, 1), CancellationToken.None);
         await sm.MarkSentAsync(request.Id, "corr-1", CancellationToken.None);
         await sm.MarkAcknowledgedAsync(request.Id, CancellationToken.None);

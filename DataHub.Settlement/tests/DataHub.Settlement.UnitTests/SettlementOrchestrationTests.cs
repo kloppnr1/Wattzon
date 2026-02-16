@@ -36,7 +36,7 @@ public class SettlementOrchestrationTests
     {
         var clock = new TestClock { Today = new DateOnly(2025, 2, 15) };
         var sm = new ProcessStateMachine(_processRepo, clock);
-        var request = await sm.CreateRequestAsync("571313100000012345", "supplier_switch", new DateOnly(2025, 1, 1), CancellationToken.None);
+        var request = await sm.CreateRequestAsync("571313100000012345", ProcessTypes.SupplierSwitch, new DateOnly(2025, 1, 1), CancellationToken.None);
         await sm.MarkSentAsync(request.Id, "corr-1", CancellationToken.None);
         await sm.MarkAcknowledgedAsync(request.Id, CancellationToken.None);
         await sm.MarkCompletedAsync(request.Id, CancellationToken.None);
@@ -55,7 +55,7 @@ public class SettlementOrchestrationTests
     {
         var clock = new TestClock { Today = new DateOnly(2025, 2, 15) };
         var sm = new ProcessStateMachine(_processRepo, clock);
-        var request = await sm.CreateRequestAsync("571313100000012345", "supplier_switch", new DateOnly(2025, 1, 1), CancellationToken.None);
+        var request = await sm.CreateRequestAsync("571313100000012345", ProcessTypes.SupplierSwitch, new DateOnly(2025, 1, 1), CancellationToken.None);
         await sm.MarkSentAsync(request.Id, "corr-1", CancellationToken.None);
         await sm.MarkAcknowledgedAsync(request.Id, CancellationToken.None);
         await sm.MarkCompletedAsync(request.Id, CancellationToken.None);
@@ -76,7 +76,7 @@ public class SettlementOrchestrationTests
     {
         var clock = new TestClock { Today = new DateOnly(2025, 2, 15) };
         var sm = new ProcessStateMachine(_processRepo, clock);
-        var request = await sm.CreateRequestAsync("571313100000012345", "supplier_switch", new DateOnly(2025, 1, 1), CancellationToken.None);
+        var request = await sm.CreateRequestAsync("571313100000012345", ProcessTypes.SupplierSwitch, new DateOnly(2025, 1, 1), CancellationToken.None);
         await sm.MarkSentAsync(request.Id, "corr-1", CancellationToken.None);
         await sm.MarkAcknowledgedAsync(request.Id, CancellationToken.None);
         await sm.MarkCompletedAsync(request.Id, CancellationToken.None);
@@ -100,7 +100,7 @@ public class SettlementOrchestrationTests
         // Jan 27–Feb 3 is still open (Feb 3 > Jan 28).
         var clock = new TestClock { Today = new DateOnly(2025, 1, 28) };
         var sm = new ProcessStateMachine(_processRepo, clock);
-        var request = await sm.CreateRequestAsync("571313100000012345", "supplier_switch", new DateOnly(2025, 1, 6), CancellationToken.None);
+        var request = await sm.CreateRequestAsync("571313100000012345", ProcessTypes.SupplierSwitch, new DateOnly(2025, 1, 6), CancellationToken.None);
         await sm.MarkSentAsync(request.Id, "corr-1", CancellationToken.None);
         await sm.MarkAcknowledgedAsync(request.Id, CancellationToken.None);
         await sm.MarkCompletedAsync(request.Id, CancellationToken.None);
@@ -123,7 +123,7 @@ public class SettlementOrchestrationTests
         // Jan 20–Jan 27 still open (Jan 27 > Jan 21).
         var clock = new TestClock { Today = new DateOnly(2025, 1, 21) };
         var sm = new ProcessStateMachine(_processRepo, clock);
-        var request = await sm.CreateRequestAsync("571313100000012345", "supplier_switch", new DateOnly(2025, 1, 6), CancellationToken.None);
+        var request = await sm.CreateRequestAsync("571313100000012345", ProcessTypes.SupplierSwitch, new DateOnly(2025, 1, 6), CancellationToken.None);
         await sm.MarkSentAsync(request.Id, "corr-1", CancellationToken.None);
         await sm.MarkAcknowledgedAsync(request.Id, CancellationToken.None);
         await sm.MarkCompletedAsync(request.Id, CancellationToken.None);
@@ -149,7 +149,7 @@ public class SettlementOrchestrationTests
         // periodEnd > today → Jan 6 > Jan 6 → false → settle.
         var clock = new TestClock { Today = new DateOnly(2025, 1, 6) };
         var sm = new ProcessStateMachine(_processRepo, clock);
-        var request = await sm.CreateRequestAsync("571313100000012345", "supplier_switch", new DateOnly(2025, 1, 5), CancellationToken.None);
+        var request = await sm.CreateRequestAsync("571313100000012345", ProcessTypes.SupplierSwitch, new DateOnly(2025, 1, 5), CancellationToken.None);
         await sm.MarkSentAsync(request.Id, "corr-1", CancellationToken.None);
         await sm.MarkAcknowledgedAsync(request.Id, CancellationToken.None);
         await sm.MarkCompletedAsync(request.Id, CancellationToken.None);
@@ -172,7 +172,7 @@ public class SettlementOrchestrationTests
         // periodEnd > today → Jan 13 > Jan 13 → false → settle.
         var clock = new TestClock { Today = new DateOnly(2025, 1, 13) };
         var sm = new ProcessStateMachine(_processRepo, clock);
-        var request = await sm.CreateRequestAsync("571313100000012345", "supplier_switch", new DateOnly(2025, 1, 6), CancellationToken.None);
+        var request = await sm.CreateRequestAsync("571313100000012345", ProcessTypes.SupplierSwitch, new DateOnly(2025, 1, 6), CancellationToken.None);
         await sm.MarkSentAsync(request.Id, "corr-1", CancellationToken.None);
         await sm.MarkAcknowledgedAsync(request.Id, CancellationToken.None);
         await sm.MarkCompletedAsync(request.Id, CancellationToken.None);
@@ -194,7 +194,7 @@ public class SettlementOrchestrationTests
         // First period: Jan 31–Feb 1 (exclusive, 1 day). Today = Mar 1.
         var clock = new TestClock { Today = new DateOnly(2025, 3, 1) };
         var sm = new ProcessStateMachine(_processRepo, clock);
-        var request = await sm.CreateRequestAsync("571313100000012345", "supplier_switch", new DateOnly(2025, 1, 31), CancellationToken.None);
+        var request = await sm.CreateRequestAsync("571313100000012345", ProcessTypes.SupplierSwitch, new DateOnly(2025, 1, 31), CancellationToken.None);
         await sm.MarkSentAsync(request.Id, "corr-1", CancellationToken.None);
         await sm.MarkAcknowledgedAsync(request.Id, CancellationToken.None);
         await sm.MarkCompletedAsync(request.Id, CancellationToken.None);
@@ -216,7 +216,7 @@ public class SettlementOrchestrationTests
         // First period: Mar 31–Apr 1 (exclusive, 1 day). Today = Apr 1.
         var clock = new TestClock { Today = new DateOnly(2025, 4, 1) };
         var sm = new ProcessStateMachine(_processRepo, clock);
-        var request = await sm.CreateRequestAsync("571313100000012345", "supplier_switch", new DateOnly(2025, 3, 31), CancellationToken.None);
+        var request = await sm.CreateRequestAsync("571313100000012345", ProcessTypes.SupplierSwitch, new DateOnly(2025, 3, 31), CancellationToken.None);
         await sm.MarkSentAsync(request.Id, "corr-1", CancellationToken.None);
         await sm.MarkAcknowledgedAsync(request.Id, CancellationToken.None);
         await sm.MarkCompletedAsync(request.Id, CancellationToken.None);
@@ -238,7 +238,7 @@ public class SettlementOrchestrationTests
         // Single period: Jan 5–Jan 6 (exclusive, 1 day).
         var clock = new TestClock { Today = new DateOnly(2025, 1, 6) };
         var sm = new ProcessStateMachine(_processRepo, clock);
-        var request = await sm.CreateRequestAsync("571313100000012345", "supplier_switch", new DateOnly(2025, 1, 5), CancellationToken.None);
+        var request = await sm.CreateRequestAsync("571313100000012345", ProcessTypes.SupplierSwitch, new DateOnly(2025, 1, 5), CancellationToken.None);
         await sm.MarkSentAsync(request.Id, "corr-1", CancellationToken.None);
         await sm.MarkAcknowledgedAsync(request.Id, CancellationToken.None);
         await sm.MarkCompletedAsync(request.Id, CancellationToken.None);
@@ -258,7 +258,7 @@ public class SettlementOrchestrationTests
     {
         var clock = new TestClock { Today = new DateOnly(2025, 2, 15) };
         var sm = new ProcessStateMachine(_processRepo, clock);
-        var request = await sm.CreateRequestAsync("571313100000012345", "supplier_switch", new DateOnly(2025, 1, 1), CancellationToken.None);
+        var request = await sm.CreateRequestAsync("571313100000012345", ProcessTypes.SupplierSwitch, new DateOnly(2025, 1, 1), CancellationToken.None);
         await sm.MarkSentAsync(request.Id, "corr-1", CancellationToken.None);
         await sm.MarkAcknowledgedAsync(request.Id, CancellationToken.None);
         await sm.MarkCompletedAsync(request.Id, CancellationToken.None);

@@ -1,3 +1,4 @@
+using DataHub.Settlement.Application.Lifecycle;
 using DataHub.Settlement.Application.Portfolio;
 using DataHub.Settlement.Infrastructure.Portfolio;
 using FluentAssertions;
@@ -102,7 +103,7 @@ public class PortfolioRepositoryTests : IClassFixture<TestDatabase>
         await _sut.CreateMeteringPointAsync(mp, CancellationToken.None);
         await _sut.CreateSupplyPeriodAsync("571313100000066666", new DateOnly(2025, 1, 1), CancellationToken.None);
 
-        await _sut.EndSupplyPeriodAsync("571313100000066666", new DateOnly(2025, 3, 1), "supplier_switch", CancellationToken.None);
+        await _sut.EndSupplyPeriodAsync("571313100000066666", new DateOnly(2025, 3, 1), ProcessTypes.SupplierSwitch, CancellationToken.None);
 
         var periods = await _sut.GetSupplyPeriodsAsync("571313100000066666", CancellationToken.None);
         periods.Should().HaveCount(1);
@@ -134,7 +135,7 @@ public class PortfolioRepositoryTests : IClassFixture<TestDatabase>
         await _sut.CreateMeteringPointAsync(mp, CancellationToken.None);
 
         await _sut.CreateSupplyPeriodAsync("571313100000044444", new DateOnly(2025, 1, 1), CancellationToken.None);
-        await _sut.EndSupplyPeriodAsync("571313100000044444", new DateOnly(2025, 3, 1), "supplier_switch", CancellationToken.None);
+        await _sut.EndSupplyPeriodAsync("571313100000044444", new DateOnly(2025, 3, 1), ProcessTypes.SupplierSwitch, CancellationToken.None);
         await _sut.CreateSupplyPeriodAsync("571313100000044444", new DateOnly(2025, 3, 1), CancellationToken.None);
 
         var periods = await _sut.GetSupplyPeriodsAsync("571313100000044444", CancellationToken.None);

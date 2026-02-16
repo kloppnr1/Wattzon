@@ -56,6 +56,22 @@ public static class RsmMessageTypes
 
     /// <summary>RSM-031 — Prisbilag (price/tariff attachments).</summary>
     public const string PriceAttachments = "RSM-031";
+
+    /// <summary>RSM-034 — Price series (charges/tariff rates from grid operator).</summary>
+    public const string PriceSeries = "RSM-034";
+
+    /// <summary>
+    /// Normalizes a raw message type string to canonical uppercase RSM-XXX format.
+    /// Handles variations like "rsm-022", "RSM022", "rsm022".
+    /// </summary>
+    public static string Normalize(string raw)
+    {
+        var upper = raw.ToUpperInvariant().Replace(" ", "");
+        // "RSM012" → "RSM-012"
+        if (upper.Length == 6 && upper.StartsWith("RSM") && char.IsDigit(upper[3]))
+            return $"RSM-{upper[3..]}";
+        return upper;
+    }
 }
 
 /// <summary>

@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
 using DataHub.Settlement.Application.DataHub;
+using DataHub.Settlement.Application.Lifecycle;
 
 namespace DataHub.Settlement.Infrastructure.DataHub;
 
@@ -13,13 +14,13 @@ public sealed class HttpDataHubClient : IDataHubClient
 
     private static readonly Dictionary<string, string> ProcessTypeToEndpoint = new()
     {
-        ["supplier_switch"] = "requestchangeofsupplier",
-        ["move_in"] = "requestchangeofsupplier",
-        ["end_of_supply"] = "requestendofsupply",
-        ["move_out"] = "requestendofsupply",
-        ["cancel_switch"] = "requestcancelchangeofsupplier",
-        ["cancel_end_of_supply"] = "requestcancelchangeofsupplier",
-        ["customer_data_update"] = "requestcustomerdataupdate",
+        [ProcessTypes.SupplierSwitch] = "requestchangeofsupplier",
+        [ProcessTypes.MoveIn] = "requestchangeofsupplier",
+        [ProcessTypes.EndOfSupply] = "requestendofsupply",
+        [ProcessTypes.MoveOut] = "requestendofsupply",
+        [ProcessTypes.CancelSwitch] = "requestcancelchangeofsupplier",
+        [ProcessTypes.CancelEndOfSupply] = "requestcancelchangeofsupplier",
+        [ProcessTypes.CustomerDataUpdate] = "requestcustomerdataupdate",
     };
 
     public HttpDataHubClient(HttpClient http)

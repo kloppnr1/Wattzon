@@ -1,6 +1,7 @@
 using System.Net;
 using DataHub.Settlement.Application.Authentication;
 using DataHub.Settlement.Application.DataHub;
+using DataHub.Settlement.Application.Lifecycle;
 using DataHub.Settlement.Infrastructure.DataHub;
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -97,7 +98,7 @@ public class ResilientDataHubClientTests
         var inner = new ControllableClient { SendResult = expected };
         var sut = CreateSut(inner);
 
-        var result = await sut.SendRequestAsync("supplier_switch", "{}", CancellationToken.None);
+        var result = await sut.SendRequestAsync(ProcessTypes.SupplierSwitch, "{}", CancellationToken.None);
 
         result.Should().Be(expected);
     }

@@ -170,7 +170,7 @@ public sealed class OnboardingService : IOnboardingService
             throw new ValidationException($"Invalid payment model '{paymentModel}'. Must be 'aconto' or 'post_payment'.");
 
         // 9. Map type to process type
-        var processType = request.Type == "switch" ? "supplier_switch" : "move_in";
+        var processType = request.Type == "switch" ? ProcessTypes.SupplierSwitch : ProcessTypes.MoveIn;
 
         // 10. Create process request
         var stateMachine = new ProcessStateMachine(_processRepo, _clock);
@@ -239,9 +239,9 @@ public sealed class OnboardingService : IOnboardingService
                     if (process?.DatahubCorrelationId is not null)
                     {
                         var cimPayload = _brsBuilder.BuildBrs003(process.Gsrn, process.DatahubCorrelationId);
-                        var response = await _dataHubClient.SendRequestAsync("cancel_switch", cimPayload, ct);
+                        var response = await _dataHubClient.SendRequestAsync(ProcessTypes.CancelSwitch, cimPayload, ct);
                         await _messageRepo.RecordOutboundRequestAsync(
-                            "RSM-024", process.Gsrn, process.DatahubCorrelationId,
+                            RsmMessageTypes.Cancellation, process.Gsrn, process.DatahubCorrelationId,
                             response.Accepted ? "acknowledged_ok" : "acknowledged_error", cimPayload, ct);
                         _logger.LogInformation(
                             "Sent BRS-003 cancel to DataHub for GSRN {Gsrn}, correlation={CorrelationId}",

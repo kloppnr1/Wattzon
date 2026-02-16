@@ -287,7 +287,7 @@ public sealed class EffectuationService
                     transaction: tx, cancellationToken: ct));
 
             // 6. Check if we need to send RSM-027
-            if (processType is "supplier_switch" or "move_in" && datahubCorrelationId is not null)
+            if (processType is ProcessTypes.SupplierSwitch or ProcessTypes.MoveIn && datahubCorrelationId is not null)
             {
                 cprCvr = signup.CustomerCprCvr;
                 if (cprCvr is not null)
@@ -388,7 +388,7 @@ public sealed class EffectuationService
             try
             {
                 var rsm027 = _brsBuilder.BuildRsm027(meteringPointId, customerName!, cprCvr!, datahubCorrelationId!);
-                await _dataHubClient.SendRequestAsync("customer_data_update", rsm027, ct);
+                await _dataHubClient.SendRequestAsync(ProcessTypes.CustomerDataUpdate, rsm027, ct);
                 await _messageRepo.RecordOutboundRequestAsync("RSM-027", meteringPointId, datahubCorrelationId!, "sent", rsm027, ct);
                 _logger.LogInformation("RSM-022: Sent RSM-027 customer data update for {Gsrn}", meteringPointId);
             }

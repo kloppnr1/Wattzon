@@ -246,7 +246,7 @@ public class PeriodBoundarySettlementTests : IClassFixture<TestDatabase>
     private async Task CreateCompletedProcessAsync(DateOnly effectiveDate, TestClock clock, CancellationToken ct)
     {
         var sm = new ProcessStateMachine(_processRepo, clock);
-        var process = await sm.CreateRequestAsync(Gsrn, "supplier_switch", effectiveDate, ct);
+        var process = await sm.CreateRequestAsync(Gsrn, ProcessTypes.SupplierSwitch, effectiveDate, ct);
         await sm.MarkSentAsync(process.Id, "corr-boundary-test", ct);
         await sm.MarkAcknowledgedAsync(process.Id, ct);
         await sm.MarkCompletedAsync(process.Id, ct);

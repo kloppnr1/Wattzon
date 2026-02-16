@@ -68,7 +68,7 @@ public class FullLifecycleTests
         var engine = new SettlementEngine();
 
         // 1. Create and send BRS-001
-        var request = await sm.CreateRequestAsync("571313100000012345", "supplier_switch",
+        var request = await sm.CreateRequestAsync("571313100000012345", ProcessTypes.SupplierSwitch,
             new DateOnly(2025, 1, 1), CancellationToken.None);
         await sm.MarkSentAsync(request.Id, "corr-lifecycle-001", CancellationToken.None);
 
@@ -108,7 +108,7 @@ public class FullLifecycleTests
         var sm = new ProcessStateMachine(_processRepo, _clock);
 
         // 1. Submit BRS-001
-        var request = await sm.CreateRequestAsync("571313100000012345", "supplier_switch",
+        var request = await sm.CreateRequestAsync("571313100000012345", ProcessTypes.SupplierSwitch,
             new DateOnly(2025, 1, 1), CancellationToken.None);
         await sm.MarkSentAsync(request.Id, "corr-reject-001", CancellationToken.None);
 
@@ -118,7 +118,7 @@ public class FullLifecycleTests
         state!.Status.Should().Be("rejected");
 
         // 3. Retry with new request
-        var retry = await sm.CreateRequestAsync("571313100000012345", "supplier_switch",
+        var retry = await sm.CreateRequestAsync("571313100000012345", ProcessTypes.SupplierSwitch,
             new DateOnly(2025, 1, 1), CancellationToken.None);
         await sm.MarkSentAsync(retry.Id, "corr-retry-001", CancellationToken.None);
         await sm.MarkAcknowledgedAsync(retry.Id, CancellationToken.None);
@@ -136,7 +136,7 @@ public class FullLifecycleTests
         var acontoService = new AcontoSettlementService(engine);
 
         // 1. Complete onboarding
-        var request = await sm.CreateRequestAsync("571313100000012345", "supplier_switch",
+        var request = await sm.CreateRequestAsync("571313100000012345", ProcessTypes.SupplierSwitch,
             new DateOnly(2025, 1, 1), CancellationToken.None);
         await sm.MarkSentAsync(request.Id, "corr-aconto-001", CancellationToken.None);
         await sm.MarkAcknowledgedAsync(request.Id, CancellationToken.None);
@@ -164,7 +164,7 @@ public class FullLifecycleTests
         var engine = new SettlementEngine();
 
         // 1. Create and send BRS-009 (move in)
-        var request = await sm.CreateRequestAsync("571313100000012345", "move_in",
+        var request = await sm.CreateRequestAsync("571313100000012345", ProcessTypes.MoveIn,
             new DateOnly(2025, 1, 1), CancellationToken.None);
         await sm.MarkSentAsync(request.Id, "corr-movein-001", CancellationToken.None);
 
@@ -195,7 +195,7 @@ public class FullLifecycleTests
         var engine = new SettlementEngine();
 
         // 1. Establish supply via supplier_switch
-        var onboard = await sm.CreateRequestAsync("571313100000012345", "supplier_switch",
+        var onboard = await sm.CreateRequestAsync("571313100000012345", ProcessTypes.SupplierSwitch,
             new DateOnly(2025, 1, 1), CancellationToken.None);
         await sm.MarkSentAsync(onboard.Id, "corr-moveout-setup", CancellationToken.None);
         await sm.MarkAcknowledgedAsync(onboard.Id, CancellationToken.None);
@@ -207,7 +207,7 @@ public class FullLifecycleTests
         janResult.Total.Should().Be(793.14m);
 
         // 3. Create move_out process (BRS-010)
-        var moveOut = await sm.CreateRequestAsync("571313100000012345", "move_out",
+        var moveOut = await sm.CreateRequestAsync("571313100000012345", ProcessTypes.MoveOut,
             new DateOnly(2025, 2, 16), CancellationToken.None);
         await sm.MarkSentAsync(moveOut.Id, "corr-moveout-001", CancellationToken.None);
         await sm.MarkAcknowledgedAsync(moveOut.Id, CancellationToken.None);

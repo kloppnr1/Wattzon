@@ -111,7 +111,7 @@ public class CorrectionWorkflowTests : IClassFixture<TestDatabase>
 
         // ──── 3. Create completed process ────
         var stateMachine = new ProcessStateMachine(_processRepo, clock);
-        var process = await stateMachine.CreateRequestAsync(Gsrn, "supplier_switch", periodStart, ct);
+        var process = await stateMachine.CreateRequestAsync(Gsrn, ProcessTypes.SupplierSwitch, periodStart, ct);
         await stateMachine.MarkSentAsync(process.Id, "corr-correction-test", ct);
         await stateMachine.MarkAcknowledgedAsync(process.Id, ct);
         await stateMachine.MarkCompletedAsync(process.Id, ct);

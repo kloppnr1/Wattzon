@@ -21,7 +21,7 @@ public class ProcessStateMachineTemporalTests
         _clock.Today = new DateOnly(2025, 2, 1);
         var sut = CreateSut();
 
-        var request = await sut.CreateRequestAsync("571313100000012345", "supplier_switch",
+        var request = await sut.CreateRequestAsync("571313100000012345", ProcessTypes.SupplierSwitch,
             new DateOnly(2025, 2, 1), CancellationToken.None);
         await sut.MarkSentAsync(request.Id, "corr-123", CancellationToken.None);
         await sut.MarkAcknowledgedAsync(request.Id, CancellationToken.None);
@@ -38,7 +38,7 @@ public class ProcessStateMachineTemporalTests
         _clock.Today = new DateOnly(2025, 12, 31);
         var sut = CreateSut();
 
-        var request = await sut.CreateRequestAsync("571313100000012345", "supplier_switch",
+        var request = await sut.CreateRequestAsync("571313100000012345", ProcessTypes.SupplierSwitch,
             new DateOnly(2025, 1, 1), CancellationToken.None);
         await sut.MarkSentAsync(request.Id, "corr-123", CancellationToken.None);
 

@@ -105,14 +105,16 @@ public class CancelFlowTests : IClassFixture<TestDatabase>
             new NullMessageRepository(), clock, NullLogger<EffectuationService>.Instance);
 
         var parser = new CimJsonParser();
-        var poller = new QueuePollerService(
-            fakeClient, parser, _meteringRepo, _portfolio, _processRepo, _signupRepo,
+        var masterDataHandler = new MasterDataMessageHandler(
+            parser, _portfolio, _processRepo, _signupRepo,
             onboardingService,
             new Infrastructure.Tariff.TariffRepository(TestDatabase.ConnectionString),
-            new Infrastructure.DataHub.BrsRequestBuilder(), new NullMessageRepository(),
-            clock, _messageLog,
-            new NullInvoiceService(),
-            effectuationService,
+            clock, effectuationService,
+            NullLogger<MasterDataMessageHandler>.Instance);
+        var poller = new QueuePollerService(
+            fakeClient, parser, _meteringRepo, _portfolio,
+            new Infrastructure.Tariff.TariffRepository(TestDatabase.ConnectionString),
+            _messageLog, masterDataHandler,
             NullLogger<QueuePollerService>.Instance);
 
         var processed = await poller.PollQueueAsync(QueueName.MasterData, ct);
@@ -186,14 +188,16 @@ public class CancelFlowTests : IClassFixture<TestDatabase>
             new NullMessageRepository(), clock, NullLogger<EffectuationService>.Instance);
 
         var parser = new CimJsonParser();
-        var poller = new QueuePollerService(
-            fakeClient, parser, _meteringRepo, _portfolio, _processRepo, _signupRepo,
+        var masterDataHandler = new MasterDataMessageHandler(
+            parser, _portfolio, _processRepo, _signupRepo,
             onboardingService,
             new Infrastructure.Tariff.TariffRepository(TestDatabase.ConnectionString),
-            new Infrastructure.DataHub.BrsRequestBuilder(), new NullMessageRepository(),
-            clock, _messageLog,
-            new NullInvoiceService(),
-            effectuationService,
+            clock, effectuationService,
+            NullLogger<MasterDataMessageHandler>.Instance);
+        var poller = new QueuePollerService(
+            fakeClient, parser, _meteringRepo, _portfolio,
+            new Infrastructure.Tariff.TariffRepository(TestDatabase.ConnectionString),
+            _messageLog, masterDataHandler,
             NullLogger<QueuePollerService>.Instance);
 
         var processed = await poller.PollQueueAsync(QueueName.MasterData, ct);

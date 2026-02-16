@@ -38,7 +38,7 @@ public class ProcessTimelineTests
         var ct = CancellationToken.None;
         var sm = CreateStateMachine();
 
-        var request = await sm.CreateRequestAsync("571313100000012345", "supplier_switch", new DateOnly(2025, 2, 1), ct);
+        var request = await sm.CreateRequestAsync("571313100000012345", ProcessTypes.SupplierSwitch, new DateOnly(2025, 2, 1), ct);
         await sm.MarkSentAsync(request.Id, "corr-sunshine-001", ct);
         await sm.MarkAcknowledgedAsync(request.Id, ct);
         await sm.MarkCompletedAsync(request.Id, ct);
@@ -62,7 +62,7 @@ public class ProcessTimelineTests
         var ct = CancellationToken.None;
         var sm = CreateStateMachine();
 
-        var request = await sm.CreateRequestAsync("571313100000012345", "supplier_switch", new DateOnly(2025, 2, 1), ct);
+        var request = await sm.CreateRequestAsync("571313100000012345", ProcessTypes.SupplierSwitch, new DateOnly(2025, 2, 1), ct);
         await sm.MarkSentAsync(request.Id, "corr-reject-001", ct);
         await sm.MarkRejectedAsync(request.Id, "E16: Supplier already holds this metering point", ct);
 
@@ -88,7 +88,7 @@ public class ProcessTimelineTests
         var ct = CancellationToken.None;
         var sm = CreateStateMachine();
 
-        var request = await sm.CreateRequestAsync("571313100000012345", "supplier_switch", new DateOnly(2025, 2, 1), ct);
+        var request = await sm.CreateRequestAsync("571313100000012345", ProcessTypes.SupplierSwitch, new DateOnly(2025, 2, 1), ct);
         await sm.MarkSentAsync(request.Id, "corr-cancel-001", ct);
         await sm.MarkAcknowledgedAsync(request.Id, ct);
 
@@ -121,7 +121,7 @@ public class ProcessTimelineTests
         var ct = CancellationToken.None;
         var sm = CreateStateMachine();
 
-        var request = await sm.CreateRequestAsync("571313100000012345", "supplier_switch", new DateOnly(2025, 2, 1), ct);
+        var request = await sm.CreateRequestAsync("571313100000012345", ProcessTypes.SupplierSwitch, new DateOnly(2025, 2, 1), ct);
         await sm.MarkCancelledAsync(request.Id, "Cancelled by user", ct);
 
         var events = await _processRepo.GetEventsAsync(request.Id, ct);
@@ -143,7 +143,7 @@ public class ProcessTimelineTests
         var ct = CancellationToken.None;
         var sm = CreateStateMachine();
 
-        var request = await sm.CreateRequestAsync("571313100000012345", "supplier_switch", new DateOnly(2025, 2, 1), ct);
+        var request = await sm.CreateRequestAsync("571313100000012345", ProcessTypes.SupplierSwitch, new DateOnly(2025, 2, 1), ct);
         await sm.MarkSentAsync(request.Id, "corr-full-001", ct);
         await sm.MarkAcknowledgedAsync(request.Id, ct);
         await sm.MarkCompletedAsync(request.Id, ct);
@@ -170,7 +170,7 @@ public class ProcessTimelineTests
         var ct = CancellationToken.None;
         var sm = CreateStateMachine();
 
-        var request = await sm.CreateRequestAsync("571313100000012345", "supplier_switch", new DateOnly(2025, 2, 1), ct);
+        var request = await sm.CreateRequestAsync("571313100000012345", ProcessTypes.SupplierSwitch, new DateOnly(2025, 2, 1), ct);
         await sm.MarkSentAsync(request.Id, "corr-ts-001", ct);
         await sm.MarkAcknowledgedAsync(request.Id, ct);
         await sm.MarkCompletedAsync(request.Id, ct);
@@ -194,7 +194,7 @@ public class ProcessTimelineTests
         var ct = CancellationToken.None;
         var sm = CreateStateMachine();
 
-        var request = await sm.CreateRequestAsync("571313100000012345", "supplier_switch", new DateOnly(2025, 2, 1), ct);
+        var request = await sm.CreateRequestAsync("571313100000012345", ProcessTypes.SupplierSwitch, new DateOnly(2025, 2, 1), ct);
         await sm.MarkSentAsync(request.Id, "corr-poller-001", ct);
 
         var parser = new StubCimParser(new Rsm001ResponseResult("corr-poller-001", true, null, null));
@@ -223,7 +223,7 @@ public class ProcessTimelineTests
         var ct = CancellationToken.None;
         var sm = CreateStateMachine();
 
-        var request = await sm.CreateRequestAsync("571313100000012345", "supplier_switch", new DateOnly(2025, 2, 1), ct);
+        var request = await sm.CreateRequestAsync("571313100000012345", ProcessTypes.SupplierSwitch, new DateOnly(2025, 2, 1), ct);
         await sm.MarkSentAsync(request.Id, "corr-poller-002", ct);
 
         var parser = new StubCimParser(new Rsm001ResponseResult("corr-poller-002", false, "E16: Invalid GSRN", "E16"));
@@ -251,7 +251,7 @@ public class ProcessTimelineTests
         var ct = CancellationToken.None;
         var sm = CreateStateMachine();
 
-        var request = await sm.CreateRequestAsync("571313100000012345", "supplier_switch", new DateOnly(2025, 2, 1), ct);
+        var request = await sm.CreateRequestAsync("571313100000012345", ProcessTypes.SupplierSwitch, new DateOnly(2025, 2, 1), ct);
         await sm.MarkSentAsync(request.Id, "corr-poller-003", ct);
         await sm.MarkAcknowledgedAsync(request.Id, ct);
         await sm.MarkCancellationSentAsync(request.Id, ct);
@@ -287,7 +287,7 @@ public class ProcessTimelineTests
         var ct = CancellationToken.None;
         var sm = CreateStateMachine();
 
-        var request = await sm.CreateRequestAsync("571313100000012345", "supplier_switch", new DateOnly(2025, 2, 1), ct);
+        var request = await sm.CreateRequestAsync("571313100000012345", ProcessTypes.SupplierSwitch, new DateOnly(2025, 2, 1), ct);
         await sm.MarkSentAsync(request.Id, "corr-revert-001", ct);
         await sm.MarkAcknowledgedAsync(request.Id, ct);
         await sm.MarkCancellationSentAsync(request.Id, ct);
@@ -317,7 +317,7 @@ public class ProcessTimelineTests
         var ct = CancellationToken.None;
         var sm = CreateStateMachine();
 
-        var request = await sm.CreateRequestAsync("571313100000012345", "supplier_switch", new DateOnly(2025, 2, 1), ct);
+        var request = await sm.CreateRequestAsync("571313100000012345", ProcessTypes.SupplierSwitch, new DateOnly(2025, 2, 1), ct);
         await sm.MarkSentAsync(request.Id, "corr-poller-004", ct);
         await sm.MarkAcknowledgedAsync(request.Id, ct);
         await sm.MarkCancellationSentAsync(request.Id, ct);

@@ -45,13 +45,11 @@ public class QueuePollerTests : IClassFixture<TestDatabase>
         var parser = new CimJsonParser();
         var processRepo = new ProcessRepository(TestDatabase.ConnectionString);
         var signupRepo = new SignupRepository(TestDatabase.ConnectionString);
+        var masterDataHandler = CreateNullMasterDataHandler(TestDatabase.ConnectionString, parser, processRepo, signupRepo);
         var poller = new QueuePollerService(
-            client, parser, _meteringRepo, _portfolioRepo, processRepo, signupRepo,
-            NullOnboardingService.Instance, new Infrastructure.Tariff.TariffRepository(TestDatabase.ConnectionString),
-            new Infrastructure.DataHub.BrsRequestBuilder(), new NullMessageRepository(),
-            new TestClock(), _messageLog,
-            new NullInvoiceService(),
-            CreateNullEffectuationService(TestDatabase.ConnectionString),
+            client, parser, _meteringRepo, _portfolioRepo,
+            new Infrastructure.Tariff.TariffRepository(TestDatabase.ConnectionString),
+            _messageLog, masterDataHandler,
             NullLogger<QueuePollerService>.Instance);
 
         client.Enqueue(QueueName.Timeseries, new DataHubMessage("msg-001", "RSM-012", null, LoadSingleDayFixture()));
@@ -79,13 +77,11 @@ public class QueuePollerTests : IClassFixture<TestDatabase>
         var parser = new CimJsonParser();
         var processRepo = new ProcessRepository(TestDatabase.ConnectionString);
         var signupRepo = new SignupRepository(TestDatabase.ConnectionString);
+        var masterDataHandler = CreateNullMasterDataHandler(TestDatabase.ConnectionString, parser, processRepo, signupRepo);
         var poller = new QueuePollerService(
-            client, parser, _meteringRepo, _portfolioRepo, processRepo, signupRepo,
-            NullOnboardingService.Instance, new Infrastructure.Tariff.TariffRepository(TestDatabase.ConnectionString),
-            new Infrastructure.DataHub.BrsRequestBuilder(), new NullMessageRepository(),
-            new TestClock(), _messageLog,
-            new NullInvoiceService(),
-            CreateNullEffectuationService(TestDatabase.ConnectionString),
+            client, parser, _meteringRepo, _portfolioRepo,
+            new Infrastructure.Tariff.TariffRepository(TestDatabase.ConnectionString),
+            _messageLog, masterDataHandler,
             NullLogger<QueuePollerService>.Instance);
 
         client.Enqueue(QueueName.Timeseries, new DataHubMessage("msg-dup", "RSM-012", null, LoadSingleDayFixture()));
@@ -112,13 +108,11 @@ public class QueuePollerTests : IClassFixture<TestDatabase>
         var parser = new CimJsonParser();
         var processRepo = new ProcessRepository(TestDatabase.ConnectionString);
         var signupRepo = new SignupRepository(TestDatabase.ConnectionString);
+        var masterDataHandler = CreateNullMasterDataHandler(TestDatabase.ConnectionString, parser, processRepo, signupRepo);
         var poller = new QueuePollerService(
-            client, parser, _meteringRepo, _portfolioRepo, processRepo, signupRepo,
-            NullOnboardingService.Instance, new Infrastructure.Tariff.TariffRepository(TestDatabase.ConnectionString),
-            new Infrastructure.DataHub.BrsRequestBuilder(), new NullMessageRepository(),
-            new TestClock(), _messageLog,
-            new NullInvoiceService(),
-            CreateNullEffectuationService(TestDatabase.ConnectionString),
+            client, parser, _meteringRepo, _portfolioRepo,
+            new Infrastructure.Tariff.TariffRepository(TestDatabase.ConnectionString),
+            _messageLog, masterDataHandler,
             NullLogger<QueuePollerService>.Instance);
 
         client.Enqueue(QueueName.Timeseries, new DataHubMessage("msg-bad", "RSM-012", null, "{ invalid json payload }"));
@@ -182,13 +176,15 @@ public class QueuePollerTests : IClassFixture<TestDatabase>
             clock,
             NullLogger<EffectuationService>.Instance);
 
-        var poller = new QueuePollerService(
-            client, parser, _meteringRepo, _portfolioRepo, processRepo, signupRepo,
+        var masterDataHandler = new MasterDataMessageHandler(
+            parser, _portfolioRepo, processRepo, signupRepo,
             onboardingService, new Infrastructure.Tariff.TariffRepository(TestDatabase.ConnectionString),
-            new Infrastructure.DataHub.BrsRequestBuilder(), new NullMessageRepository(),
-            clock, _messageLog,
-            new NullInvoiceService(),
-            effectuationService,
+            clock, effectuationService,
+            NullLogger<MasterDataMessageHandler>.Instance);
+        var poller = new QueuePollerService(
+            client, parser, _meteringRepo, _portfolioRepo,
+            new Infrastructure.Tariff.TariffRepository(TestDatabase.ConnectionString),
+            _messageLog, masterDataHandler,
             NullLogger<QueuePollerService>.Instance);
 
         // 2. Ensure grid area exists (required for RSM-022)
@@ -291,6 +287,14 @@ public class QueuePollerTests : IClassFixture<TestDatabase>
             new NullMessageRepository(),
             new TestClock(),
             NullLogger<EffectuationService>.Instance);
+
+    private static MasterDataMessageHandler CreateNullMasterDataHandler(
+        string connectionString, CimJsonParser parser,
+        ProcessRepository processRepo, SignupRepository signupRepo) =>
+        new(parser, new PortfolioRepository(connectionString), processRepo, signupRepo,
+            NullOnboardingService.Instance, new Infrastructure.Tariff.TariffRepository(connectionString),
+            new TestClock(), CreateNullEffectuationService(connectionString),
+            NullLogger<MasterDataMessageHandler>.Instance);
 
     /// <summary>
     /// Stub address lookup that returns the GSRN used in RSM-022 fixture

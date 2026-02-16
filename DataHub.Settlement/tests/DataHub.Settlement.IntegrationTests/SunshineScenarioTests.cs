@@ -98,7 +98,7 @@ public class SunshineScenarioTests : IClassFixture<TestDatabase>
 
         // ──── 3. ACT: submit BRS-001 ────
         var stateMachine = new ProcessStateMachine(_processRepo, new TestClock());
-        var processRequest = await stateMachine.CreateRequestAsync(Gsrn, "supplier_switch", new DateOnly(2025, 1, 1), ct);
+        var processRequest = await stateMachine.CreateRequestAsync(Gsrn, ProcessTypes.SupplierSwitch, new DateOnly(2025, 1, 1), ct);
 
         var fakeClient = new FakeDataHubClient();
         var brsBuilder = new Infrastructure.DataHub.BrsRequestBuilder();
@@ -149,13 +149,15 @@ public class SunshineScenarioTests : IClassFixture<TestDatabase>
             TestDatabase.ConnectionString, NullOnboardingService.Instance, new NullInvoiceService(),
             fakeClient, new Infrastructure.DataHub.BrsRequestBuilder(), new NullMessageRepository(),
             new TestClock(), NullLogger<EffectuationService>.Instance);
+        var masterDataHandler = new MasterDataMessageHandler(
+            parser, _portfolio, _processRepo, new SignupRepository(TestDatabase.ConnectionString),
+            NullOnboardingService.Instance, new TariffRepository(TestDatabase.ConnectionString),
+            new TestClock(), nullEffectuation,
+            NullLogger<MasterDataMessageHandler>.Instance);
         var poller = new QueuePollerService(
-            fakeClient, parser, _meteringRepo, _portfolio, _processRepo, new SignupRepository(TestDatabase.ConnectionString),
-            NullOnboardingService.Instance, new Infrastructure.Tariff.TariffRepository(TestDatabase.ConnectionString),
-            new Infrastructure.DataHub.BrsRequestBuilder(), new NullMessageRepository(),
-            new TestClock(), _messageLog,
-            new NullInvoiceService(),
-            nullEffectuation,
+            fakeClient, parser, _meteringRepo, _portfolio,
+            new TariffRepository(TestDatabase.ConnectionString),
+            _messageLog, masterDataHandler,
             NullLogger<QueuePollerService>.Instance);
         await poller.PollQueueAsync(QueueName.Timeseries, ct);
 

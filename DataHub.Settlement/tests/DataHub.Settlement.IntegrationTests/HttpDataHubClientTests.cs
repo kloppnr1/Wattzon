@@ -1,4 +1,5 @@
 using DataHub.Settlement.Application.DataHub;
+using DataHub.Settlement.Application.Lifecycle;
 using DataHub.Settlement.Infrastructure.DataHub;
 using DataHub.Settlement.Simulator;
 using FluentAssertions;
@@ -37,7 +38,7 @@ public class HttpDataHubClientTests : IClassFixture<WebApplicationFactory<Progra
     {
         await _admin.PostAsync("/admin/reset", null);
 
-        var response = await _sut.SendRequestAsync("supplier_switch", "{\"test\":true}", CancellationToken.None);
+        var response = await _sut.SendRequestAsync(ProcessTypes.SupplierSwitch, "{\"test\":true}", CancellationToken.None);
 
         response.Accepted.Should().BeTrue();
         response.CorrelationId.Should().NotBeNullOrEmpty();

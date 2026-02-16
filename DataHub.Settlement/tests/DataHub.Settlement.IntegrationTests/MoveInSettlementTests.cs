@@ -92,7 +92,7 @@ public class MoveInSettlementTests : IClassFixture<TestDatabase>
 
         // ──── 3. CREATE PROCESS: move_in with retroactive effective date ────
         var stateMachine = new ProcessStateMachine(_processRepo, clock);
-        var process = await stateMachine.CreateRequestAsync(Gsrn, "move_in", effectiveDate, ct);
+        var process = await stateMachine.CreateRequestAsync(Gsrn, ProcessTypes.MoveIn, effectiveDate, ct);
 
         // ──── 4. ADVANCE PROCESS: pending → sent → acknowledged → effectuation_pending → completed ────
         await stateMachine.MarkSentAsync(process.Id, "corr-movein-test", ct);

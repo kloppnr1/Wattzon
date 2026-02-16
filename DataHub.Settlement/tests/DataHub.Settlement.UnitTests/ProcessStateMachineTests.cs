@@ -16,7 +16,7 @@ public class ProcessStateMachineTests
     {
         var sut = CreateSut();
 
-        var request = await sut.CreateRequestAsync("571313100000012345", "supplier_switch", new DateOnly(2025, 2, 1), CancellationToken.None);
+        var request = await sut.CreateRequestAsync("571313100000012345", ProcessTypes.SupplierSwitch, new DateOnly(2025, 2, 1), CancellationToken.None);
 
         request.Status.Should().Be("pending");
         request.Gsrn.Should().Be("571313100000012345");
@@ -26,7 +26,7 @@ public class ProcessStateMachineTests
     public async Task Full_sunshine_path_transitions_correctly()
     {
         var sut = CreateSut();
-        var request = await sut.CreateRequestAsync("571313100000012345", "supplier_switch", new DateOnly(2025, 2, 1), CancellationToken.None);
+        var request = await sut.CreateRequestAsync("571313100000012345", ProcessTypes.SupplierSwitch, new DateOnly(2025, 2, 1), CancellationToken.None);
 
         await sut.MarkSentAsync(request.Id, "corr-123", CancellationToken.None);
         var afterSent = await _repo.GetAsync(request.Id, CancellationToken.None);
@@ -46,7 +46,7 @@ public class ProcessStateMachineTests
     public async Task Invalid_transition_throws()
     {
         var sut = CreateSut();
-        var request = await sut.CreateRequestAsync("571313100000012345", "supplier_switch", new DateOnly(2025, 2, 1), CancellationToken.None);
+        var request = await sut.CreateRequestAsync("571313100000012345", ProcessTypes.SupplierSwitch, new DateOnly(2025, 2, 1), CancellationToken.None);
 
         // Cannot go directly from pending to acknowledged
         var act = () => sut.MarkAcknowledgedAsync(request.Id, CancellationToken.None);
@@ -59,7 +59,7 @@ public class ProcessStateMachineTests
     public async Task Each_transition_creates_events()
     {
         var sut = CreateSut();
-        var request = await sut.CreateRequestAsync("571313100000012345", "supplier_switch", new DateOnly(2025, 2, 1), CancellationToken.None);
+        var request = await sut.CreateRequestAsync("571313100000012345", ProcessTypes.SupplierSwitch, new DateOnly(2025, 2, 1), CancellationToken.None);
 
         await sut.MarkSentAsync(request.Id, "corr-123", CancellationToken.None);
         await sut.MarkAcknowledgedAsync(request.Id, CancellationToken.None);
@@ -73,7 +73,7 @@ public class ProcessStateMachineTests
     public async Task Rejection_from_sent_to_datahub_transitions_correctly()
     {
         var sut = CreateSut();
-        var request = await sut.CreateRequestAsync("571313100000012345", "supplier_switch", new DateOnly(2025, 2, 1), CancellationToken.None);
+        var request = await sut.CreateRequestAsync("571313100000012345", ProcessTypes.SupplierSwitch, new DateOnly(2025, 2, 1), CancellationToken.None);
         await sut.MarkSentAsync(request.Id, "corr-123", CancellationToken.None);
 
         await sut.MarkRejectedAsync(request.Id, "E16: Invalid GSRN", CancellationToken.None);
@@ -90,7 +90,7 @@ public class ProcessStateMachineTests
     public async Task Cancellation_from_pending_transitions_correctly()
     {
         var sut = CreateSut();
-        var request = await sut.CreateRequestAsync("571313100000012345", "supplier_switch", new DateOnly(2025, 2, 1), CancellationToken.None);
+        var request = await sut.CreateRequestAsync("571313100000012345", ProcessTypes.SupplierSwitch, new DateOnly(2025, 2, 1), CancellationToken.None);
 
         await sut.MarkCancelledAsync(request.Id, "Customer withdrew", CancellationToken.None);
 
@@ -102,7 +102,7 @@ public class ProcessStateMachineTests
     public async Task Cancellation_from_effectuation_pending_transitions_through_cancellation_pending()
     {
         var sut = CreateSut();
-        var request = await sut.CreateRequestAsync("571313100000012345", "supplier_switch", new DateOnly(2025, 2, 1), CancellationToken.None);
+        var request = await sut.CreateRequestAsync("571313100000012345", ProcessTypes.SupplierSwitch, new DateOnly(2025, 2, 1), CancellationToken.None);
         await sut.MarkSentAsync(request.Id, "corr-123", CancellationToken.None);
         await sut.MarkAcknowledgedAsync(request.Id, CancellationToken.None);
 
@@ -126,7 +126,7 @@ public class ProcessStateMachineTests
     public async Task Cancellation_from_effectuation_pending_rejects_direct_cancelled()
     {
         var sut = CreateSut();
-        var request = await sut.CreateRequestAsync("571313100000012345", "supplier_switch", new DateOnly(2025, 2, 1), CancellationToken.None);
+        var request = await sut.CreateRequestAsync("571313100000012345", ProcessTypes.SupplierSwitch, new DateOnly(2025, 2, 1), CancellationToken.None);
         await sut.MarkSentAsync(request.Id, "corr-123", CancellationToken.None);
         await sut.MarkAcknowledgedAsync(request.Id, CancellationToken.None);
 
@@ -141,7 +141,7 @@ public class ProcessStateMachineTests
     public async Task Cancellation_from_pending_still_works()
     {
         var sut = CreateSut();
-        var request = await sut.CreateRequestAsync("571313100000012345", "supplier_switch", new DateOnly(2025, 2, 1), CancellationToken.None);
+        var request = await sut.CreateRequestAsync("571313100000012345", ProcessTypes.SupplierSwitch, new DateOnly(2025, 2, 1), CancellationToken.None);
 
         // Direct cancellation from pending should still work (no DataHub involvement)
         await sut.MarkCancelledAsync(request.Id, "Cancelled by user before sending", CancellationToken.None);
@@ -158,7 +158,7 @@ public class ProcessStateMachineTests
     public async Task Offboarding_from_completed_transitions_correctly()
     {
         var sut = CreateSut();
-        var request = await sut.CreateRequestAsync("571313100000012345", "supplier_switch", new DateOnly(2025, 2, 1), CancellationToken.None);
+        var request = await sut.CreateRequestAsync("571313100000012345", ProcessTypes.SupplierSwitch, new DateOnly(2025, 2, 1), CancellationToken.None);
         await sut.MarkSentAsync(request.Id, "corr-123", CancellationToken.None);
         await sut.MarkAcknowledgedAsync(request.Id, CancellationToken.None);
         await sut.MarkCompletedAsync(request.Id, CancellationToken.None);
@@ -173,7 +173,7 @@ public class ProcessStateMachineTests
     public async Task Final_settled_from_offboarding_transitions_correctly()
     {
         var sut = CreateSut();
-        var request = await sut.CreateRequestAsync("571313100000012345", "supplier_switch", new DateOnly(2025, 2, 1), CancellationToken.None);
+        var request = await sut.CreateRequestAsync("571313100000012345", ProcessTypes.SupplierSwitch, new DateOnly(2025, 2, 1), CancellationToken.None);
         await sut.MarkSentAsync(request.Id, "corr-123", CancellationToken.None);
         await sut.MarkAcknowledgedAsync(request.Id, CancellationToken.None);
         await sut.MarkCompletedAsync(request.Id, CancellationToken.None);
@@ -192,7 +192,7 @@ public class ProcessStateMachineTests
     public async Task Cannot_offboard_from_pending()
     {
         var sut = CreateSut();
-        var request = await sut.CreateRequestAsync("571313100000012345", "supplier_switch", new DateOnly(2025, 2, 1), CancellationToken.None);
+        var request = await sut.CreateRequestAsync("571313100000012345", ProcessTypes.SupplierSwitch, new DateOnly(2025, 2, 1), CancellationToken.None);
 
         var act = () => sut.MarkOffboardingAsync(request.Id, CancellationToken.None);
 

@@ -90,13 +90,13 @@ public sealed class MarketRulesScenarioTests : IClassFixture<WebApplicationFacto
 
         // Send BRS-001 through HTTP simulator
         var payload = _brsBuilder.BuildBrs001(gsrn, "0101901234", new DateOnly(2025, 1, 1));
-        var response = await _datahub.SendRequestAsync("supplier_switch", payload, ct);
+        var response = await _datahub.SendRequestAsync(ProcessTypes.SupplierSwitch, payload, ct);
 
         response.Accepted.Should().BeTrue();
         response.CorrelationId.Should().NotBeNullOrEmpty();
 
         // Create process in DB and advance state machine
-        var process = await _stateMachine.CreateRequestAsync(gsrn, "supplier_switch", new DateOnly(2025, 1, 1), ct);
+        var process = await _stateMachine.CreateRequestAsync(gsrn, ProcessTypes.SupplierSwitch, new DateOnly(2025, 1, 1), ct);
         await _stateMachine.MarkSentAsync(process.Id, response.CorrelationId, ct);
         await _stateMachine.MarkAcknowledgedAsync(process.Id, ct);
 
@@ -127,11 +127,11 @@ public sealed class MarketRulesScenarioTests : IClassFixture<WebApplicationFacto
 
         // First BRS-001 — accepted
         var payload = _brsBuilder.BuildBrs001(gsrn, "0101901234", new DateOnly(2025, 1, 1));
-        var first = await _datahub.SendRequestAsync("supplier_switch", payload, ct);
+        var first = await _datahub.SendRequestAsync(ProcessTypes.SupplierSwitch, payload, ct);
         first.Accepted.Should().BeTrue();
 
         // Second BRS-001 for same GSRN — rejected by simulator
-        var second = await _datahub.SendRequestAsync("supplier_switch", payload, ct);
+        var second = await _datahub.SendRequestAsync(ProcessTypes.SupplierSwitch, payload, ct);
         second.Accepted.Should().BeFalse();
         second.RejectionReason.Should().Be("E16");
     }
@@ -152,7 +152,7 @@ public sealed class MarketRulesScenarioTests : IClassFixture<WebApplicationFacto
         // Simulator also knows this GSRN is active (from first BRS-001)
         // Try duplicate BRS-001 through simulator
         var payload = _brsBuilder.BuildBrs001(gsrn, "0101901234", new DateOnly(2025, 1, 1));
-        var simResponse = await _datahub.SendRequestAsync("supplier_switch", payload, ct);
+        var simResponse = await _datahub.SendRequestAsync(ProcessTypes.SupplierSwitch, payload, ct);
         simResponse.Accepted.Should().BeFalse("simulator should reject duplicate GSRN");
 
         // Also verify DB-level market rules reject it
@@ -171,7 +171,7 @@ public sealed class MarketRulesScenarioTests : IClassFixture<WebApplicationFacto
         await ResetSimulator();
 
         var payload = _brsBuilder.BuildBrs002(gsrn, new DateOnly(2025, 2, 1));
-        var response = await _datahub.SendRequestAsync("end_of_supply", payload, ct);
+        var response = await _datahub.SendRequestAsync(ProcessTypes.EndOfSupply, payload, ct);
 
         response.Accepted.Should().BeFalse();
         response.RejectionReason.Should().Be("E16");
@@ -195,10 +195,10 @@ public sealed class MarketRulesScenarioTests : IClassFixture<WebApplicationFacto
         await _portfolio.CreateContractAsync(customer.Id, gsrn, product.Id, "monthly", "post_payment", new DateOnly(2025, 1, 1), ct);
 
         var brs001Payload = _brsBuilder.BuildBrs001(gsrn, "0101901234", new DateOnly(2025, 1, 1));
-        var brs001Response = await _datahub.SendRequestAsync("supplier_switch", brs001Payload, ct);
+        var brs001Response = await _datahub.SendRequestAsync(ProcessTypes.SupplierSwitch, brs001Payload, ct);
         brs001Response.Accepted.Should().BeTrue();
 
-        var process = await _stateMachine.CreateRequestAsync(gsrn, "supplier_switch", new DateOnly(2025, 1, 1), ct);
+        var process = await _stateMachine.CreateRequestAsync(gsrn, ProcessTypes.SupplierSwitch, new DateOnly(2025, 1, 1), ct);
         await _stateMachine.MarkSentAsync(process.Id, brs001Response.CorrelationId, ct);
         await _stateMachine.MarkAcknowledgedAsync(process.Id, ct);
         await _portfolio.ActivateMeteringPointAsync(gsrn, new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc), ct);
@@ -238,11 +238,11 @@ public sealed class MarketRulesScenarioTests : IClassFixture<WebApplicationFacto
         offboardCheck.IsValid.Should().BeTrue();
 
         var brs002Payload = _brsBuilder.BuildBrs002(gsrn, new DateOnly(2025, 2, 1));
-        var brs002Response = await _datahub.SendRequestAsync("end_of_supply", brs002Payload, ct);
+        var brs002Response = await _datahub.SendRequestAsync(ProcessTypes.EndOfSupply, brs002Payload, ct);
         brs002Response.Accepted.Should().BeTrue();
 
         await _stateMachine.MarkOffboardingAsync(process.Id, ct);
-        await _portfolio.EndSupplyPeriodAsync(gsrn, new DateOnly(2025, 2, 1), "supplier_switch", ct);
+        await _portfolio.EndSupplyPeriodAsync(gsrn, new DateOnly(2025, 2, 1), ProcessTypes.SupplierSwitch, ct);
         await _portfolio.EndContractAsync(gsrn, new DateOnly(2025, 2, 1), ct);
         await _portfolio.DeactivateMeteringPointAsync(gsrn, new DateTime(2025, 2, 1, 0, 0, 0, DateTimeKind.Utc), ct);
         await _stateMachine.MarkFinalSettledAsync(process.Id, ct);
@@ -328,13 +328,15 @@ public sealed class MarketRulesScenarioTests : IClassFixture<WebApplicationFacto
             Conn, NullOnboardingService.Instance, new NullInvoiceService(),
             _datahub, new Infrastructure.DataHub.BrsRequestBuilder(), new NullMessageRepository(),
             new TestClock(), NullLogger<EffectuationService>.Instance);
+        var masterDataHandler = new MasterDataMessageHandler(
+            parser, _portfolio, processRepo, signupRepo,
+            NullOnboardingService.Instance, new TariffRepository(Conn),
+            new TestClock(), nullEffectuation,
+            NullLogger<MasterDataMessageHandler>.Instance);
         var poller = new QueuePollerService(
-            _datahub, parser, meteringRepo, _portfolio, processRepo, signupRepo,
-            NullOnboardingService.Instance, new Infrastructure.Tariff.TariffRepository(Conn),
-            new Infrastructure.DataHub.BrsRequestBuilder(), new NullMessageRepository(),
-            new TestClock(), messageLog,
-            new NullInvoiceService(),
-            nullEffectuation,
+            _datahub, parser, meteringRepo, _portfolio,
+            new TariffRepository(Conn),
+            messageLog, masterDataHandler,
             NullLogger<QueuePollerService>.Instance);
         await poller.PollQueueAsync(QueueName.Timeseries, ct);
 
@@ -357,7 +359,7 @@ public sealed class MarketRulesScenarioTests : IClassFixture<WebApplicationFacto
 
         // GSRN starts inactive — BRS-001 should be accepted
         var payload = _brsBuilder.BuildBrs001(gsrn, "0101901234", new DateOnly(2025, 1, 1));
-        var first = await _datahub.SendRequestAsync("supplier_switch", payload, ct);
+        var first = await _datahub.SendRequestAsync(ProcessTypes.SupplierSwitch, payload, ct);
         first.Accepted.Should().BeTrue();
 
         // Now GSRN is active — deactivate via admin
@@ -365,7 +367,7 @@ public sealed class MarketRulesScenarioTests : IClassFixture<WebApplicationFacto
         deactivate.EnsureSuccessStatusCode();
 
         // BRS-001 should be accepted again (GSRN is inactive)
-        var second = await _datahub.SendRequestAsync("supplier_switch", payload, ct);
+        var second = await _datahub.SendRequestAsync(ProcessTypes.SupplierSwitch, payload, ct);
         second.Accepted.Should().BeTrue();
 
         // Manually activate via admin
@@ -373,7 +375,7 @@ public sealed class MarketRulesScenarioTests : IClassFixture<WebApplicationFacto
         activate.EnsureSuccessStatusCode();
 
         // BRS-001 should be rejected (GSRN is active)
-        var third = await _datahub.SendRequestAsync("supplier_switch", payload, ct);
+        var third = await _datahub.SendRequestAsync(ProcessTypes.SupplierSwitch, payload, ct);
         third.Accepted.Should().BeFalse();
         third.RejectionReason.Should().Be("E16");
     }
@@ -500,11 +502,11 @@ public sealed class MarketRulesScenarioTests : IClassFixture<WebApplicationFacto
 
         // Send through simulator
         var payload = _brsBuilder.BuildBrs001(gsrn, "0101901234", new DateOnly(2025, 1, 1));
-        var response = await _datahub.SendRequestAsync("supplier_switch", payload, ct);
+        var response = await _datahub.SendRequestAsync(ProcessTypes.SupplierSwitch, payload, ct);
         response.Accepted.Should().BeTrue();
 
         // Advance DB state
-        var process = await _stateMachine.CreateRequestAsync(gsrn, "supplier_switch", new DateOnly(2025, 1, 1), ct);
+        var process = await _stateMachine.CreateRequestAsync(gsrn, ProcessTypes.SupplierSwitch, new DateOnly(2025, 1, 1), ct);
         await _stateMachine.MarkSentAsync(process.Id, response.CorrelationId, ct);
         await _stateMachine.MarkAcknowledgedAsync(process.Id, ct);
         await _portfolio.ActivateMeteringPointAsync(gsrn, new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc), ct);

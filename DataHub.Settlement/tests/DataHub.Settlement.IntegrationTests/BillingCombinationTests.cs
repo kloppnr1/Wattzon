@@ -244,7 +244,7 @@ public class BillingCombinationTests : IClassFixture<TestDatabase>
 
         // Create and complete process
         var sm = new ProcessStateMachine(_processRepo, clock);
-        var process = await sm.CreateRequestAsync(gsrn, "supplier_switch", effectiveDate, ct);
+        var process = await sm.CreateRequestAsync(gsrn, ProcessTypes.SupplierSwitch, effectiveDate, ct);
         await sm.MarkSentAsync(process.Id, $"corr-{gsrn}", ct);
         await sm.MarkAcknowledgedAsync(process.Id, ct);
         await sm.MarkCompletedAsync(process.Id, ct);

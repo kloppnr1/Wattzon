@@ -17,7 +17,7 @@ public class AutoCancelAtomicityTests
         var clock = new TestClock();
         var sut = new ProcessStateMachine(repo, clock);
 
-        var request = await sut.CreateRequestAsync("571313100000012345", "supplier_switch",
+        var request = await sut.CreateRequestAsync("571313100000012345", ProcessTypes.SupplierSwitch,
             new DateOnly(2025, 2, 1), CancellationToken.None);
 
         await sut.MarkSentAsync(request.Id, "corr-123", CancellationToken.None);
@@ -46,7 +46,7 @@ public class AutoCancelAtomicityTests
         var clock = new TestClock();
         var sut = new ProcessStateMachine(repo, clock);
 
-        var request = await sut.CreateRequestAsync("571313100000012345", "supplier_switch",
+        var request = await sut.CreateRequestAsync("571313100000012345", ProcessTypes.SupplierSwitch,
             new DateOnly(2025, 2, 1), CancellationToken.None);
 
         // Process is in "pending" — auto-cancel expects "effectuation_pending"

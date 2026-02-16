@@ -75,13 +75,13 @@ public sealed class ProcessSchedulerService : BackgroundService
             {
                 string? cimPayload;
 
-                if (process.ProcessType is "end_of_supply" or "move_out")
+                if (process.ProcessType is ProcessTypes.EndOfSupply or ProcessTypes.MoveOut)
                 {
                     // BRS-002/BRS-010 don't need CPR/CVR
                     cimPayload = process.ProcessType switch
                     {
-                        "end_of_supply" => _brsBuilder.BuildBrs002(process.Gsrn, process.EffectiveDate!.Value),
-                        "move_out" => _brsBuilder.BuildBrs010(process.Gsrn, process.EffectiveDate!.Value),
+                        ProcessTypes.EndOfSupply => _brsBuilder.BuildBrs002(process.Gsrn, process.EffectiveDate!.Value),
+                        ProcessTypes.MoveOut => _brsBuilder.BuildBrs010(process.Gsrn, process.EffectiveDate!.Value),
                         _ => null,
                     };
                 }
@@ -105,8 +105,8 @@ public sealed class ProcessSchedulerService : BackgroundService
                     // Build the BRS request
                     cimPayload = process.ProcessType switch
                     {
-                        "supplier_switch" => _brsBuilder.BuildBrs001(process.Gsrn, cprCvr, process.EffectiveDate!.Value),
-                        "move_in" => _brsBuilder.BuildBrs009(process.Gsrn, cprCvr, process.EffectiveDate!.Value),
+                        ProcessTypes.SupplierSwitch => _brsBuilder.BuildBrs001(process.Gsrn, cprCvr, process.EffectiveDate!.Value),
+                        ProcessTypes.MoveIn => _brsBuilder.BuildBrs009(process.Gsrn, cprCvr, process.EffectiveDate!.Value),
                         _ => null,
                     };
                 }
@@ -123,9 +123,9 @@ public sealed class ProcessSchedulerService : BackgroundService
                 // Record outbound request for conversation timeline
                 var rsmType = process.ProcessType switch
                 {
-                    "supplier_switch" => "RSM-001",
-                    "move_in" => "RSM-001",
-                    "end_of_supply" => "RSM-005",
+                    ProcessTypes.SupplierSwitch => RsmMessageTypes.Request,
+                    ProcessTypes.MoveIn => RsmMessageTypes.Request,
+                    ProcessTypes.EndOfSupply => RsmMessageTypes.EndOfSupply,
                     _ => process.ProcessType,
                 };
                 var outboundStatus = response.Accepted ? "acknowledged_ok" : "acknowledged_error";

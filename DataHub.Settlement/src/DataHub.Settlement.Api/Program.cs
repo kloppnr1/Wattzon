@@ -119,6 +119,7 @@ builder.Services.AddSingleton<EffectuationService>(sp =>
         sp.GetRequiredService<IMessageRepository>(),
         sp.GetRequiredService<IClock>(),
         sp.GetRequiredService<ILogger<EffectuationService>>()));
+builder.Services.AddSingleton<MasterDataMessageHandler>();
 builder.Services.AddSingleton<QueuePollerService>();
 
 var app = builder.Build();
@@ -1140,7 +1141,7 @@ app.MapGet("/api/processes/{id:guid}/events", async (Guid id, IProcessRepository
 app.MapPost("/api/processes/end-of-supply", async (ProcessInitRequest request, IProcessRepository processRepo, IClock clock, CancellationToken ct) =>
 {
     var stateMachine = new ProcessStateMachine(processRepo, clock);
-    var process = await stateMachine.CreateRequestAsync(request.Gsrn, "end_of_supply", request.EffectiveDate, ct);
+    var process = await stateMachine.CreateRequestAsync(request.Gsrn, ProcessTypes.EndOfSupply, request.EffectiveDate, ct);
     return Results.Ok(new { process.Id, process.ProcessType, process.Gsrn, process.Status, process.EffectiveDate });
 });
 
@@ -1148,7 +1149,7 @@ app.MapPost("/api/processes/end-of-supply", async (ProcessInitRequest request, I
 app.MapPost("/api/processes/move-out", async (ProcessInitRequest request, IProcessRepository processRepo, IClock clock, CancellationToken ct) =>
 {
     var stateMachine = new ProcessStateMachine(processRepo, clock);
-    var process = await stateMachine.CreateRequestAsync(request.Gsrn, "move_out", request.EffectiveDate, ct);
+    var process = await stateMachine.CreateRequestAsync(request.Gsrn, ProcessTypes.MoveOut, request.EffectiveDate, ct);
     return Results.Ok(new { process.Id, process.ProcessType, process.Gsrn, process.Status, process.EffectiveDate });
 });
 

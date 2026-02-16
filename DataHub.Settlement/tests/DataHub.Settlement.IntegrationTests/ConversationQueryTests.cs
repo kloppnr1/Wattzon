@@ -1,3 +1,4 @@
+using DataHub.Settlement.Application.Lifecycle;
 using DataHub.Settlement.Infrastructure.Lifecycle;
 using DataHub.Settlement.Infrastructure.Messaging;
 using DataHub.Settlement.UnitTests;
@@ -32,18 +33,18 @@ public class ConversationQueryTests : IClassFixture<TestDatabase>
         var sm = new Application.Lifecycle.ProcessStateMachine(_processRepo, clock);
 
         // 1. Create process and progress to cancellation_pending
-        var request = await sm.CreateRequestAsync("571313100000099999", "supplier_switch", new DateOnly(2025, 6, 1), ct);
+        var request = await sm.CreateRequestAsync("571313100000099999", ProcessTypes.SupplierSwitch, new DateOnly(2025, 6, 1), ct);
         await sm.MarkSentAsync(request.Id, "corr-conv-test-001", ct);
         await sm.MarkAcknowledgedAsync(request.Id, ct);
         await sm.MarkCancellationSentAsync(request.Id, ct);
 
         // 2. Record outbound for original BRS-001
         await _messageRepo.RecordOutboundRequestAsync(
-            "supplier_switch", "571313100000099999", "corr-conv-test-001", "acknowledged_ok", null, ct);
+            ProcessTypes.SupplierSwitch, "571313100000099999", "corr-conv-test-001", "acknowledged_ok", null, ct);
 
         // 3. Record outbound for RSM-024 cancel (same correlation ID)
         await _messageRepo.RecordOutboundRequestAsync(
-            "cancel_switch", "571313100000099999", "corr-conv-test-001", "sent", null, ct);
+            ProcessTypes.CancelSwitch, "571313100000099999", "corr-conv-test-001", "sent", null, ct);
 
         // 4. Record inbound RSM-001 ack for original
         await _messageLog.RecordInboundAsync(
@@ -74,16 +75,16 @@ public class ConversationQueryTests : IClassFixture<TestDatabase>
         var sm = new Application.Lifecycle.ProcessStateMachine(_processRepo, clock);
 
         // Create process with cancellation
-        var request = await sm.CreateRequestAsync("571313100000088888", "supplier_switch", new DateOnly(2025, 7, 1), ct);
+        var request = await sm.CreateRequestAsync("571313100000088888", ProcessTypes.SupplierSwitch, new DateOnly(2025, 7, 1), ct);
         await sm.MarkSentAsync(request.Id, "corr-conv-summary-001", ct);
         await sm.MarkAcknowledgedAsync(request.Id, ct);
         await sm.MarkCancellationSentAsync(request.Id, ct);
 
         // Record outbound for both (same correlation ID)
         await _messageRepo.RecordOutboundRequestAsync(
-            "supplier_switch", "571313100000088888", "corr-conv-summary-001", "acknowledged_ok", null, ct);
+            ProcessTypes.SupplierSwitch, "571313100000088888", "corr-conv-summary-001", "acknowledged_ok", null, ct);
         await _messageRepo.RecordOutboundRequestAsync(
-            "cancel_switch", "571313100000088888", "corr-conv-summary-001", "sent", null, ct);
+            ProcessTypes.CancelSwitch, "571313100000088888", "corr-conv-summary-001", "sent", null, ct);
 
         // Record inbound for both (same correlation ID)
         await _messageLog.RecordInboundAsync(

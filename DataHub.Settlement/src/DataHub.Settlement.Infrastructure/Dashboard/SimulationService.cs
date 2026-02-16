@@ -267,7 +267,7 @@ public sealed class SimulationService
         var start = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
         // ── Step 4: Submit BRS-001 ──
-        var processRequest = await setup.StateMachine.CreateRequestAsync(Gsrn, "supplier_switch", new DateOnly(2025, 1, 1), ct);
+        var processRequest = await setup.StateMachine.CreateRequestAsync(Gsrn, ProcessTypes.SupplierSwitch, new DateOnly(2025, 1, 1), ct);
         await setup.StateMachine.MarkSentAsync(processRequest.Id, "corr-sim-001", ct);
 
         await onStepCompleted(new SimulationStep(4, "Submit BRS-001",
@@ -396,7 +396,7 @@ public sealed class SimulationService
 
         var finalResult = finalService.CalculateFinal(finalRequest, acontoPaid: null);
 
-        await setup.Portfolio.EndSupplyPeriodAsync(Gsrn, new DateOnly(2025, 2, 16), "supplier_switch", ct);
+        await setup.Portfolio.EndSupplyPeriodAsync(Gsrn, new DateOnly(2025, 2, 16), ProcessTypes.SupplierSwitch, ct);
         await setup.Portfolio.EndContractAsync(Gsrn, new DateOnly(2025, 2, 16), ct);
         await setup.Portfolio.DeactivateMeteringPointAsync(Gsrn,
             new DateTime(2025, 2, 16, 0, 0, 0, DateTimeKind.Utc), ct);
@@ -413,7 +413,7 @@ public sealed class SimulationService
         var setup = await SeedCommonDataAsync(onStepCompleted, ct, createSupplyPeriod: false);
 
         // ── Step 4: Submit BRS-001 ──
-        var processRequest = await setup.StateMachine.CreateRequestAsync(Gsrn, "supplier_switch", new DateOnly(2025, 1, 1), ct);
+        var processRequest = await setup.StateMachine.CreateRequestAsync(Gsrn, ProcessTypes.SupplierSwitch, new DateOnly(2025, 1, 1), ct);
         await setup.StateMachine.MarkSentAsync(processRequest.Id, "corr-rej-001", ct);
 
         await onStepCompleted(new SimulationStep(4, "Submit BRS-001",
@@ -428,7 +428,7 @@ public sealed class SimulationService
         // await Task.Delay(2000, ct);
 
         // ── Step 6: Retry with New BRS-001 ──
-        var retryRequest = await setup.StateMachine.CreateRequestAsync(Gsrn, "supplier_switch", new DateOnly(2025, 1, 1), ct);
+        var retryRequest = await setup.StateMachine.CreateRequestAsync(Gsrn, ProcessTypes.SupplierSwitch, new DateOnly(2025, 1, 1), ct);
         await setup.StateMachine.MarkSentAsync(retryRequest.Id, "corr-rej-002", ct);
 
         await onStepCompleted(new SimulationStep(6, "Retry with New BRS-001",
@@ -460,7 +460,7 @@ public sealed class SimulationService
         var start = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
         // ── Step 4 (3+1): Activate via abbreviated BRS-001 ──
-        var processRequest = await setup.StateMachine.CreateRequestAsync(Gsrn, "supplier_switch", new DateOnly(2025, 1, 1), ct);
+        var processRequest = await setup.StateMachine.CreateRequestAsync(Gsrn, ProcessTypes.SupplierSwitch, new DateOnly(2025, 1, 1), ct);
         await setup.StateMachine.MarkSentAsync(processRequest.Id, "corr-aconto-001", ct);
         await setup.StateMachine.MarkAcknowledgedAsync(processRequest.Id, ct);
         await setup.StateMachine.MarkCompletedAsync(processRequest.Id, ct);
@@ -586,7 +586,7 @@ public sealed class SimulationService
         var setup = await SeedCommonDataAsync(onStepCompleted, ct, createSupplyPeriod: false);
 
         // ── Step 4: Submit BRS-001 ──
-        var processRequest = await setup.StateMachine.CreateRequestAsync(Gsrn, "supplier_switch", new DateOnly(2025, 1, 1), ct);
+        var processRequest = await setup.StateMachine.CreateRequestAsync(Gsrn, ProcessTypes.SupplierSwitch, new DateOnly(2025, 1, 1), ct);
         await setup.StateMachine.MarkSentAsync(processRequest.Id, "corr-cancel-001", ct);
 
         await onStepCompleted(new SimulationStep(4, "Submit BRS-001",
@@ -623,7 +623,7 @@ public sealed class SimulationService
         var start = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
         // ── Step 4: Submit BRS-009 ──
-        var processRequest = await setup.StateMachine.CreateRequestAsync(Gsrn, "move_in", new DateOnly(2025, 1, 1), ct);
+        var processRequest = await setup.StateMachine.CreateRequestAsync(Gsrn, ProcessTypes.MoveIn, new DateOnly(2025, 1, 1), ct);
         await setup.StateMachine.MarkSentAsync(processRequest.Id, "corr-movein-001", ct);
 
         await onStepCompleted(new SimulationStep(4, "Submit BRS-009",
@@ -698,7 +698,7 @@ public sealed class SimulationService
         var start = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
         // ── Step 4: Establish Supply (abbreviated BRS-001) ──
-        var onboardProcess = await setup.StateMachine.CreateRequestAsync(Gsrn, "supplier_switch", new DateOnly(2025, 1, 1), ct);
+        var onboardProcess = await setup.StateMachine.CreateRequestAsync(Gsrn, ProcessTypes.SupplierSwitch, new DateOnly(2025, 1, 1), ct);
         await setup.StateMachine.MarkSentAsync(onboardProcess.Id, "corr-moveout-setup", ct);
         await setup.StateMachine.MarkAcknowledgedAsync(onboardProcess.Id, ct);
         await setup.StateMachine.MarkCompletedAsync(onboardProcess.Id, ct);
@@ -733,7 +733,7 @@ public sealed class SimulationService
         // await Task.Delay(1500, ct);
 
         // ── Step 7: Submit BRS-010 (Move Out) ──
-        var moveOutProcess = await setup.StateMachine.CreateRequestAsync(Gsrn, "move_out", new DateOnly(2025, 2, 16), ct);
+        var moveOutProcess = await setup.StateMachine.CreateRequestAsync(Gsrn, ProcessTypes.MoveOut, new DateOnly(2025, 2, 16), ct);
         await setup.StateMachine.MarkSentAsync(moveOutProcess.Id, "corr-moveout-001", ct);
 
         await onStepCompleted(new SimulationStep(7, "Submit BRS-010",
@@ -790,7 +790,7 @@ public sealed class SimulationService
             setup.Product.SubscriptionKrPerMonth);
         var finalResult = finalService.CalculateFinal(finalRequest, acontoPaid: null);
 
-        await setup.Portfolio.EndSupplyPeriodAsync(Gsrn, new DateOnly(2025, 2, 16), "move_out", ct);
+        await setup.Portfolio.EndSupplyPeriodAsync(Gsrn, new DateOnly(2025, 2, 16), ProcessTypes.MoveOut, ct);
         await setup.Portfolio.EndContractAsync(Gsrn, new DateOnly(2025, 2, 16), ct);
         await setup.Portfolio.DeactivateMeteringPointAsync(Gsrn, finalEnd, ct);
         await setup.StateMachine.MarkOffboardingAsync(moveOutProcess.Id, ct);
@@ -903,7 +903,7 @@ public sealed class SimulationService
         // ── Step 3: Submit BRS-001 ──
         var uid = Guid.NewGuid().ToString("N")[..8];
         var corrId = $"corr-ops-{uid}";
-        var processRequest = await stateMachine.CreateRequestAsync(gsrn, "supplier_switch", new DateOnly(2025, 1, 1), ct);
+        var processRequest = await stateMachine.CreateRequestAsync(gsrn, ProcessTypes.SupplierSwitch, new DateOnly(2025, 1, 1), ct);
         await stateMachine.MarkSentAsync(processRequest.Id, corrId, ct);
 
         await onStepCompleted(new SimulationStep(3, "Submit BRS-001",
@@ -1323,7 +1323,7 @@ public sealed class SimulationService
 
         // ── Step 4: End supply + contract + deactivate ──
         var departureDate = DateOnly.FromDateTime(departureEnd);
-        await portfolio.EndSupplyPeriodAsync(gsrn, departureDate, "supplier_switch", ct);
+        await portfolio.EndSupplyPeriodAsync(gsrn, departureDate, ProcessTypes.SupplierSwitch, ct);
         await portfolio.EndContractAsync(gsrn, departureDate, ct);
         await portfolio.DeactivateMeteringPointAsync(gsrn, departureEnd, ct);
 
@@ -1555,7 +1555,7 @@ public sealed class SimulationService
         // ── Step 3: Submit BRS-009 ──
         var uid = Guid.NewGuid().ToString("N")[..8];
         var corrId = $"corr-movein-{uid}";
-        var processRequest = await stateMachine.CreateRequestAsync(gsrn, "move_in", new DateOnly(2025, 1, 1), ct);
+        var processRequest = await stateMachine.CreateRequestAsync(gsrn, ProcessTypes.MoveIn, new DateOnly(2025, 1, 1), ct);
         await stateMachine.MarkSentAsync(processRequest.Id, corrId, ct);
 
         await onStepCompleted(new SimulationStep(3, "Submit BRS-009",
@@ -1714,7 +1714,7 @@ public sealed class SimulationService
         // ── Step 1: Submit BRS-010 (Move Out) ──
         var uid = Guid.NewGuid().ToString("N")[..8];
         var corrId = $"corr-moveout-{uid}";
-        var moveOutProcess = await stateMachine.CreateRequestAsync(gsrn, "move_out", new DateOnly(2025, 2, 16), ct);
+        var moveOutProcess = await stateMachine.CreateRequestAsync(gsrn, ProcessTypes.MoveOut, new DateOnly(2025, 2, 16), ct);
         await stateMachine.MarkSentAsync(moveOutProcess.Id, corrId, ct);
         await stateMachine.MarkAcknowledgedAsync(moveOutProcess.Id, ct);
         await stateMachine.MarkCompletedAsync(moveOutProcess.Id, ct);
@@ -1799,7 +1799,7 @@ public sealed class SimulationService
 
         // ── Step 4: End supply + contract + deactivate ──
         var departureDate = DateOnly.FromDateTime(departureEnd);
-        await portfolio.EndSupplyPeriodAsync(gsrn, departureDate, "move_out", ct);
+        await portfolio.EndSupplyPeriodAsync(gsrn, departureDate, ProcessTypes.MoveOut, ct);
         await portfolio.EndContractAsync(gsrn, departureDate, ct);
         await portfolio.DeactivateMeteringPointAsync(gsrn, departureEnd, ct);
 
@@ -2004,7 +2004,7 @@ public sealed class SimulationService
             var stateMachine = new ProcessStateMachine(processRepo, _clock);
             var uid = Guid.NewGuid().ToString("N")[..8];
             var corrId = $"corr-ops-{uid}";
-            var processRequest = await stateMachine.CreateRequestAsync(ctx.Gsrn, "supplier_switch", ed, ct);
+            var processRequest = await stateMachine.CreateRequestAsync(ctx.Gsrn, ProcessTypes.SupplierSwitch, ed, ct);
             await stateMachine.MarkSentAsync(processRequest.Id, corrId, ct);
             ctx.ProcessRequestId = processRequest.Id;
             ctx.IsBrsSubmitted = true;
@@ -2227,7 +2227,7 @@ public sealed class SimulationService
             var stateMachine = new ProcessStateMachine(processRepo, _clock);
             var uid = Guid.NewGuid().ToString("N")[..8];
             var corrId = $"corr-movein-{uid}";
-            var processRequest = await stateMachine.CreateRequestAsync(ctx.Gsrn, "move_in", ed, ct);
+            var processRequest = await stateMachine.CreateRequestAsync(ctx.Gsrn, ProcessTypes.MoveIn, ed, ct);
             await stateMachine.MarkSentAsync(processRequest.Id, corrId, ct);
             ctx.ProcessRequestId = processRequest.Id;
             ctx.IsBrsSubmitted = true;
@@ -2457,7 +2457,7 @@ public sealed class SimulationService
             var stateMachine = new ProcessStateMachine(processRepo, _clock);
             var uid = Guid.NewGuid().ToString("N")[..8];
             var corrId = $"corr-aconto-{uid}";
-            var processRequest = await stateMachine.CreateRequestAsync(ctx.Gsrn, "supplier_switch", ed, ct);
+            var processRequest = await stateMachine.CreateRequestAsync(ctx.Gsrn, ProcessTypes.SupplierSwitch, ed, ct);
             await stateMachine.MarkSentAsync(processRequest.Id, corrId, ct);
             ctx.ProcessRequestId = processRequest.Id;
             ctx.IsBrsSubmitted = true;
