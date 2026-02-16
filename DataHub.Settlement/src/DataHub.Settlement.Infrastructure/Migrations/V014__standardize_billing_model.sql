@@ -38,3 +38,17 @@ ALTER TABLE billing.invoice_line
 
 -- 6. Drop the shadow ledger table
 DROP TABLE IF EXISTS billing.aconto_payment;
+
+-- 7. Update uniqueness constraint: now that both prepayment and settlement invoices
+-- share invoice_type = 'invoice', differentiate by settlement_run_id.
+-- Prepayment invoices have settlement_run_id IS NULL; settlement invoices have a value.
+DROP INDEX IF EXISTS billing.idx_invoice_unique_period;
+
+CREATE UNIQUE INDEX idx_invoice_unique_settlement
+ON billing.invoice (contract_id, period_start, period_end, settlement_run_id)
+WHERE status != 'cancelled' AND contract_id IS NOT NULL AND settlement_run_id IS NOT NULL;
+
+CREATE UNIQUE INDEX idx_invoice_unique_prepayment
+ON billing.invoice (contract_id, period_start, period_end)
+WHERE status != 'cancelled' AND contract_id IS NOT NULL AND settlement_run_id IS NULL
+  AND invoice_type = 'invoice';

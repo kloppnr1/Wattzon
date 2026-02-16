@@ -108,14 +108,14 @@ public class EffectuationSettlementTests : IClassFixture<TestDatabase>
             new { Gsrn, Start = effectiveDate, End = new DateOnly(2026, 2, 16) });
         settlementRunCount.Should().Be(1, "closed period should be settled at effectuation time");
 
-        // ASSERT: no aconto invoice for the closed period
+        // ASSERT: no aconto prepayment invoice for the closed period
         var acontoCount = await conn.ExecuteScalarAsync<int>("""
-            SELECT COUNT(*) FROM billing.invoice i
-            JOIN billing.invoice_line il ON il.invoice_id = i.id
-            WHERE il.gsrn = @Gsrn AND i.invoice_type = 'aconto'
+            SELECT COUNT(*) FROM billing.invoice_line il
+            JOIN billing.invoice i ON i.id = il.invoice_id
+            WHERE il.gsrn = @Gsrn AND il.line_type = 'aconto_prepayment'
             """,
             new { Gsrn });
-        acontoCount.Should().Be(0, "closed period should not get an aconto invoice");
+        acontoCount.Should().Be(0, "closed period should not get an aconto prepayment invoice");
     }
 
     [Fact]
@@ -174,14 +174,14 @@ public class EffectuationSettlementTests : IClassFixture<TestDatabase>
             new { Gsrn = gsrn });
         settlementRunCount.Should().Be(0, "open period should not be settled");
 
-        // ASSERT: aconto invoice created
+        // ASSERT: aconto prepayment invoice created
         var acontoCount = await conn.ExecuteScalarAsync<int>("""
-            SELECT COUNT(*) FROM billing.invoice i
-            JOIN billing.invoice_line il ON il.invoice_id = i.id
-            WHERE il.gsrn = @Gsrn AND i.invoice_type = 'aconto'
+            SELECT COUNT(*) FROM billing.invoice_line il
+            JOIN billing.invoice i ON i.id = il.invoice_id
+            WHERE il.gsrn = @Gsrn AND il.line_type = 'aconto_prepayment'
             """,
             new { Gsrn = gsrn });
-        acontoCount.Should().Be(1, "open period with aconto payment model should get an aconto invoice");
+        acontoCount.Should().Be(1, "open period with aconto payment model should get an aconto prepayment invoice");
     }
 
     [Fact]
@@ -246,14 +246,14 @@ public class EffectuationSettlementTests : IClassFixture<TestDatabase>
             new { Gsrn = gsrn, Start = effectiveDate, End = new DateOnly(2026, 2, 16) });
         settlementRunCount.Should().Be(1, "closed period should be settled even for direct payment");
 
-        // ASSERT: no aconto invoice (direct payment never gets aconto)
+        // ASSERT: no aconto prepayment invoice (direct payment never gets aconto)
         var acontoCount = await conn.ExecuteScalarAsync<int>("""
-            SELECT COUNT(*) FROM billing.invoice i
-            JOIN billing.invoice_line il ON il.invoice_id = i.id
-            WHERE il.gsrn = @Gsrn AND i.invoice_type = 'aconto'
+            SELECT COUNT(*) FROM billing.invoice_line il
+            JOIN billing.invoice i ON i.id = il.invoice_id
+            WHERE il.gsrn = @Gsrn AND il.line_type = 'aconto_prepayment'
             """,
             new { Gsrn = gsrn });
-        acontoCount.Should().Be(0, "direct payment model should never create aconto invoices");
+        acontoCount.Should().Be(0, "direct payment model should never create aconto prepayment invoices");
     }
 
     // ──── Helper methods ────
