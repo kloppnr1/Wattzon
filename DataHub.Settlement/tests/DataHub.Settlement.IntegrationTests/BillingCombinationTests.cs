@@ -141,22 +141,27 @@ public class BillingCombinationTests : IClassFixture<TestDatabase>
 
         await CreateInvoicing(clock).RunTickAsync(ct);
 
-        // Assert: exactly 1 invoice
+        // Assert: settlement invoice created
         await using var conn = new NpgsqlConnection(TestDatabase.ConnectionString);
         await conn.OpenAsync(ct);
         var invoices = (await conn.QueryAsync<dynamic>(
             """
-            SELECT i.id, i.invoice_type, i.total_incl_vat
+            SELECT i.id, i.invoice_type, i.total_incl_vat, i.settlement_run_id
             FROM billing.invoice i
             JOIN portfolio.contract c ON c.id = i.contract_id
             WHERE c.gsrn = @Gsrn AND i.status <> 'cancelled'
             """,
             new { Gsrn = gsrn })).ToList();
 
-        invoices.Should().HaveCount(1,
-            $"{frequency}/{paymentModel}: should have exactly 1 invoice after boundary ({afterBoundary})");
-        ((string)invoices[0].invoice_type).Should().Be("invoice");
-        ((decimal)invoices[0].total_incl_vat).Should().BeGreaterThan(0,
+        // Aconto has 2 invoices: the seeded prepayment + the settlement invoice.
+        // Post-payment has only the settlement invoice.
+        var expectedCount = paymentModel == "aconto" ? 2 : 1;
+        invoices.Should().HaveCount(expectedCount,
+            $"{frequency}/{paymentModel}: expected {expectedCount} invoice(s) after boundary ({afterBoundary})");
+
+        var settlementInvoice = invoices.First(i => i.settlement_run_id != null);
+        ((string)settlementInvoice.invoice_type).Should().Be("invoice");
+        ((decimal)settlementInvoice.total_incl_vat).Should().BeGreaterThan(0,
             "invoice total should be positive (energy + tariffs + VAT)");
 
         // Assert invoice lines
@@ -167,7 +172,7 @@ public class BillingCombinationTests : IClassFixture<TestDatabase>
             WHERE il.invoice_id = @InvoiceId
             ORDER BY il.sort_order
             """,
-            new { InvoiceId = (Guid)invoices[0].id })).ToList();
+            new { InvoiceId = (Guid)settlementInvoice.id })).ToList();
 
         lines.Should().NotBeEmpty("invoice should have settlement lines");
 
@@ -238,15 +243,16 @@ public class BillingCombinationTests : IClassFixture<TestDatabase>
         await invoicing.RunTickAsync(ct);
         await invoicing.RunTickAsync(ct); // second run — should be idempotent
 
-        // Assert: still exactly 1 invoice
+        // Assert: idempotent — aconto has 2 (seeded prepayment + settlement), post_payment has 1
         await using var conn = new NpgsqlConnection(TestDatabase.ConnectionString);
         await conn.OpenAsync(ct);
         var invoiceCount = await conn.ExecuteScalarAsync<long>(
             "SELECT COUNT(*) FROM billing.invoice i JOIN portfolio.contract c ON c.id = i.contract_id WHERE c.gsrn = @Gsrn AND i.status <> 'cancelled'",
             new { Gsrn = gsrn });
 
-        invoiceCount.Should().Be(1,
-            $"{frequency}/{paymentModel}: invoicing should be idempotent — running twice should still produce exactly 1 invoice");
+        var expectedCount = paymentModel == "aconto" ? 2 : 1;
+        invoiceCount.Should().Be(expectedCount,
+            $"{frequency}/{paymentModel}: invoicing should be idempotent — running twice should still produce exactly {expectedCount} invoice(s)");
     }
 
     // ── Setup helpers ──

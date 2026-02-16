@@ -216,7 +216,7 @@ public class AcontoSettlementSyncTests : IClassFixture<TestDatabase>
             FROM billing.invoice_line il
             JOIN billing.invoice i ON i.id = il.invoice_id
             JOIN portfolio.contract c ON c.id = i.contract_id AND c.gsrn = @Gsrn
-            WHERE i.status <> 'cancelled' AND i.invoice_type = 'settlement'
+            WHERE i.status <> 'cancelled' AND i.settlement_run_id IS NOT NULL
             ORDER BY il.sort_order
             """,
             new { Gsrn = gsrn })).ToList();
