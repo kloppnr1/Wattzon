@@ -4,24 +4,15 @@ namespace DataHub.Settlement.UnitTests;
 
 public sealed class NullInvoiceService : IInvoiceService
 {
-    public Task<Invoice> CreateAcontoInvoiceAsync(Guid customerId, Guid? payerId, Guid? contractId, string gsrn,
-        DateOnly periodStart, DateOnly periodEnd, decimal amount, CancellationToken ct)
-    {
-        return Task.FromResult(new Invoice(
-            Guid.NewGuid(), null, customerId, payerId, contractId, null, null,
-            "aconto", "draft", periodStart, periodEnd,
-            amount, 0, amount, 0, amount,
-            null, null, null, null, null, DateTime.UtcNow, DateTime.UtcNow));
-    }
-
-    public Task<Invoice> CreateSettlementInvoiceAsync(Guid customerId, Guid? payerId, Guid? contractId,
-        Guid settlementRunId, Guid billingPeriodId, string gsrn,
+    public Task<Invoice> CreateInvoiceAsync(Guid customerId, Guid? payerId, Guid? contractId,
+        Guid? settlementRunId, Guid? billingPeriodId, string gsrn,
         DateOnly periodStart, DateOnly periodEnd,
-        IReadOnlyList<CreateInvoiceLineRequest> lines, CancellationToken ct)
+        IReadOnlyList<CreateInvoiceLineRequest> lines,
+        DateOnly? dueDate, CancellationToken ct)
     {
         return Task.FromResult(new Invoice(
             Guid.NewGuid(), null, customerId, payerId, contractId, settlementRunId, billingPeriodId,
-            "settlement", "draft", periodStart, periodEnd,
+            "invoice", "draft", periodStart, periodEnd,
             0, 0, 0, 0, 0,
             null, null, null, null, null, DateTime.UtcNow, DateTime.UtcNow));
     }

@@ -37,7 +37,6 @@ public class BillingCombinationTests : IClassFixture<TestDatabase>
     private readonly MeteringDataRepository _meteringRepo;
     private readonly SpotPriceRepository _spotPriceRepo;
     private readonly ProcessRepository _processRepo;
-    private readonly AcontoPaymentRepository _acontoRepo;
     private readonly InvoiceRepository _invoiceRepo;
 
     public BillingCombinationTests(TestDatabase db)
@@ -47,7 +46,6 @@ public class BillingCombinationTests : IClassFixture<TestDatabase>
         _meteringRepo = new MeteringDataRepository(TestDatabase.ConnectionString);
         _spotPriceRepo = new SpotPriceRepository(TestDatabase.ConnectionString);
         _processRepo = new ProcessRepository(TestDatabase.ConnectionString);
-        _acontoRepo = new AcontoPaymentRepository(TestDatabase.ConnectionString);
         _invoiceRepo = new InvoiceRepository(TestDatabase.ConnectionString);
     }
 
@@ -118,11 +116,24 @@ public class BillingCombinationTests : IClassFixture<TestDatabase>
 
         await SetupPortfolioAsync(gsrn, frequency, paymentModel, effectiveDate, clock, ct);
 
-        // For aconto, seed a prepayment so we can verify deduction
+        // For aconto, seed a prepayment invoice so we can verify deduction
         if (paymentModel == "aconto")
         {
             var periodEnd = BillingPeriodCalculator.GetFirstPeriodEnd(effectiveDate, frequency);
-            await _acontoRepo.RecordPaymentAsync(gsrn, effectiveDate, periodEnd, 100.00m, ct);
+            await using var seedConn = new NpgsqlConnection(TestDatabase.ConnectionString);
+            await seedConn.OpenAsync(ct);
+            var contract = await seedConn.QuerySingleAsync<dynamic>(
+                "SELECT id, customer_id FROM portfolio.contract WHERE gsrn = @Gsrn AND end_date IS NULL",
+                new { Gsrn = gsrn });
+            var invoiceId = await seedConn.QuerySingleAsync<Guid>(
+                @"INSERT INTO billing.invoice (customer_id, contract_id, invoice_type, period_start, period_end, total_ex_vat, vat_amount, total_incl_vat, status)
+                  VALUES (@CustomerId, @ContractId, 'invoice', @Start, @End, 100.00, 25.00, 125.00, 'sent')
+                  RETURNING id",
+                new { CustomerId = (Guid)contract.customer_id, ContractId = (Guid)contract.id, Start = effectiveDate, End = periodEnd });
+            await seedConn.ExecuteAsync(
+                @"INSERT INTO billing.invoice_line (invoice_id, gsrn, sort_order, line_type, description, amount_ex_vat, vat_amount, amount_incl_vat)
+                  VALUES (@InvoiceId, @Gsrn, 1, 'aconto_prepayment', 'Test aconto prepayment', 100.00, 25.00, 125.00)",
+                new { InvoiceId = invoiceId, Gsrn = gsrn });
         }
 
         // Run full pipeline with clock AFTER the boundary
@@ -144,7 +155,7 @@ public class BillingCombinationTests : IClassFixture<TestDatabase>
 
         invoices.Should().HaveCount(1,
             $"{frequency}/{paymentModel}: should have exactly 1 invoice after boundary ({afterBoundary})");
-        ((string)invoices[0].invoice_type).Should().Be("settlement");
+        ((string)invoices[0].invoice_type).Should().Be("invoice");
         ((decimal)invoices[0].total_incl_vat).Should().BeGreaterThan(0,
             "invoice total should be positive (energy + tariffs + VAT)");
 
@@ -203,7 +214,20 @@ public class BillingCombinationTests : IClassFixture<TestDatabase>
         if (paymentModel == "aconto")
         {
             var periodEnd = BillingPeriodCalculator.GetFirstPeriodEnd(effectiveDate, frequency);
-            await _acontoRepo.RecordPaymentAsync(gsrn, effectiveDate, periodEnd, 100.00m, ct);
+            await using var seedConn = new NpgsqlConnection(TestDatabase.ConnectionString);
+            await seedConn.OpenAsync(ct);
+            var contract = await seedConn.QuerySingleAsync<dynamic>(
+                "SELECT id, customer_id FROM portfolio.contract WHERE gsrn = @Gsrn AND end_date IS NULL",
+                new { Gsrn = gsrn });
+            var invoiceId = await seedConn.QuerySingleAsync<Guid>(
+                @"INSERT INTO billing.invoice (customer_id, contract_id, invoice_type, period_start, period_end, total_ex_vat, vat_amount, total_incl_vat, status)
+                  VALUES (@CustomerId, @ContractId, 'invoice', @Start, @End, 100.00, 25.00, 125.00, 'sent')
+                  RETURNING id",
+                new { CustomerId = (Guid)contract.customer_id, ContractId = (Guid)contract.id, Start = effectiveDate, End = periodEnd });
+            await seedConn.ExecuteAsync(
+                @"INSERT INTO billing.invoice_line (invoice_id, gsrn, sort_order, line_type, description, amount_ex_vat, vat_amount, amount_incl_vat)
+                  VALUES (@InvoiceId, @Gsrn, 1, 'aconto_prepayment', 'Test aconto prepayment', 100.00, 25.00, 125.00)",
+                new { InvoiceId = invoiceId, Gsrn = gsrn });
         }
 
         var orchestration = CreateOrchestration(clock);
@@ -269,8 +293,8 @@ public class BillingCombinationTests : IClassFixture<TestDatabase>
     private InvoicingService CreateInvoicing(TestClock clock)
         => new(
             TestDatabase.ConnectionString,
-            new InvoiceService(_invoiceRepo, _acontoRepo, NullLogger<InvoiceService>.Instance),
-            _acontoRepo, clock,
+            new InvoiceService(_invoiceRepo, NullLogger<InvoiceService>.Instance),
+            clock,
             NullLogger<InvoicingService>.Instance);
 
     private async Task CleanupAsync(string gsrn, CancellationToken ct)
@@ -279,7 +303,6 @@ public class BillingCombinationTests : IClassFixture<TestDatabase>
         await conn.OpenAsync(ct);
         await conn.ExecuteAsync("DELETE FROM billing.invoice_line WHERE invoice_id IN (SELECT i.id FROM billing.invoice i JOIN portfolio.contract c ON c.id = i.contract_id WHERE c.gsrn = @Gsrn)", new { Gsrn = gsrn });
         await conn.ExecuteAsync("DELETE FROM billing.invoice WHERE contract_id IN (SELECT id FROM portfolio.contract WHERE gsrn = @Gsrn)", new { Gsrn = gsrn });
-        await conn.ExecuteAsync("DELETE FROM billing.aconto_payment WHERE gsrn = @Gsrn", new { Gsrn = gsrn });
         await conn.ExecuteAsync("DELETE FROM settlement.settlement_line WHERE metering_point_id = @Gsrn", new { Gsrn = gsrn });
         await conn.ExecuteAsync("DELETE FROM settlement.settlement_run WHERE metering_point_id = @Gsrn", new { Gsrn = gsrn });
         await conn.ExecuteAsync("DELETE FROM settlement.billing_period WHERE id NOT IN (SELECT billing_period_id FROM settlement.settlement_run)");

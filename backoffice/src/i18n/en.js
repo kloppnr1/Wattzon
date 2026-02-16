@@ -724,11 +724,8 @@ export default {
   'invoices.status_overdue': 'Overdue',
   'invoices.status_cancelled': 'Cancelled',
   'invoices.status_credited': 'Credited',
-  'invoices.type_aconto': 'Aconto',
-  'invoices.type_settlement': 'Settlement',
-  'invoices.type_combined_quarterly': 'Combined quarterly',
+  'invoices.type_invoice': 'Invoice',
   'invoices.type_credit_note': 'Credit note',
-  'invoices.type_final_settlement': 'Final settlement',
 
   // ── Invoice Detail ──
   'invoiceDetail.title': 'Invoice',

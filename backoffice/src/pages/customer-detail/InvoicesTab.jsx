@@ -16,11 +16,8 @@ const statusStyles = {
 };
 
 const typeStyles = {
-  aconto: 'bg-teal-50 text-teal-700',
-  settlement: 'bg-indigo-50 text-indigo-700',
-  combined_quarterly: 'bg-violet-50 text-violet-700',
+  invoice: 'bg-indigo-50 text-indigo-700',
   credit_note: 'bg-rose-50 text-rose-700',
-  final_settlement: 'bg-amber-50 text-amber-700',
 };
 
 export default function InvoicesTab({ customerId, customerName }) {

@@ -19,7 +19,6 @@ public static class DatabaseSeeder
         await conn.ExecuteAsync("DELETE FROM settlement.settlement_line");
         await conn.ExecuteAsync("DELETE FROM settlement.settlement_run");
         await conn.ExecuteAsync("DELETE FROM settlement.billing_period");
-        await conn.ExecuteAsync("DELETE FROM billing.aconto_payment");
         await conn.ExecuteAsync("DELETE FROM portfolio.supply_period");
         await conn.ExecuteAsync("DELETE FROM portfolio.contract");
         await conn.ExecuteAsync("DELETE FROM portfolio.metering_point");

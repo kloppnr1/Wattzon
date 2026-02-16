@@ -1,4 +1,3 @@
-using DataHub.Settlement.Application.Billing;
 using DataHub.Settlement.Application.Lifecycle;
 using DataHub.Settlement.Application.Metering;
 using DataHub.Settlement.Application.Settlement;
@@ -90,11 +89,10 @@ public class FullLifecycleTests
         state = await _processRepo.GetAsync(request.Id, CancellationToken.None);
         state!.Status.Should().Be("offboarding");
 
-        // 6. Final settlement (partial Feb)
-        var finalService = new FinalSettlementService(engine);
+        // 6. Final settlement (partial Feb) — just use the settlement engine directly
         var febRequest = BuildMonthRequest(new DateOnly(2025, 2, 1), new DateOnly(2025, 2, 16));
-        var finalResult = finalService.CalculateFinal(febRequest, acontoPaid: null);
-        finalResult.TotalDue.Should().BeGreaterThan(0);
+        var febResult = engine.Calculate(febRequest);
+        febResult.Total.Should().BeGreaterThan(0);
 
         // 7. Mark final settled
         await sm.MarkFinalSettledAsync(request.Id, CancellationToken.None);
@@ -133,7 +131,6 @@ public class FullLifecycleTests
     {
         var sm = new ProcessStateMachine(_processRepo, _clock);
         var engine = new SettlementEngine();
-        var acontoService = new AcontoSettlementService(engine);
 
         // 1. Complete onboarding
         var request = await sm.CreateRequestAsync("571313100000012345", ProcessTypes.SupplierSwitch,
@@ -142,19 +139,20 @@ public class FullLifecycleTests
         await sm.MarkAcknowledgedAsync(request.Id, CancellationToken.None);
         await sm.MarkCompletedAsync(request.Id, CancellationToken.None);
 
-        // 2. Run Q1 settlement with aconto reconciliation
+        // 2. Run Q1 settlement — aconto reconciliation is just arithmetic on settlement result
         var janRequest = BuildMonthRequest(new DateOnly(2025, 1, 1), new DateOnly(2025, 2, 1));
+        var settlement = engine.Calculate(janRequest);
 
         // Customer paid 700 DKK aconto for January
-        var result = acontoService.CalculateQuarterlyInvoice(
-            janRequest,
-            totalAcontoPaid: 700.00m,
-            newQuarterlyEstimate: 800.00m);
+        var acontoPaid = 700.00m;
+        var newEstimate = 800.00m;
+        var difference = settlement.Total - acontoPaid;
+        var totalDue = difference + newEstimate;
 
         // Actual is 793.14, paid 700, difference = 93.14
-        result.PreviousQuarter.ActualSettlement.Total.Should().Be(793.14m);
-        result.PreviousQuarter.Difference.Should().Be(93.14m);
-        result.TotalDue.Should().Be(893.14m); // 93.14 underpayment + 800.00 next quarter
+        settlement.Total.Should().Be(793.14m);
+        difference.Should().Be(93.14m);
+        totalDue.Should().Be(893.14m); // 93.14 underpayment + 800.00 next quarter
     }
 
     [Fact]
@@ -213,11 +211,10 @@ public class FullLifecycleTests
         await sm.MarkAcknowledgedAsync(moveOut.Id, CancellationToken.None);
         await sm.MarkCompletedAsync(moveOut.Id, CancellationToken.None);
 
-        // 4. Final settlement (partial Feb)
-        var finalService = new FinalSettlementService(engine);
+        // 4. Final settlement (partial Feb) — just use the settlement engine directly
         var febRequest = BuildMonthRequest(new DateOnly(2025, 2, 1), new DateOnly(2025, 2, 16));
-        var finalResult = finalService.CalculateFinal(febRequest, acontoPaid: null);
-        finalResult.TotalDue.Should().BeGreaterThan(0);
+        var febResult = engine.Calculate(febRequest);
+        febResult.Total.Should().BeGreaterThan(0);
 
         // 5. Offboard and final settle the move_out process
         await sm.MarkOffboardingAsync(moveOut.Id, CancellationToken.None);

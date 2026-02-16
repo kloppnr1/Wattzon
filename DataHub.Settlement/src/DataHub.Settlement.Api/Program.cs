@@ -89,7 +89,6 @@ builder.Services.AddSingleton<ICorrectionRepository>(new CorrectionRepository(co
 builder.Services.AddSingleton<IMeteringDataRepository>(new MeteringDataRepository(connectionString));
 builder.Services.AddSingleton<ITariffRepository>(new TariffRepository(connectionString));
 builder.Services.AddSingleton<ICorrectionService, CorrectionService>();
-builder.Services.AddSingleton<IAcontoPaymentRepository>(new AcontoPaymentRepository(connectionString));
 builder.Services.AddSingleton<IInvoiceRepository>(new InvoiceRepository(connectionString));
 builder.Services.AddSingleton<IPaymentRepository>(new PaymentRepository(connectionString));
 builder.Services.AddSingleton<IInvoiceService, InvoiceService>();
@@ -898,27 +897,24 @@ app.MapGet("/api/metering/spot-prices/status", async (ISpotPriceRepository repo,
     });
 });
 
-// --- Aconto Payments ---
+// --- Aconto Prepayments ---
 
-// GET /api/billing/aconto/{gsrn} — aconto payments for a metering point
+// GET /api/billing/aconto/{gsrn} — aconto prepayment totals for a metering point (from invoice lines)
 app.MapGet("/api/billing/aconto/{gsrn}", async (
     string gsrn, DateOnly? from, DateOnly? to,
-    IAcontoPaymentRepository repo, CancellationToken ct) =>
+    IInvoiceRepository repo, CancellationToken ct) =>
 {
     var fromDate = from ?? new DateOnly(DateTime.UtcNow.Year, 1, 1);
     var toDate = to ?? DateOnly.FromDateTime(DateTime.UtcNow).AddDays(1);
 
-    var payments = await repo.GetPaymentsAsync(gsrn, fromDate, toDate, ct);
-    var totalPaid = await repo.GetTotalPaidAsync(gsrn, fromDate, toDate, ct);
+    var totalPrepaid = await repo.GetAcontoPrepaymentTotalAsync(gsrn, fromDate, toDate, ct);
 
     return Results.Ok(new
     {
         gsrn,
         from = fromDate,
         to = toDate,
-        totalPaid,
-        count = payments.Count,
-        payments,
+        totalPrepaid,
     });
 });
 

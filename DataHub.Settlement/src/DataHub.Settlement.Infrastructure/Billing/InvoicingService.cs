@@ -12,7 +12,6 @@ public sealed class InvoicingService : BackgroundService
 {
     private readonly string _connectionString;
     private readonly IInvoiceService _invoiceService;
-    private readonly IAcontoPaymentRepository _acontoRepo;
     private readonly IClock _clock;
     private readonly ILogger<InvoicingService> _logger;
     private readonly TimeSpan _pollInterval;
@@ -20,14 +19,12 @@ public sealed class InvoicingService : BackgroundService
     public InvoicingService(
         string connectionString,
         IInvoiceService invoiceService,
-        IAcontoPaymentRepository acontoRepo,
         IClock clock,
         ILogger<InvoicingService> logger,
         TimeSpan? pollInterval = null)
     {
         _connectionString = connectionString;
         _invoiceService = invoiceService;
-        _acontoRepo = acontoRepo;
         _clock = clock;
         _logger = logger;
         _pollInterval = pollInterval ?? TimeSpan.FromMinutes(5);
@@ -60,17 +57,17 @@ public sealed class InvoicingService : BackgroundService
         var directRuns = dueRuns.Where(r => r.PaymentModel != "aconto").ToList();
         var acontoRuns = dueRuns.Where(r => r.PaymentModel == "aconto").ToList();
 
-        // Direct payment: invoice each run individually (existing behavior)
+        // Direct payment: invoice each run individually
         foreach (var run in directRuns)
         {
             try
             {
                 var lines = await GetSettlementLinesAsync(run.SettlementRunId, run.Gsrn, run.PeriodStart, run.PeriodEnd, ct);
 
-                await _invoiceService.CreateSettlementInvoiceAsync(
+                await _invoiceService.CreateInvoiceAsync(
                     run.CustomerId, run.PayerId, run.ContractId,
                     run.SettlementRunId, run.BillingPeriodId, run.Gsrn,
-                    run.PeriodStart, run.PeriodEnd, lines, ct);
+                    run.PeriodStart, run.PeriodEnd, lines, null, ct);
 
                 _logger.LogInformation(
                     "Created invoice for settlement run {RunId}, GSRN {Gsrn}, period {Start}–{End}",
@@ -117,8 +114,8 @@ public sealed class InvoicingService : BackgroundService
                 for (int i = 0; i < allLines.Count; i++)
                     allLines[i] = allLines[i] with { SortOrder = i + 1 };
 
-                // Deduct total aconto paid in the aconto period
-                var totalAcontoPaid = await _acontoRepo.GetTotalPaidAsync(first.Gsrn, overallStart, acontoPeriodEnd, ct);
+                // Deduct total aconto prepayments from prior invoices for this period
+                var totalAcontoPaid = await GetAcontoPrepaymentTotalAsync(first.Gsrn, overallStart, acontoPeriodEnd, ct);
                 if (totalAcontoPaid > 0)
                 {
                     allLines.Add(new CreateInvoiceLineRequest(
@@ -143,31 +140,49 @@ public sealed class InvoicingService : BackgroundService
                         $"Aconto prepayment — {acontoPeriodEnd:yyyy-MM-dd} to {nextPeriodEnd:yyyy-MM-dd}",
                         0m, null, acontoPrepayment, 0m, acontoPrepayment));
 
-                    // Record aconto payment for next period
-                    await _acontoRepo.RecordPaymentAsync(first.Gsrn, acontoPeriodEnd, nextPeriodEnd, acontoPrepayment, ct);
-
                     _logger.LogInformation(
                         "Added aconto prepayment {Amount} DKK for GSRN {Gsrn}, next period {Start}–{End}",
                         acontoPrepayment, first.Gsrn, acontoPeriodEnd, nextPeriodEnd);
                 }
 
-                // Create ONE combined invoice using the first run as reference
-                await _invoiceService.CreateSettlementInvoiceAsync(
+                // Create ONE invoice — lines determine what it is
+                await _invoiceService.CreateInvoiceAsync(
                     first.CustomerId, first.PayerId, first.ContractId,
                     first.SettlementRunId, first.BillingPeriodId, first.Gsrn,
-                    overallStart, overallEnd, allLines, ct);
+                    overallStart, overallEnd, allLines, null, ct);
 
                 _logger.LogInformation(
-                    "Created combined aconto invoice for GSRN {Gsrn}, aconto period {Start}–{End}, {RunCount} runs",
+                    "Created invoice for GSRN {Gsrn}, aconto period {Start}–{End}, {RunCount} settlement runs",
                     first.Gsrn, overallStart, acontoPeriodEnd, runs.Count);
             }
             catch (Exception ex)
             {
                 _logger.LogWarning(ex,
-                    "Failed to create aconto invoice for GSRN {Gsrn} — will retry next tick",
+                    "Failed to create invoice for GSRN {Gsrn} — will retry next tick",
                     group.Key.Gsrn);
             }
         }
+    }
+
+    /// <summary>
+    /// Queries aconto prepayment totals from invoice lines (replaces shadow ledger).
+    /// </summary>
+    private async Task<decimal> GetAcontoPrepaymentTotalAsync(string gsrn, DateOnly from, DateOnly to, CancellationToken ct)
+    {
+        const string sql = """
+            SELECT COALESCE(SUM(il.amount_ex_vat), 0)
+            FROM billing.invoice_line il
+            JOIN billing.invoice i ON i.id = il.invoice_id
+            WHERE il.gsrn = @Gsrn
+              AND il.line_type = 'aconto_prepayment'
+              AND i.period_start >= @From AND i.period_end <= @To
+              AND i.status NOT IN ('cancelled', 'credited')
+            """;
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+        await conn.OpenAsync(ct);
+        return await conn.QuerySingleAsync<decimal>(
+            new CommandDefinition(sql, new { Gsrn = gsrn, From = from, To = to }, cancellationToken: ct));
     }
 
     internal async Task<IReadOnlyList<UninvoicedRun>> GetUninvoicedDueRunsAsync(CancellationToken ct)

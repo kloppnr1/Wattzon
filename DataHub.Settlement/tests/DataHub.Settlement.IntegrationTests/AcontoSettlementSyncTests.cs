@@ -40,7 +40,6 @@ public class AcontoSettlementSyncTests : IClassFixture<TestDatabase>
     private readonly MeteringDataRepository _meteringRepo;
     private readonly SpotPriceRepository _spotPriceRepo;
     private readonly ProcessRepository _processRepo;
-    private readonly AcontoPaymentRepository _acontoRepo;
     private readonly InvoiceRepository _invoiceRepo;
 
     public AcontoSettlementSyncTests(TestDatabase db)
@@ -50,7 +49,6 @@ public class AcontoSettlementSyncTests : IClassFixture<TestDatabase>
         _meteringRepo = new MeteringDataRepository(TestDatabase.ConnectionString);
         _spotPriceRepo = new SpotPriceRepository(TestDatabase.ConnectionString);
         _processRepo = new ProcessRepository(TestDatabase.ConnectionString);
-        _acontoRepo = new AcontoPaymentRepository(TestDatabase.ConnectionString);
         _invoiceRepo = new InvoiceRepository(TestDatabase.ConnectionString);
     }
 
@@ -89,7 +87,7 @@ public class AcontoSettlementSyncTests : IClassFixture<TestDatabase>
         // Effectuate — with post_payment, NO aconto invoice should be created
         var effectuation = new EffectuationService(
             TestDatabase.ConnectionString, NullOnboardingService.Instance,
-            new InvoiceService(_invoiceRepo, _acontoRepo, NullLogger<InvoiceService>.Instance),
+            new InvoiceService(_invoiceRepo, NullLogger<InvoiceService>.Instance),
             new FakeDataHubClient(), new Infrastructure.DataHub.BrsRequestBuilder(),
             new NullMessageRepository(), clock, NullLogger<EffectuationService>.Instance);
 
@@ -112,8 +110,8 @@ public class AcontoSettlementSyncTests : IClassFixture<TestDatabase>
         // Run invoicing
         var invoicing = new InvoicingService(
             TestDatabase.ConnectionString,
-            new InvoiceService(_invoiceRepo, _acontoRepo, NullLogger<InvoiceService>.Instance),
-            _acontoRepo, clock,
+            new InvoiceService(_invoiceRepo, NullLogger<InvoiceService>.Instance),
+            clock,
             NullLogger<InvoicingService>.Instance);
         await invoicing.RunTickAsync(ct);
 
@@ -130,7 +128,7 @@ public class AcontoSettlementSyncTests : IClassFixture<TestDatabase>
             new { Gsrn = gsrn })).ToList();
 
         invoices.Should().HaveCount(1, "post_payment should have exactly 1 settlement invoice");
-        ((string)invoices[0].invoice_type).Should().Be("settlement");
+        ((string)invoices[0].invoice_type).Should().Be("invoice");
     }
 
     [Fact]
@@ -165,9 +163,27 @@ public class AcontoSettlementSyncTests : IClassFixture<TestDatabase>
         try { await _portfolio.CreateSupplyPeriodAsync(gsrn, effectiveDate, ct); } catch { }
         await StoreMeteringDataAsync(gsrn, effectiveDate, periodEnd, ct);
 
-        // Record aconto payment (simulating what EffectuationService does for aconto)
+        // Seed an aconto prepayment invoice (replaces shadow ledger)
         var acontoAmount = 500.00m;
-        await _acontoRepo.RecordPaymentAsync(gsrn, effectiveDate, periodEnd, acontoAmount, ct);
+        {
+            await using var seedConn = new NpgsqlConnection(TestDatabase.ConnectionString);
+            await seedConn.OpenAsync(ct);
+            var contract = await seedConn.QuerySingleAsync<dynamic>(
+                "SELECT id, customer_id FROM portfolio.contract WHERE gsrn = @Gsrn AND end_date IS NULL",
+                new { Gsrn = gsrn });
+            var invoiceId = await seedConn.QuerySingleAsync<Guid>(
+                @"INSERT INTO billing.invoice (customer_id, contract_id, invoice_type, period_start, period_end, total_ex_vat, vat_amount, total_incl_vat, status)
+                  VALUES (@CustomerId, @ContractId, 'invoice', @Start, @End, @Amount, @Vat, @Total, 'sent')
+                  RETURNING id",
+                new { CustomerId = (Guid)contract.customer_id, ContractId = (Guid)contract.id,
+                      Start = effectiveDate, End = periodEnd,
+                      Amount = acontoAmount, Vat = acontoAmount * 0.25m, Total = acontoAmount * 1.25m });
+            await seedConn.ExecuteAsync(
+                @"INSERT INTO billing.invoice_line (invoice_id, gsrn, sort_order, line_type, description, amount_ex_vat, vat_amount, amount_incl_vat)
+                  VALUES (@InvoiceId, @Gsrn, 1, 'aconto_prepayment', 'Test aconto prepayment', @Amount, @Vat, @Total)",
+                new { InvoiceId = invoiceId, Gsrn = gsrn,
+                      Amount = acontoAmount, Vat = acontoAmount * 0.25m, Total = acontoAmount * 1.25m });
+        }
 
         // Run settlement orchestration (creates settlement_run for Q1)
         var resultStore = new SettlementResultStore(TestDatabase.ConnectionString);
@@ -185,8 +201,8 @@ public class AcontoSettlementSyncTests : IClassFixture<TestDatabase>
         // Run invoicing — should create settlement invoice with aconto_deduction line
         var invoicing = new InvoicingService(
             TestDatabase.ConnectionString,
-            new InvoiceService(_invoiceRepo, _acontoRepo, NullLogger<InvoiceService>.Instance),
-            _acontoRepo, clock,
+            new InvoiceService(_invoiceRepo, NullLogger<InvoiceService>.Instance),
+            clock,
             NullLogger<InvoicingService>.Instance);
         await invoicing.RunTickAsync(ct);
 
@@ -265,7 +281,6 @@ public class AcontoSettlementSyncTests : IClassFixture<TestDatabase>
         await conn.OpenAsync(ct);
         await conn.ExecuteAsync("DELETE FROM billing.invoice_line WHERE invoice_id IN (SELECT i.id FROM billing.invoice i JOIN portfolio.contract c ON c.id = i.contract_id WHERE c.gsrn = @Gsrn)", new { Gsrn = gsrn });
         await conn.ExecuteAsync("DELETE FROM billing.invoice WHERE contract_id IN (SELECT id FROM portfolio.contract WHERE gsrn = @Gsrn)", new { Gsrn = gsrn });
-        await conn.ExecuteAsync("DELETE FROM billing.aconto_payment WHERE gsrn = @Gsrn", new { Gsrn = gsrn });
         await conn.ExecuteAsync("DELETE FROM settlement.settlement_line WHERE metering_point_id = @Gsrn", new { Gsrn = gsrn });
         await conn.ExecuteAsync("DELETE FROM settlement.settlement_run WHERE metering_point_id = @Gsrn", new { Gsrn = gsrn });
         await conn.ExecuteAsync("DELETE FROM settlement.billing_period WHERE id NOT IN (SELECT billing_period_id FROM settlement.settlement_run)", new { Gsrn = gsrn });

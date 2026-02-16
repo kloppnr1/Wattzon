@@ -5,7 +5,6 @@ using DataHub.Settlement.Application.Metering;
 using DataHub.Settlement.Application.Portfolio;
 using DataHub.Settlement.Application.Settlement;
 using DataHub.Settlement.Application.Tariff;
-using DataHub.Settlement.Infrastructure.Billing;
 using DataHub.Settlement.Infrastructure.Database;
 using DataHub.Settlement.Infrastructure.Lifecycle;
 using DataHub.Settlement.Infrastructure.Metering;
@@ -108,7 +107,14 @@ public sealed class SimulationService
             (decimal)r.total_amount, (decimal)r.vat_amount, (string)r.status)).ToList();
 
         var aRows = await conn.QueryAsync<dynamic>(
-            "SELECT period_start, period_end, amount FROM billing.aconto_payment WHERE gsrn = @Gsrn ORDER BY period_start",
+            """
+            SELECT i.period_start, i.period_end, il.amount_ex_vat AS amount
+            FROM billing.invoice_line il
+            JOIN billing.invoice i ON i.id = il.invoice_id
+            WHERE il.gsrn = @Gsrn AND il.line_type = 'aconto_prepayment'
+              AND i.status NOT IN ('cancelled', 'credited')
+            ORDER BY i.period_start
+            """,
             new { Gsrn = gsrn });
         var acontoPayments = aRows.Select(r => new MeteringPointSummary.AcontoInfo(
             DateOnly.FromDateTime((DateTime)r.period_start),
@@ -134,18 +140,9 @@ public sealed class SimulationService
         await conn.OpenAsync();
         await using var cmd = conn.CreateCommand();
         cmd.CommandText = """
-            CREATE SCHEMA IF NOT EXISTS billing;
-            CREATE TABLE IF NOT EXISTS billing.aconto_payment (
-                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                gsrn TEXT NOT NULL,
-                period_start DATE NOT NULL,
-                period_end DATE NOT NULL,
-                amount NUMERIC(12,2) NOT NULL,
-                paid_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-                created_at TIMESTAMPTZ NOT NULL DEFAULT now()
-            );
             TRUNCATE
-                billing.aconto_payment,
+                billing.invoice_line,
+                billing.invoice,
                 settlement.settlement_line,
                 settlement.settlement_run,
                 settlement.billing_period,
@@ -383,8 +380,7 @@ public sealed class SimulationService
         var gridSub = await setup.TariffRepo.GetSubscriptionAsync("344", "grid", new DateOnly(2025, 1, 15), ct) ?? 0m;
 
         var finalEngine = new SettlementEngine();
-        var finalService = new FinalSettlementService(finalEngine);
-        var finalRequest = new SettlementRequest(
+        var finalResult = finalEngine.Calculate(new SettlementRequest(
             Gsrn,
             new DateOnly(2025, 2, 1), new DateOnly(2025, 2, 16),
             finalConsumption, finalSpotPrices,
@@ -392,9 +388,7 @@ public sealed class SimulationService
             gridSub,
             setup.Product.MarginOrePerKwh / 100m,
             (setup.Product.SupplementOrePerKwh ?? 0m) / 100m,
-            setup.Product.SubscriptionKrPerMonth);
-
-        var finalResult = finalService.CalculateFinal(finalRequest, acontoPaid: null);
+            setup.Product.SubscriptionKrPerMonth));
 
         await setup.Portfolio.EndSupplyPeriodAsync(Gsrn, new DateOnly(2025, 2, 16), ProcessTypes.SupplierSwitch, ct);
         await setup.Portfolio.EndContractAsync(Gsrn, new DateOnly(2025, 2, 16), ct);
@@ -403,7 +397,7 @@ public sealed class SimulationService
         await setup.StateMachine.MarkFinalSettledAsync(processRequest.Id, ct);
 
         await onStepCompleted(new SimulationStep(12, "Run Final Settlement",
-            $"Final settlement — total {finalResult.TotalDue:N2} DKK, customer offboarded"));
+            $"Final settlement — total {finalResult.Total:N2} DKK, customer offboarded"));
     }
 
     // ── Scenario 2: Rejection & Retry ────────────────────────────────
@@ -456,7 +450,6 @@ public sealed class SimulationService
     public async Task RunAcontoQuarterlyAsync(Func<SimulationStep, Task> onStepCompleted, CancellationToken ct)
     {
         var setup = await SeedCommonDataAsync(onStepCompleted, ct, customerName: "Aconto Kunde");
-        var acontoRepo = new AcontoPaymentRepository(_connectionString);
         var start = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
         // ── Step 4 (3+1): Activate via abbreviated BRS-001 ──
@@ -481,7 +474,7 @@ public sealed class SimulationService
             annualConsumptionKwh: 4000m, expectedPrice, gridSubRate, supplierSubRate);
 
         // Customer pays the full quarterly aconto amount upfront at Q1 start
-        await acontoRepo.RecordPaymentAsync(Gsrn, new DateOnly(2025, 1, 1), new DateOnly(2025, 4, 1), quarterlyEstimate, ct);
+        // Aconto prepayment is now tracked as invoice lines (line_type = 'aconto_prepayment')
 
         await onStepCompleted(new SimulationStep(5, "Estimate Q1 Aconto",
             $"Quarterly estimate: {quarterlyEstimate:N2} DKK (paid upfront for Q1)"));
@@ -778,8 +771,7 @@ public sealed class SimulationService
         var gridSub = await setup.TariffRepo.GetSubscriptionAsync("344", "grid", new DateOnly(2025, 1, 15), ct) ?? 0m;
 
         var engine = new SettlementEngine();
-        var finalService = new FinalSettlementService(engine);
-        var finalRequest = new SettlementRequest(
+        var finalResult = engine.Calculate(new SettlementRequest(
             Gsrn,
             new DateOnly(2025, 2, 1), new DateOnly(2025, 2, 16),
             finalConsumption, finalSpotPrices,
@@ -787,8 +779,7 @@ public sealed class SimulationService
             gridSub,
             setup.Product.MarginOrePerKwh / 100m,
             (setup.Product.SupplementOrePerKwh ?? 0m) / 100m,
-            setup.Product.SubscriptionKrPerMonth);
-        var finalResult = finalService.CalculateFinal(finalRequest, acontoPaid: null);
+            setup.Product.SubscriptionKrPerMonth));
 
         await setup.Portfolio.EndSupplyPeriodAsync(Gsrn, new DateOnly(2025, 2, 16), ProcessTypes.MoveOut, ct);
         await setup.Portfolio.EndContractAsync(Gsrn, new DateOnly(2025, 2, 16), ct);
@@ -797,7 +788,7 @@ public sealed class SimulationService
         await setup.StateMachine.MarkFinalSettledAsync(moveOutProcess.Id, ct);
 
         await onStepCompleted(new SimulationStep(10, "Final Settlement + Deactivate",
-            $"Final settlement — total {finalResult.TotalDue:N2} DKK, customer moved out"));
+            $"Final settlement — total {finalResult.Total:N2} DKK, customer moved out"));
     }
 
     // ── Operations: Change of Supplier (concurrent-safe) ───────────
@@ -1305,8 +1296,7 @@ public sealed class SimulationService
         var gridSub = await tariffRepo.GetSubscriptionAsync("344", "grid", DateOnly.FromDateTime(departureStart), ct) ?? 0m;
 
         var engine = new SettlementEngine();
-        var finalService = new FinalSettlementService(engine);
-        var finalRequest = new SettlementRequest(
+        var finalResult = engine.Calculate(new SettlementRequest(
             gsrn,
             DateOnly.FromDateTime(departureStart), DateOnly.FromDateTime(departureEnd),
             finalConsumption, finalSpotPrices,
@@ -1314,11 +1304,10 @@ public sealed class SimulationService
             gridSub,
             product.MarginOrePerKwh / 100m,
             (product.SupplementOrePerKwh ?? 0m) / 100m,
-            product.SubscriptionKrPerMonth);
-        var finalResult = finalService.CalculateFinal(finalRequest, acontoPaid: null);
+            product.SubscriptionKrPerMonth));
 
         await onStepCompleted(new SimulationStep(3, "Final Settlement",
-            $"Total due: {finalResult.TotalDue:N2} DKK"));
+            $"Total due: {finalResult.Total:N2} DKK"));
         // await Task.Delay(1000, ct);
 
         // ── Step 4: End supply + contract + deactivate ──
@@ -1351,7 +1340,6 @@ public sealed class SimulationService
         var tariffRepo = new TariffRepository(_connectionString);
         var spotPriceRepo = new SpotPriceRepository(_connectionString);
         var meteringRepo = new MeteringDataRepository(_connectionString);
-        var acontoRepo = new AcontoPaymentRepository(_connectionString);
 
         var contract = await portfolio.GetActiveContractAsync(gsrn, ct)
             ?? throw new InvalidOperationException($"No active contract for GSRN {gsrn}");
@@ -1388,7 +1376,7 @@ public sealed class SimulationService
         var qStartDate = DateOnly.FromDateTime(quarterStart);
         var qEndDate = qStartDate.AddMonths(3);
 
-        await acontoRepo.RecordPaymentAsync(gsrn, qStartDate, qEndDate, quarterlyEstimate, ct);
+        // Aconto prepayment is now tracked as invoice lines (line_type = 'aconto_prepayment')
 
         await onStepCompleted(new SimulationStep(2, "Record Payment",
             $"Aconto payment of {quarterlyEstimate:N2} DKK recorded for {qStartDate}–{qEndDate}"));
@@ -1781,8 +1769,7 @@ public sealed class SimulationService
         var gridSub = await tariffRepo.GetSubscriptionAsync("344", "grid", DateOnly.FromDateTime(departureStart), ct) ?? 0m;
 
         var engine = new SettlementEngine();
-        var finalService = new FinalSettlementService(engine);
-        var finalRequest = new SettlementRequest(
+        var finalResult = engine.Calculate(new SettlementRequest(
             gsrn,
             DateOnly.FromDateTime(departureStart), DateOnly.FromDateTime(departureEnd),
             finalConsumption, finalSpotPrices,
@@ -1790,11 +1777,10 @@ public sealed class SimulationService
             gridSub,
             product.MarginOrePerKwh / 100m,
             (product.SupplementOrePerKwh ?? 0m) / 100m,
-            product.SubscriptionKrPerMonth);
-        var finalResult = finalService.CalculateFinal(finalRequest, acontoPaid: null);
+            product.SubscriptionKrPerMonth));
 
         await onStepCompleted(new SimulationStep(3, "Final Settlement",
-            $"Total due: {finalResult.TotalDue:N2} DKK"));
+            $"Total due: {finalResult.Total:N2} DKK"));
         // await Task.Delay(1000, ct);
 
         // ── Step 4: End supply + contract + deactivate ──
@@ -2593,10 +2579,9 @@ public sealed class SimulationService
         // Step 9: Record Payment (after effectuation — direct debit collection)
         if (ctx.IsEffectuated && !ctx.IsAcontoPaid && currentDate >= timeline.GetDate("Record Payment"))
         {
-            var acontoRepo = new AcontoPaymentRepository(_connectionString);
+            // Aconto prepayment is now tracked as invoice lines (line_type = 'aconto_prepayment')
             var qStartDate = ed;
             var qEndDate = ed.AddMonths(3);
-            await acontoRepo.RecordPaymentAsync(ctx.Gsrn, qStartDate, qEndDate, ctx.AcontoEstimate, ct);
 
             ctx.IsAcontoPaid = true;
             executed.Add(new SimulationStep(9, "Record Payment",

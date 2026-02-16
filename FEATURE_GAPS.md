@@ -40,8 +40,7 @@ The backoffice currently exposes **12 API endpoints** covering signups, customer
 ### 1. Settlement & Billing (🔴 Critical Gap)
 
 **Backend Capabilities:**
-- `AcontoSettlementService` - Monthly aconto billing
-- `FinalSettlementService` - Offboarding final settlement
+- `InvoicingService` - Standardized billing pipeline (settlement + aconto as invoice lines)
 - `SettlementEngine` - Consumption-based settlement with tariffs, spot prices, taxes
 - `CorrectionEngine` - Correction settlements for metering data changes
 - `ErroneousSwitchService` - Credit handling for supplier errors

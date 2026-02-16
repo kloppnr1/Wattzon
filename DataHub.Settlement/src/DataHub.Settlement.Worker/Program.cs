@@ -116,7 +116,6 @@ builder.Services.AddSingleton<IBrsRequestBuilder, BrsRequestBuilder>();
 builder.Services.AddSingleton<IOnboardingService, OnboardingService>();
 
 // Billing services
-builder.Services.AddSingleton<IAcontoPaymentRepository>(new AcontoPaymentRepository(connectionString));
 builder.Services.AddSingleton<IInvoiceRepository>(new InvoiceRepository(connectionString));
 builder.Services.AddSingleton<IPaymentRepository>(new PaymentRepository(connectionString));
 builder.Services.AddSingleton<IInvoiceService, InvoiceService>();
@@ -171,7 +170,6 @@ builder.Services.AddHostedService(sp =>
     new InvoicingService(
         connectionString,
         sp.GetRequiredService<IInvoiceService>(),
-        sp.GetRequiredService<IAcontoPaymentRepository>(),
         sp.GetRequiredService<IClock>(),
         sp.GetRequiredService<ILogger<InvoicingService>>()));
 

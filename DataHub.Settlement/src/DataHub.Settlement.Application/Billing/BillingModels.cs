@@ -72,7 +72,7 @@ public record CustomerBillingSummary(
     Guid CustomerId,
     string CustomerName,
     IReadOnlyList<CustomerBillingPeriod> BillingPeriods,
-    IReadOnlyList<AcontoPaymentInfo> AcontoPayments,
+    IReadOnlyList<AcontoPrepaymentInfo> AcontoPrepayments,
     decimal TotalBilled,
     decimal TotalPaid);
 
@@ -84,8 +84,12 @@ public record CustomerBillingPeriod(
     decimal TotalVat,
     IReadOnlyList<string> GsrnList);
 
-public record AcontoPaymentInfo(
-    Guid Id,
+/// <summary>
+/// Aconto prepayment info sourced from invoice lines (no shadow ledger).
+/// </summary>
+public record AcontoPrepaymentInfo(
+    Guid InvoiceId,
+    string? InvoiceNumber,
     DateOnly PeriodStart,
     DateOnly PeriodEnd,
     decimal Amount,

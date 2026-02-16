@@ -17,11 +17,8 @@ const statusStyles = {
 };
 
 const typeStyles = {
-  aconto: 'bg-teal-50 text-teal-700',
-  settlement: 'bg-indigo-50 text-indigo-700',
-  combined_quarterly: 'bg-violet-50 text-violet-700',
+  invoice: 'bg-indigo-50 text-indigo-700',
   credit_note: 'bg-rose-50 text-rose-700',
-  final_settlement: 'bg-amber-50 text-amber-700',
 };
 
 function StatusBadge({ status, t }) {
@@ -113,11 +110,8 @@ export default function InvoiceList() {
             className="px-3 py-2 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-400"
           >
             <option value="">{t('invoices.allTypes')}</option>
-            <option value="aconto">{t('invoices.type_aconto')}</option>
-            <option value="settlement">{t('invoices.type_settlement')}</option>
-            <option value="combined_quarterly">{t('invoices.type_combined_quarterly')}</option>
+            <option value="invoice">{t('invoices.type_invoice')}</option>
             <option value="credit_note">{t('invoices.type_credit_note')}</option>
-            <option value="final_settlement">{t('invoices.type_final_settlement')}</option>
           </select>
           <input
             type="date"

@@ -341,6 +341,24 @@ public sealed class InvoiceRepository : IInvoiceRepository
         return rows.ToList();
     }
 
+    public async Task<decimal> GetAcontoPrepaymentTotalAsync(string gsrn, DateOnly from, DateOnly to, CancellationToken ct)
+    {
+        const string sql = """
+            SELECT COALESCE(SUM(il.amount_ex_vat), 0)
+            FROM billing.invoice_line il
+            JOIN billing.invoice i ON i.id = il.invoice_id
+            WHERE il.gsrn = @Gsrn
+              AND il.line_type = 'aconto_prepayment'
+              AND i.period_start >= @From AND i.period_end <= @To
+              AND i.status NOT IN ('cancelled', 'credited')
+            """;
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+        await conn.OpenAsync(ct);
+        return await conn.QuerySingleAsync<decimal>(
+            new CommandDefinition(sql, new { Gsrn = gsrn, From = from, To = to }, cancellationToken: ct));
+    }
+
     internal class InvoiceNames
     {
         public string? CustomerName { get; set; }

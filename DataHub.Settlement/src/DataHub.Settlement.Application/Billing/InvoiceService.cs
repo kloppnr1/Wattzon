@@ -4,12 +4,16 @@ namespace DataHub.Settlement.Application.Billing;
 
 public interface IInvoiceService
 {
-    Task<Invoice> CreateAcontoInvoiceAsync(Guid customerId, Guid? payerId, Guid? contractId, string gsrn,
-        DateOnly periodStart, DateOnly periodEnd, decimal amount, CancellationToken ct);
-    Task<Invoice> CreateSettlementInvoiceAsync(Guid customerId, Guid? payerId, Guid? contractId,
-        Guid settlementRunId, Guid billingPeriodId, string gsrn,
+    /// <summary>
+    /// Creates a billing document (invoice) with the given line items.
+    /// The line items determine what the invoice is about: settlement charges,
+    /// aconto prepayment, aconto deduction, or any combination.
+    /// </summary>
+    Task<Invoice> CreateInvoiceAsync(Guid customerId, Guid? payerId, Guid? contractId,
+        Guid? settlementRunId, Guid? billingPeriodId, string gsrn,
         DateOnly periodStart, DateOnly periodEnd,
-        IReadOnlyList<CreateInvoiceLineRequest> lines, CancellationToken ct);
+        IReadOnlyList<CreateInvoiceLineRequest> lines,
+        DateOnly? dueDate, CancellationToken ct);
     Task<string> SendInvoiceAsync(Guid invoiceId, CancellationToken ct);
     Task CancelInvoiceAsync(Guid invoiceId, CancellationToken ct);
     Task<Invoice> CreateCreditNoteAsync(Guid invoiceId, string? notes, CancellationToken ct);
@@ -18,74 +22,36 @@ public interface IInvoiceService
 public sealed class InvoiceService : IInvoiceService
 {
     private readonly IInvoiceRepository _invoiceRepo;
-    private readonly IAcontoPaymentRepository _acontoRepo;
     private readonly ILogger<InvoiceService> _logger;
-    private readonly decimal _vatRate;
 
     public InvoiceService(
         IInvoiceRepository invoiceRepo,
-        IAcontoPaymentRepository acontoRepo,
-        ILogger<InvoiceService> logger,
-        decimal vatRate = 0.25m)
+        ILogger<InvoiceService> logger)
     {
         _invoiceRepo = invoiceRepo;
-        _acontoRepo = acontoRepo;
         _logger = logger;
-        _vatRate = vatRate;
     }
 
-    public async Task<Invoice> CreateAcontoInvoiceAsync(
-        Guid customerId, Guid? payerId, Guid? contractId, string gsrn,
-        DateOnly periodStart, DateOnly periodEnd, decimal amount, CancellationToken ct)
-    {
-        var vatAmount = Math.Round(amount * _vatRate, 2);
-        var totalInclVat = amount + vatAmount;
-        var dueDate = periodStart.AddDays(14);
-
-        var request = new CreateInvoiceRequest(
-            customerId, payerId, contractId, null, null,
-            "aconto", periodStart, periodEnd, dueDate, null);
-
-        var lines = new List<CreateInvoiceLineRequest>
-        {
-            new(null, gsrn, 1, "aconto_charge", $"Aconto payment {periodStart:yyyy-MM-dd} to {periodEnd:yyyy-MM-dd}",
-                null, null, amount, vatAmount, totalInclVat),
-        };
-
-        var invoice = await _invoiceRepo.CreateAsync(request, lines, ct);
-
-        // Dual-write: also record in legacy aconto_payment table
-        await _acontoRepo.RecordPaymentAsync(gsrn, periodStart, periodEnd, amount, ct);
-
-        // Auto-send aconto invoices
-        await SendInvoiceAsync(invoice.Id, ct);
-
-        _logger.LogInformation(
-            "Created aconto invoice {InvoiceId} for customer {CustomerId}, GSRN {Gsrn}, amount {Amount} DKK",
-            invoice.Id, customerId, gsrn, totalInclVat);
-
-        return invoice;
-    }
-
-    public async Task<Invoice> CreateSettlementInvoiceAsync(
+    public async Task<Invoice> CreateInvoiceAsync(
         Guid customerId, Guid? payerId, Guid? contractId,
-        Guid settlementRunId, Guid billingPeriodId, string gsrn,
+        Guid? settlementRunId, Guid? billingPeriodId, string gsrn,
         DateOnly periodStart, DateOnly periodEnd,
-        IReadOnlyList<CreateInvoiceLineRequest> lines, CancellationToken ct)
+        IReadOnlyList<CreateInvoiceLineRequest> lines,
+        DateOnly? dueDate, CancellationToken ct)
     {
-        var dueDate = DateOnly.FromDateTime(DateTime.UtcNow).AddDays(30);
+        dueDate ??= DateOnly.FromDateTime(DateTime.UtcNow).AddDays(30);
 
         var request = new CreateInvoiceRequest(
             customerId, payerId, contractId, settlementRunId, billingPeriodId,
-            "settlement", periodStart, periodEnd, dueDate, null);
+            "invoice", periodStart, periodEnd, dueDate, null);
 
         var invoice = await _invoiceRepo.CreateAsync(request, lines, ct);
 
-        // Auto-send settlement invoices
+        // Auto-send
         await SendInvoiceAsync(invoice.Id, ct);
 
         _logger.LogInformation(
-            "Created settlement invoice {InvoiceId} for customer {CustomerId}, GSRN {Gsrn}, amount {Amount} DKK",
+            "Created invoice {InvoiceId} for customer {CustomerId}, GSRN {Gsrn}, amount {Amount} DKK",
             invoice.Id, customerId, gsrn, invoice.TotalInclVat);
 
         return invoice;

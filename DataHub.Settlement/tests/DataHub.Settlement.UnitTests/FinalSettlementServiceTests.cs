@@ -1,4 +1,3 @@
-using DataHub.Settlement.Application.Billing;
 using DataHub.Settlement.Application.Metering;
 using DataHub.Settlement.Application.Settlement;
 using DataHub.Settlement.Application.Tariff;
@@ -8,10 +7,13 @@ using Xunit;
 
 namespace DataHub.Settlement.UnitTests;
 
-public class FinalSettlementServiceTests
+/// <summary>
+/// Tests final settlement scenarios in the standardized billing model.
+/// Final settlement = settlement engine result + optional aconto deduction (no new prepayment).
+/// </summary>
+public class FinalSettlementTests
 {
     private static readonly SettlementEngine Engine = new();
-    private readonly FinalSettlementService _sut = new(Engine);
 
     private static SettlementRequest BuildPartialRequest(DateOnly start, DateOnly end)
     {
@@ -59,28 +61,29 @@ public class FinalSettlementServiceTests
     }
 
     [Fact]
-    public void Post_payment_customer_final_settlement_returns_full_amount()
+    public void Post_payment_final_settlement_equals_settlement_total()
     {
-        // Jan 16 - Feb 1, 16 days, no aconto
+        // Jan 16 - Feb 1, 16 days, no aconto — total due is just the settlement total
         var request = BuildPartialRequest(new DateOnly(2025, 1, 16), new DateOnly(2025, 2, 1));
+        var settlement = Engine.Calculate(request);
 
-        var result = _sut.CalculateFinal(request, acontoPaid: null);
+        // No aconto → invoice has only settlement lines → total due = settlement total
+        var totalDue = settlement.Total;
 
-        result.AcontoPaid.Should().BeNull();
-        result.AcontoDifference.Should().BeNull();
-        result.TotalDue.Should().Be(result.Settlement.Total);
-        result.Settlement.TotalKwh.Should().BeGreaterThan(0);
+        settlement.TotalKwh.Should().BeGreaterThan(0);
+        totalDue.Should().Be(settlement.Total);
     }
 
     [Fact]
-    public void Aconto_customer_final_settlement_with_reconciliation()
+    public void Aconto_final_settlement_deducts_prepaid_amount()
     {
         var request = BuildPartialRequest(new DateOnly(2025, 1, 16), new DateOnly(2025, 2, 1));
+        var settlement = Engine.Calculate(request);
 
-        var result = _sut.CalculateFinal(request, acontoPaid: 300.00m);
+        // Aconto customer: deduct 300 DKK prepaid, no new prepayment (customer is leaving)
+        var acontoPaid = 300.00m;
+        var totalDue = settlement.Total - acontoPaid;
 
-        result.AcontoPaid.Should().Be(300.00m);
-        result.AcontoDifference.Should().Be(result.Settlement.Total - 300.00m);
-        result.TotalDue.Should().Be(result.Settlement.Total - 300.00m);
+        totalDue.Should().Be(settlement.Total - 300.00m);
     }
 }

@@ -18,7 +18,6 @@ Console.WriteLine("Cleaning existing seed data...");
 await conn.ExecuteAsync("DELETE FROM settlement.settlement_line");
 await conn.ExecuteAsync("DELETE FROM settlement.settlement_run");
 await conn.ExecuteAsync("DELETE FROM settlement.billing_period");
-await conn.ExecuteAsync("DELETE FROM billing.aconto_payment");
 await conn.ExecuteAsync("DELETE FROM datahub.dead_letter");
 await conn.ExecuteAsync("DELETE FROM datahub.processed_message_id");
 await conn.ExecuteAsync("DELETE FROM datahub.outbound_request");
@@ -710,9 +709,9 @@ Console.WriteLine();
 Console.WriteLine($"  {lineCount} settlement lines\n");
 
 // ══════════════════════════════════════════════════════════════════════
-// Phase 9: Aconto payments
+// Phase 9: Aconto prepayment invoices
 // ══════════════════════════════════════════════════════════════════════
-Console.WriteLine("Phase 9: Creating aconto payments...");
+Console.WriteLine("Phase 9: Creating aconto prepayment invoices...");
 
 int acontoCount = 0;
 var acontoMps = activeMeteringPoints.Take(100).ToList();
@@ -721,13 +720,39 @@ foreach (var gsrn in acontoMps)
     var periodStart = new DateTime(2025, rng.Next(1, 11), 1);
     var periodEnd = periodStart.AddMonths(1);
     var amount = 400m + rng.Next(0, 400);
+    var vatAmount = Math.Round(amount * 0.25m, 2);
+
+    // Get customer_id and contract_id for this GSRN
+    var contract = await conn.QuerySingleOrDefaultAsync<dynamic>(
+        "SELECT id, customer_id FROM portfolio.contract WHERE gsrn = @Gsrn AND end_date IS NULL LIMIT 1",
+        new { Gsrn = gsrn });
+    if (contract is null) continue;
+
+    var invoiceId = await conn.QuerySingleAsync<Guid>(
+        @"INSERT INTO billing.invoice (customer_id, contract_id, invoice_type, status, period_start, period_end,
+            total_ex_vat, vat_amount, total_incl_vat, amount_outstanding, due_date, issued_at)
+          VALUES (@CustomerId, @ContractId, 'invoice', 'sent', @Start, @End,
+            @Amount, @Vat, @Total, @Total, @DueDate, @IssuedAt)
+          RETURNING id",
+        new {
+            CustomerId = (Guid)contract.customer_id, ContractId = (Guid)contract.id,
+            Start = periodStart, End = periodEnd,
+            Amount = amount, Vat = vatAmount, Total = amount + vatAmount,
+            DueDate = periodStart.AddDays(14), IssuedAt = periodStart.AddDays(1)
+        });
 
     await conn.ExecuteAsync(
-        "INSERT INTO billing.aconto_payment (id, gsrn, period_start, period_end, amount, paid_at) VALUES (@Id, @Gsrn, @PeriodStart, @PeriodEnd, @Amount, @PaidAt)",
-        new { Id = Guid.NewGuid(), Gsrn = gsrn, PeriodStart = periodStart, PeriodEnd = periodEnd, Amount = amount, PaidAt = periodStart.AddDays(15) });
+        @"INSERT INTO billing.invoice_line (invoice_id, gsrn, sort_order, line_type, description,
+            amount_ex_vat, vat_amount, amount_incl_vat)
+          VALUES (@InvoiceId, @Gsrn, 1, 'aconto_prepayment', @Desc, @Amount, @Vat, @Total)",
+        new {
+            InvoiceId = invoiceId, Gsrn = gsrn,
+            Desc = $"Aconto prepayment {periodStart:yyyy-MM-dd} to {periodEnd:yyyy-MM-dd}",
+            Amount = amount, Vat = vatAmount, Total = amount + vatAmount
+        });
     acontoCount++;
 }
-Console.WriteLine($"  {acontoCount} aconto payments\n");
+Console.WriteLine($"  {acontoCount} aconto prepayment invoices\n");
 
 // ══════════════════════════════════════════════════════════════════════
 // Phase 10: Processed message IDs (idempotency table)

@@ -18,4 +18,11 @@ public interface IInvoiceRepository
     Task<CustomerBalance?> GetCustomerBalanceAsync(Guid customerId, CancellationToken ct);
     Task<IReadOnlyList<CustomerLedgerEntry>> GetCustomerLedgerAsync(Guid customerId, CancellationToken ct);
     Task<IReadOnlyList<OutstandingCustomer>> GetOutstandingCustomersAsync(CancellationToken ct);
+
+    /// <summary>
+    /// Returns the total aconto prepayment amount (ex VAT) invoiced for a GSRN within a date range.
+    /// Queries invoice lines with line_type='aconto_prepayment' on non-cancelled/credited invoices.
+    /// This replaces the old shadow ledger (billing.aconto_payment table).
+    /// </summary>
+    Task<decimal> GetAcontoPrepaymentTotalAsync(string gsrn, DateOnly from, DateOnly to, CancellationToken ct);
 }

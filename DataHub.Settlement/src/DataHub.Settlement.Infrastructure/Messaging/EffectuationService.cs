@@ -337,7 +337,7 @@ public sealed class EffectuationService
             }
         }
 
-        // 7b. Create aconto invoice only for aconto payment model, and only if the first period is still open
+        // 7b. Create aconto prepayment invoice for aconto payment model, only if first period is still open
         if (paymentModel == "aconto")
         {
             try
@@ -358,13 +358,23 @@ public sealed class EffectuationService
                             averageGridTariffRate: 0.20m));
                     var periodDays = periodEnd.DayNumber - effectiveDate.DayNumber;
                     var acontoAmount = Math.Round(quarterlyAmount * periodDays / 90m, 2);
+                    var vatAmount = Math.Round(acontoAmount * 0.25m, 2);
 
-                    await _invoiceService.CreateAcontoInvoiceAsync(
+                    var lines = new List<CreateInvoiceLineRequest>
+                    {
+                        new(null, meteringPointId, 1, "aconto_prepayment",
+                            $"Aconto prepayment {effectiveDate:yyyy-MM-dd} to {periodEnd:yyyy-MM-dd}",
+                            null, null, acontoAmount, vatAmount, acontoAmount + vatAmount),
+                    };
+
+                    await _invoiceService.CreateInvoiceAsync(
                         customerId!.Value, contract?.PayerId, contract?.Id,
-                        meteringPointId, effectiveDate, periodEnd, acontoAmount, ct);
+                        null, null, meteringPointId,
+                        effectiveDate, periodEnd, lines,
+                        effectiveDate.AddDays(14), ct);
 
                     _logger.LogInformation(
-                        "RSM-022: Created aconto invoice for GSRN {Gsrn}, period {Start} to {End}, amount {Amount} DKK",
+                        "RSM-022: Created aconto prepayment invoice for GSRN {Gsrn}, period {Start} to {End}, amount {Amount} DKK",
                         meteringPointId, effectiveDate, periodEnd, acontoAmount);
                 }
                 else

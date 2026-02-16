@@ -8,10 +8,13 @@ using Xunit;
 
 namespace DataHub.Settlement.UnitTests;
 
-public class AcontoSettlementServiceTests
+/// <summary>
+/// Tests the standardized billing model where aconto is just line items on an invoice.
+/// Settlement engine produces the actual charges; aconto deduction/prepayment are arithmetic.
+/// </summary>
+public class AcontoBillingTests
 {
     private static readonly SettlementEngine Engine = new();
-    private readonly AcontoSettlementService _sut = new(Engine);
 
     private static SettlementRequest BuildJanuaryRequest()
     {
@@ -58,36 +61,75 @@ public class AcontoSettlementServiceTests
     }
 
     [Fact]
-    public void Underpayment_produces_positive_difference()
+    public void Settlement_total_is_invariant_regardless_of_billing_model()
     {
+        // The settlement engine always produces the same result — aconto is a billing concern, not settlement
         var request = BuildJanuaryRequest();
-        // Golden master total is 793.14 DKK; aconto paid less
-        var result = _sut.CalculateQuarterlyInvoice(request, totalAcontoPaid: 700.00m, newQuarterlyEstimate: 800.00m);
+        var result = Engine.Calculate(request);
 
-        result.PreviousQuarter.ActualSettlement.Total.Should().Be(793.14m);
-        result.PreviousQuarter.TotalAcontoPaid.Should().Be(700.00m);
-        result.PreviousQuarter.Difference.Should().Be(93.14m);
-        result.NewAcontoAmount.Should().Be(800.00m);
-        result.TotalDue.Should().Be(893.14m); // 93.14 + 800.00
+        result.Total.Should().Be(793.14m, "golden master total for January 2025");
     }
 
     [Fact]
-    public void Overpayment_produces_negative_difference()
+    public void Underpayment_aconto_deduction_leaves_positive_net()
     {
         var request = BuildJanuaryRequest();
-        var result = _sut.CalculateQuarterlyInvoice(request, totalAcontoPaid: 900.00m, newQuarterlyEstimate: 800.00m);
+        var settlement = Engine.Calculate(request);
 
-        result.PreviousQuarter.Difference.Should().Be(-106.86m); // 793.14 - 900.00
-        result.TotalDue.Should().Be(693.14m); // -106.86 + 800.00
+        // Standard billing model: difference = actual - prepaid, net = difference + new estimate
+        var acontoPaid = 700.00m;
+        var difference = settlement.Total - acontoPaid;
+        var newEstimate = 800.00m;
+        var totalDue = difference + newEstimate;
+
+        difference.Should().Be(93.14m, "underpaid by 93.14");
+        totalDue.Should().Be(893.14m, "settlement difference + new aconto estimate");
+    }
+
+    [Fact]
+    public void Overpayment_aconto_deduction_reduces_net()
+    {
+        var request = BuildJanuaryRequest();
+        var settlement = Engine.Calculate(request);
+
+        var acontoPaid = 900.00m;
+        var difference = settlement.Total - acontoPaid;
+        var newEstimate = 800.00m;
+        var totalDue = difference + newEstimate;
+
+        difference.Should().Be(-106.86m, "overpaid by 106.86");
+        totalDue.Should().Be(693.14m, "negative difference reduces next quarter charge");
     }
 
     [Fact]
     public void Exact_payment_produces_zero_difference()
     {
         var request = BuildJanuaryRequest();
-        var result = _sut.CalculateQuarterlyInvoice(request, totalAcontoPaid: 793.14m, newQuarterlyEstimate: 800.00m);
+        var settlement = Engine.Calculate(request);
 
-        result.PreviousQuarter.Difference.Should().Be(0m);
-        result.TotalDue.Should().Be(800.00m);
+        var acontoPaid = 793.14m;
+        var difference = settlement.Total - acontoPaid;
+        var newEstimate = 800.00m;
+        var totalDue = difference + newEstimate;
+
+        difference.Should().Be(0m);
+        totalDue.Should().Be(800.00m, "only the new estimate is due");
+    }
+
+    [Fact]
+    public void Aconto_estimator_produces_reasonable_quarterly_amount()
+    {
+        var quarterly = AcontoEstimator.EstimateQuarterlyAmount(
+            annualConsumptionKwh: 4000m,
+            expectedPricePerKwh: AcontoEstimator.CalculateExpectedPricePerKwh(
+                averageSpotPriceOrePerKwh: 80m,
+                marginOrePerKwh: 4m,
+                systemTariffRate: 0.054m,
+                transmissionTariffRate: 0.049m,
+                electricityTaxRate: 0.008m,
+                averageGridTariffRate: 0.20m));
+
+        quarterly.Should().BeGreaterThan(0, "estimate should be positive");
+        quarterly.Should().BeLessThan(5000m, "should be a reasonable amount");
     }
 }

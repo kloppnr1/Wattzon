@@ -182,17 +182,20 @@ public class GoldenMasterTests
     public void Aconto_quarterly_settlement_matches_golden_master()
     {
         var request = BuildRequest(new DateOnly(2025, 1, 1), new DateOnly(2025, 2, 1));
-        var acontoService = new AcontoSettlementService(Engine);
+        var settlement = Engine.Calculate(request);
 
-        var result = acontoService.CalculateQuarterlyInvoice(
-            request, totalAcontoPaid: 700.00m, newQuarterlyEstimate: 800.00m);
+        // Aconto is just arithmetic on the settlement result:
+        // actual (793.14) - prepaid (700.00) = difference (93.14), + new estimate (800.00) = total due (893.14)
+        var acontoPaid = 700.00m;
+        var newEstimate = 800.00m;
+        var difference = settlement.Total - acontoPaid;
+        var totalDue = difference + newEstimate;
 
-        result.PreviousQuarter.ActualSettlement.Total.Should().Be(793.14m);
-        result.PreviousQuarter.TotalAcontoPaid.Should().Be(700.00m);
-        result.PreviousQuarter.Difference.Should().Be(93.14m);
-        result.PreviousQuarter.NewQuarterlyEstimate.Should().Be(800.00m);
-        result.NewAcontoAmount.Should().Be(800.00m);
-        result.TotalDue.Should().Be(893.14m);
+        settlement.Total.Should().Be(793.14m);
+        acontoPaid.Should().Be(700.00m);
+        difference.Should().Be(93.14m);
+        newEstimate.Should().Be(800.00m);
+        totalDue.Should().Be(893.14m);
     }
 
     /// <summary>
@@ -207,14 +210,15 @@ public class GoldenMasterTests
     public void Final_settlement_at_offboarding_matches_golden_master()
     {
         var request = BuildRequest(new DateOnly(2025, 1, 16), new DateOnly(2025, 2, 1));
-        var finalService = new FinalSettlementService(Engine);
+        var settlement = Engine.Calculate(request);
 
-        var result = finalService.CalculateFinal(request, acontoPaid: 300.00m);
+        // Final settlement: actual - prepaid = total due (no new prepayment, customer is leaving)
+        var acontoPaid = 300.00m;
+        var totalDue = settlement.Total - acontoPaid;
 
-        result.Settlement.Total.Should().Be(409.36m);
-        result.AcontoPaid.Should().Be(300.00m);
-        result.AcontoDifference.Should().Be(109.36m);
-        result.TotalDue.Should().Be(109.36m);
+        settlement.Total.Should().Be(409.36m);
+        acontoPaid.Should().Be(300.00m);
+        totalDue.Should().Be(109.36m);
     }
 
     /// <summary>

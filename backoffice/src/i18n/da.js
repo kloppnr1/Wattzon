@@ -724,11 +724,8 @@ export default {
   'invoices.status_overdue': 'Forfalden',
   'invoices.status_cancelled': 'Annulleret',
   'invoices.status_credited': 'Krediteret',
-  'invoices.type_aconto': 'Aconto',
-  'invoices.type_settlement': 'Afregning',
-  'invoices.type_combined_quarterly': 'Kombineret kvartal',
+  'invoices.type_invoice': 'Faktura',
   'invoices.type_credit_note': 'Kreditnota',
-  'invoices.type_final_settlement': 'Slutafregning',
 
   // ── Fakturadetaljer ──
   'invoiceDetail.title': 'Faktura',

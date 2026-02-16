@@ -298,11 +298,15 @@ public sealed class BillingRepository : IBillingRepository
             """;
 
         const string acontoSql = """
-            SELECT ap.id, ap.period_start, ap.period_end, ap.amount, ap.currency
-            FROM billing.aconto_payment ap
-            JOIN portfolio.contract ct ON ap.gsrn = ct.gsrn
+            SELECT i.id AS invoice_id, i.invoice_number, i.period_start, i.period_end,
+                   il.amount_ex_vat AS amount, 'DKK' AS currency
+            FROM billing.invoice_line il
+            JOIN billing.invoice i ON i.id = il.invoice_id
+            JOIN portfolio.contract ct ON ct.gsrn = il.gsrn
             WHERE ct.customer_id = @CustomerId
-            ORDER BY ap.period_start DESC
+              AND il.line_type = 'aconto_prepayment'
+              AND i.status NOT IN ('cancelled', 'credited')
+            ORDER BY i.period_start DESC
             """;
 
         await using var conn = new NpgsqlConnection(_connectionString);
@@ -324,9 +328,10 @@ public sealed class BillingRepository : IBillingRepository
             p.TotalVat,
             gsrnsByPeriod.GetValueOrDefault(p.BillingPeriodId, []))).ToList();
 
-        var acontoRows = await conn.QueryAsync<AcontoPaymentRow>(acontoSql, new { CustomerId = customerId });
-        var acontoList = acontoRows.Select(a => new AcontoPaymentInfo(
-            a.Id,
+        var acontoRows = await conn.QueryAsync<AcontoPrepaymentRow>(acontoSql, new { CustomerId = customerId });
+        var acontoList = acontoRows.Select(a => new AcontoPrepaymentInfo(
+            a.InvoiceId,
+            a.InvoiceNumber,
             DateOnly.FromDateTime(a.PeriodStart),
             DateOnly.FromDateTime(a.PeriodEnd),
             a.Amount,
@@ -429,9 +434,10 @@ internal class CustomerBillingPeriodRow
     public decimal TotalVat { get; set; }
 }
 
-internal class AcontoPaymentRow
+internal class AcontoPrepaymentRow
 {
-    public Guid Id { get; set; }
+    public Guid InvoiceId { get; set; }
+    public string? InvoiceNumber { get; set; }
     public DateTime PeriodStart { get; set; }
     public DateTime PeriodEnd { get; set; }
     public decimal Amount { get; set; }

@@ -48,7 +48,6 @@ public class DatabaseSchemaTests : IClassFixture<TestDatabase>, IAsyncLifetime
     [InlineData("datahub", "outbound_request")]
     [InlineData("lifecycle", "process_request")]
     [InlineData("lifecycle", "process_event")]
-    [InlineData("billing", "aconto_payment")]
     [InlineData("metering", "metering_data_history")]
     [InlineData("metering", "annual_consumption_tracker")]
     [InlineData("settlement", "correction_settlement")]
