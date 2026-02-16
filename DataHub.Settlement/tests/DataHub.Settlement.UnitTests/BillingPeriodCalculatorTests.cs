@@ -210,13 +210,39 @@ public class BillingPeriodCalculatorTests
         (sundayEnd.DayNumber - sundayStart.DayNumber).Should().Be(1);
     }
 
+    // ── Daily (exclusive: next day) ──
+
+    [Fact]
+    public void Daily_returns_next_day()
+    {
+        var start = new DateOnly(2025, 1, 15);
+        var periodEnd = BillingPeriodCalculator.GetFirstPeriodEnd(start, "daily");
+        periodEnd.Should().Be(new DateOnly(2025, 1, 16));
+    }
+
+    [Fact]
+    public void Daily_end_of_month()
+    {
+        var start = new DateOnly(2025, 1, 31);
+        var periodEnd = BillingPeriodCalculator.GetFirstPeriodEnd(start, "daily");
+        periodEnd.Should().Be(new DateOnly(2025, 2, 1));
+    }
+
+    [Fact]
+    public void Daily_exclusive_end_gives_1_day()
+    {
+        var start = new DateOnly(2025, 3, 15);
+        var periodEnd = BillingPeriodCalculator.GetFirstPeriodEnd(start, "daily");
+        (periodEnd.DayNumber - start.DayNumber).Should().Be(1);
+    }
+
     // ── Invalid frequency ──
 
     [Fact]
     public void Throws_on_unknown_frequency()
     {
-        var act = () => BillingPeriodCalculator.GetFirstPeriodEnd(new DateOnly(2026, 1, 1), "daily");
+        var act = () => BillingPeriodCalculator.GetFirstPeriodEnd(new DateOnly(2026, 1, 1), "biweekly");
 
-        act.Should().Throw<ArgumentException>().WithMessage("*daily*");
+        act.Should().Throw<ArgumentException>().WithMessage("*biweekly*");
     }
 }

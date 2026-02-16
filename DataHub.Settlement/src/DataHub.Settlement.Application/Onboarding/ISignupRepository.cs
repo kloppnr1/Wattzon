@@ -8,7 +8,7 @@ public interface ISignupRepository
         string customerName, string customerCprCvr, string customerContactType,
         Guid productId, Guid processRequestId, string type, DateOnly effectiveDate,
         Guid? correctedFromId, SignupAddressInfo? addressInfo, string? mobile,
-        string billingFrequency, CancellationToken ct);
+        string billingFrequency, string paymentModel, CancellationToken ct);
     Task<string> NextSignupNumberAsync(CancellationToken ct);
     Task<Signup?> GetBySignupNumberAsync(string signupNumber, CancellationToken ct);
     Task<Signup?> GetByIdAsync(Guid id, CancellationToken ct);

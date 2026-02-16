@@ -719,7 +719,7 @@ var acontoMps = activeMeteringPoints.Take(100).ToList();
 foreach (var gsrn in acontoMps)
 {
     var periodStart = new DateTime(2025, rng.Next(1, 11), 1);
-    var periodEnd = periodStart.AddMonths(1).AddDays(-1);
+    var periodEnd = periodStart.AddMonths(1);
     var amount = 400m + rng.Next(0, 400);
 
     await conn.ExecuteAsync(

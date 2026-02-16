@@ -268,7 +268,7 @@ public class QueuePollerTests
         contract.Gsrn.Should().Be(gsrn);
         contract.ProductId.Should().Be(product.Id);
         contract.BillingFrequency.Should().Be("monthly");
-        contract.PaymentModel.Should().Be("aconto");
+        contract.PaymentModel.Should().Be("post_payment");
 
         // 11. Verify SupplyPeriod created
         var supplyPeriods = await _portfolioRepo.GetSupplyPeriodsAsync(gsrn, ct);

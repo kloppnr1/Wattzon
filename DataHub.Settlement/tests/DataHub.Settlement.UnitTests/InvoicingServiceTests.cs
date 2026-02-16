@@ -113,4 +113,26 @@ public class InvoicingServiceTests
 
         InvoicingService.IsPeriodDue("weekly", periodEnd, today).Should().BeFalse();
     }
+
+    // ── Daily ──
+
+    [Fact]
+    public void IsPeriodDue_daily_due_next_day()
+    {
+        // Daily period: Jan 15–Jan 16 (exclusive). Today = Jan 16 — due.
+        var periodEnd = new DateOnly(2025, 1, 16);
+        var today = new DateOnly(2025, 1, 16);
+
+        InvoicingService.IsPeriodDue("daily", periodEnd, today).Should().BeTrue();
+    }
+
+    [Fact]
+    public void IsPeriodDue_daily_not_due_same_day()
+    {
+        // Daily period: Jan 15–Jan 16 (exclusive). Today = Jan 15 — not due.
+        var periodEnd = new DateOnly(2025, 1, 16);
+        var today = new DateOnly(2025, 1, 15);
+
+        InvoicingService.IsPeriodDue("daily", periodEnd, today).Should().BeFalse();
+    }
 }

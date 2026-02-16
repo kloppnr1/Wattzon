@@ -11,6 +11,7 @@ public sealed class InvoicingService : BackgroundService
 {
     private readonly string _connectionString;
     private readonly IInvoiceService _invoiceService;
+    private readonly IAcontoPaymentRepository _acontoRepo;
     private readonly IClock _clock;
     private readonly ILogger<InvoicingService> _logger;
     private readonly TimeSpan _pollInterval;
@@ -18,12 +19,14 @@ public sealed class InvoicingService : BackgroundService
     public InvoicingService(
         string connectionString,
         IInvoiceService invoiceService,
+        IAcontoPaymentRepository acontoRepo,
         IClock clock,
         ILogger<InvoicingService> logger,
         TimeSpan? pollInterval = null)
     {
         _connectionString = connectionString;
         _invoiceService = invoiceService;
+        _acontoRepo = acontoRepo;
         _clock = clock;
         _logger = logger;
         _pollInterval = pollInterval ?? TimeSpan.FromMinutes(5);
@@ -57,6 +60,24 @@ public sealed class InvoicingService : BackgroundService
             try
             {
                 var lines = await GetSettlementLinesAsync(run.SettlementRunId, run.Gsrn, run.PeriodStart, run.PeriodEnd, ct);
+
+                // For aconto customers, deduct prepaid amount from the settlement invoice
+                if (run.PaymentModel == "aconto")
+                {
+                    var totalAcontoPaid = await _acontoRepo.GetTotalPaidAsync(run.Gsrn, run.PeriodStart, run.PeriodEnd, ct);
+                    if (totalAcontoPaid > 0)
+                    {
+                        var deductionLine = new CreateInvoiceLineRequest(
+                            null, run.Gsrn, lines.Count + 1, "aconto_deduction",
+                            $"Aconto deduction — {run.PeriodStart:yyyy-MM-dd} to {run.PeriodEnd:yyyy-MM-dd}",
+                            0m, null, -totalAcontoPaid, 0m, -totalAcontoPaid);
+                        lines = lines.Append(deductionLine).ToList();
+
+                        _logger.LogInformation(
+                            "Deducting {Amount} DKK aconto for GSRN {Gsrn}, period {Start}–{End}",
+                            totalAcontoPaid, run.Gsrn, run.PeriodStart, run.PeriodEnd);
+                    }
+                }
 
                 await _invoiceService.CreateSettlementInvoiceAsync(
                     run.CustomerId, run.PayerId, run.ContractId,
@@ -94,7 +115,8 @@ public sealed class InvoicingService : BackgroundService
                     c.customer_id,
                     c.payer_id,
                     c.id AS contract_id,
-                    c.billing_frequency
+                    c.billing_frequency,
+                    c.payment_model
                 FROM settlement.settlement_run sr
                 JOIN settlement.billing_period bp ON bp.id = sr.billing_period_id
                 JOIN portfolio.contract c ON c.gsrn = sr.metering_point_id
@@ -167,7 +189,8 @@ public sealed class InvoicingService : BackgroundService
         Guid CustomerId,
         Guid? PayerId,
         Guid ContractId,
-        string BillingFrequency);
+        string BillingFrequency,
+        string PaymentModel);
 
     private record SettlementLineRow(Guid Id, string ChargeType, decimal TotalKwh, decimal TotalAmount, decimal VatAmount);
 }

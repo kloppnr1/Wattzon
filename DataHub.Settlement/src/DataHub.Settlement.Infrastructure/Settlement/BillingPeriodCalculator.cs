@@ -15,6 +15,7 @@ public static class BillingPeriodCalculator
     public static DateOnly GetFirstPeriodEnd(DateOnly startDate, string billingFrequency)
         => billingFrequency switch
         {
+            "daily" => startDate.AddDays(1),
             "weekly" => GetWeekEnd(startDate),
             "monthly" => GetMonthEnd(startDate),
             "quarterly" => GetQuarterEnd(startDate),

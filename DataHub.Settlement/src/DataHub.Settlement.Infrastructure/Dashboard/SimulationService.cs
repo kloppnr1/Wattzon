@@ -481,7 +481,7 @@ public sealed class SimulationService
             annualConsumptionKwh: 4000m, expectedPrice, gridSubRate, supplierSubRate);
 
         // Customer pays the full quarterly aconto amount upfront at Q1 start
-        await acontoRepo.RecordPaymentAsync(Gsrn, new DateOnly(2025, 1, 1), new DateOnly(2025, 3, 31), quarterlyEstimate, ct);
+        await acontoRepo.RecordPaymentAsync(Gsrn, new DateOnly(2025, 1, 1), new DateOnly(2025, 4, 1), quarterlyEstimate, ct);
 
         await onStepCompleted(new SimulationStep(5, "Estimate Q1 Aconto",
             $"Quarterly estimate: {quarterlyEstimate:N2} DKK (paid upfront for Q1)"));
@@ -1386,7 +1386,7 @@ public sealed class SimulationService
         var quarterStart = new DateTime(latestTimestamp.Year, latestTimestamp.Month, 1, 0, 0, 0, DateTimeKind.Utc)
             .AddMonths(1);
         var qStartDate = DateOnly.FromDateTime(quarterStart);
-        var qEndDate = qStartDate.AddMonths(3).AddDays(-1);
+        var qEndDate = qStartDate.AddMonths(3);
 
         await acontoRepo.RecordPaymentAsync(gsrn, qStartDate, qEndDate, quarterlyEstimate, ct);
 
@@ -2595,7 +2595,7 @@ public sealed class SimulationService
         {
             var acontoRepo = new AcontoPaymentRepository(_connectionString);
             var qStartDate = ed;
-            var qEndDate = ed.AddMonths(3).AddDays(-1);
+            var qEndDate = ed.AddMonths(3);
             await acontoRepo.RecordPaymentAsync(ctx.Gsrn, qStartDate, qEndDate, ctx.AcontoEstimate, ct);
 
             ctx.IsAcontoPaid = true;

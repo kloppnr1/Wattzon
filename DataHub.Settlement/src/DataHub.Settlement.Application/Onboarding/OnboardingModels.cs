@@ -34,6 +34,7 @@ public record SignupRequest(
     string? Mobile = null,
     string? Gsrn = null,
     string? BillingFrequency = null,
+    string? PaymentModel = null,
     Guid? CorrectedFromId = null,
     // Billing address (customer's postal address — distinct from supply point)
     string? BillingDarId = null,

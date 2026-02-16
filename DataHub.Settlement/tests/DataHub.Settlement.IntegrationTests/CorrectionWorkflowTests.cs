@@ -60,6 +60,20 @@ public class CorrectionWorkflowTests
             await conn.ExecuteAsync("DELETE FROM settlement.settlement_line WHERE metering_point_id = @Gsrn", new { Gsrn });
             await conn.ExecuteAsync("DELETE FROM settlement.settlement_run WHERE metering_point_id = @Gsrn", new { Gsrn });
             // Also clean up any stale runs for the same billing period + grid area to avoid unique constraint violations
+            // Must delete invoice_lines first since they may reference settlement_lines via FK
+            await conn.ExecuteAsync("""
+                DELETE FROM billing.invoice_line WHERE settlement_line_id IN (
+                    SELECT sl.id FROM settlement.settlement_line sl
+                    JOIN settlement.settlement_run sr ON sl.settlement_run_id = sr.id
+                    JOIN settlement.billing_period bp ON sr.billing_period_id = bp.id
+                    WHERE bp.period_start = @PeriodStart AND bp.period_end = @PeriodEnd AND sr.grid_area_code = '344')
+                """, new { PeriodStart = new DateOnly(2025, 1, 1), PeriodEnd = new DateOnly(2025, 2, 1) });
+            await conn.ExecuteAsync("""
+                DELETE FROM billing.invoice WHERE settlement_run_id IN (
+                    SELECT sr.id FROM settlement.settlement_run sr
+                    JOIN settlement.billing_period bp ON sr.billing_period_id = bp.id
+                    WHERE bp.period_start = @PeriodStart AND bp.period_end = @PeriodEnd AND sr.grid_area_code = '344')
+                """, new { PeriodStart = new DateOnly(2025, 1, 1), PeriodEnd = new DateOnly(2025, 2, 1) });
             await conn.ExecuteAsync("""
                 DELETE FROM settlement.settlement_line WHERE settlement_run_id IN (
                     SELECT sr.id FROM settlement.settlement_run sr

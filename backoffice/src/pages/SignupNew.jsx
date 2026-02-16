@@ -47,6 +47,7 @@ export default function SignupNew() {
   // ── Row 3: Product + Invoicing ──
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [billingFrequency, setBillingFrequency] = useState('monthly');
+  const [paymentModel, setPaymentModel] = useState('post_payment');
 
   // ── Row 4: Customer ──
   const [contactType, setContactType] = useState('private');
@@ -213,6 +214,7 @@ export default function SignupNew() {
         mobile,
         productId: selectedProduct,
         billingFrequency,
+        paymentModel,
         type,
         effectiveDate,
         billingDarId: addr?.darId || undefined,
@@ -533,11 +535,20 @@ export default function SignupNew() {
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-1.5">{t('signupNew.invoicingInterval')}</label>
               <select value={billingFrequency} onChange={(e) => setBillingFrequency(e.target.value)} className={INPUT}>
+                <option value="daily">{t('signupNew.intervalDaily') || 'Daglig'}</option>
                 <option value="weekly">{t('signupNew.intervalWeekly')}</option>
                 <option value="monthly">{t('signupNew.intervalMonthly')}</option>
                 <option value="quarterly">{t('signupNew.intervalQuarterly')}</option>
               </select>
               <p className="text-[11px] text-slate-400 mt-1 font-medium">{t('signupNew.invoicingIntervalHelper')}</p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-slate-700 mb-1.5">{t('signupNew.paymentModel') || 'Betalingsmodel'}</label>
+              <select value={paymentModel} onChange={(e) => setPaymentModel(e.target.value)} className={INPUT}>
+                <option value="post_payment">{t('signupNew.postPayment') || 'Efterbetaling'}</option>
+                <option value="aconto">{t('signupNew.aconto') || 'Aconto'}</option>
+              </select>
             </div>
 
             {/* ── CUSTOMER ── */}

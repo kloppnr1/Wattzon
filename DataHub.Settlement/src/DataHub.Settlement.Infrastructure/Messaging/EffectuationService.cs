@@ -70,6 +70,7 @@ public sealed class EffectuationService
         Guid? customerId = null;
         string? signupNumber = null;
         Guid? productId = null;
+        string? paymentModel = null;
         bool shouldSendRsm027 = false;
         string? customerName = null;
         string? cprCvr = null;
@@ -108,7 +109,7 @@ public sealed class EffectuationService
             // 2. Load signup and create/link customer — all within the same transaction
             var signup = await conn.QuerySingleOrDefaultAsync<FullSignupRow>(
                 new CommandDefinition("""
-                    SELECT id, signup_number, customer_id, product_id, billing_frequency,
+                    SELECT id, signup_number, customer_id, product_id, billing_frequency, payment_model,
                            customer_name, customer_cpr_cvr, customer_contact_type,
                            billing_dar_id, billing_street, billing_house_number, billing_floor, billing_door,
                            billing_postal_code, billing_city,
@@ -129,6 +130,7 @@ public sealed class EffectuationService
             signupNumber = signup.SignupNumber;
             productId = signup.ProductId;
             customerId = signup.CustomerId;
+            paymentModel = signup.PaymentModel;
 
             // Create/link customer if not yet linked
             if (customerId is null && !string.IsNullOrEmpty(signup.CustomerCprCvr))
@@ -264,7 +266,7 @@ public sealed class EffectuationService
                         Gsrn = meteringPointId,
                         ProductId = productId,
                         BillingFrequency = signup.BillingFrequency,
-                        PaymentModel = "aconto",
+                        PaymentModel = signup.PaymentModel,
                         StartDate = effectiveDate,
                     },
                     transaction: tx, cancellationToken: ct));
@@ -315,38 +317,41 @@ public sealed class EffectuationService
                 processId);
         }
 
-        // 7. Create aconto invoice (uses its own transaction internally via InvoiceRepository)
-        try
+        // 7. Create aconto invoice only for aconto payment model (uses its own transaction internally via InvoiceRepository)
+        if (paymentModel == "aconto")
         {
-            var contract = await GetActiveContractAsync(conn, meteringPointId, ct);
-            var periodEnd = effectiveDate.AddMonths(1);
+            try
+            {
+                var contract = await GetActiveContractAsync(conn, meteringPointId, ct);
+                var periodEnd = effectiveDate.AddMonths(1);
 
-            // Use AcontoEstimator with default values for first-month estimate
-            var acontoAmount = AcontoEstimator.EstimateQuarterlyAmount(
-                annualConsumptionKwh: 4000m,
-                expectedPricePerKwh: AcontoEstimator.CalculateExpectedPricePerKwh(
-                    averageSpotPriceOrePerKwh: 80m,
-                    marginOrePerKwh: 4m,
-                    systemTariffRate: 0.054m,
-                    transmissionTariffRate: 0.049m,
-                    electricityTaxRate: 0.008m,
-                    averageGridTariffRate: 0.20m));
-            // Convert quarterly to monthly (first month only)
-            acontoAmount = Math.Round(acontoAmount / 3m, 2);
+                // Use AcontoEstimator with default values for first-month estimate
+                var acontoAmount = AcontoEstimator.EstimateQuarterlyAmount(
+                    annualConsumptionKwh: 4000m,
+                    expectedPricePerKwh: AcontoEstimator.CalculateExpectedPricePerKwh(
+                        averageSpotPriceOrePerKwh: 80m,
+                        marginOrePerKwh: 4m,
+                        systemTariffRate: 0.054m,
+                        transmissionTariffRate: 0.049m,
+                        electricityTaxRate: 0.008m,
+                        averageGridTariffRate: 0.20m));
+                // Convert quarterly to monthly (first month only)
+                acontoAmount = Math.Round(acontoAmount / 3m, 2);
 
-            await _invoiceService.CreateAcontoInvoiceAsync(
-                customerId!.Value, contract?.PayerId, contract?.Id,
-                meteringPointId, effectiveDate, periodEnd, acontoAmount, ct);
+                await _invoiceService.CreateAcontoInvoiceAsync(
+                    customerId!.Value, contract?.PayerId, contract?.Id,
+                    meteringPointId, effectiveDate, periodEnd, acontoAmount, ct);
 
-            _logger.LogInformation(
-                "RSM-022: Created aconto invoice for GSRN {Gsrn}, period {Start} to {End}, amount {Amount} DKK",
-                meteringPointId, effectiveDate, periodEnd, acontoAmount);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex,
-                "RSM-022: Failed to create aconto invoice for GSRN {Gsrn} — invoice creation is non-blocking",
-                meteringPointId);
+                _logger.LogInformation(
+                    "RSM-022: Created aconto invoice for GSRN {Gsrn}, period {Start} to {End}, amount {Amount} DKK",
+                    meteringPointId, effectiveDate, periodEnd, acontoAmount);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex,
+                    "RSM-022: Failed to create aconto invoice for GSRN {Gsrn} — invoice creation is non-blocking",
+                    meteringPointId);
+            }
         }
 
         // 8. Send RSM-027 outside transaction (HTTP call)
@@ -399,6 +404,7 @@ public sealed class EffectuationService
         public Guid? CustomerId { get; set; }
         public Guid? ProductId { get; set; }
         public string BillingFrequency { get; set; } = null!;
+        public string PaymentModel { get; set; } = null!;
         public string? CustomerName { get; set; }
         public string? CustomerCprCvr { get; set; }
         public string? CustomerContactType { get; set; }

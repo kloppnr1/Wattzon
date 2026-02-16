@@ -225,6 +225,28 @@ public class SettlementOrchestrationTests
         _resultStore.StoreCount.Should().BeGreaterThanOrEqualTo(1, "single-day Mar 31 quarterly period should be settled");
     }
 
+    [Fact]
+    public async Task Daily_billing_settles_single_day_period()
+    {
+        // Effective date: Jan 5 2025, daily billing. Today: Jan 6.
+        // Single period: Jan 5–Jan 6 (exclusive, 1 day).
+        var clock = new TestClock { Today = new DateOnly(2025, 1, 6) };
+        var sm = new ProcessStateMachine(_processRepo, clock);
+        var request = await sm.CreateRequestAsync("571313100000012345", "supplier_switch", new DateOnly(2025, 1, 5), CancellationToken.None);
+        await sm.MarkSentAsync(request.Id, "corr-1", CancellationToken.None);
+        await sm.MarkAcknowledgedAsync(request.Id, CancellationToken.None);
+        await sm.MarkCompletedAsync(request.Id, CancellationToken.None);
+
+        _completenessChecker.Result = new MeteringCompleteness(24, 24, true);
+        _portfolioRepo.Contract = new Contract(Guid.NewGuid(), Guid.NewGuid(), "571313100000012345", Guid.NewGuid(), "daily", "post_payment", new DateOnly(2025, 1, 5));
+        _portfolioRepo.Product = new Product(Guid.NewGuid(), "Spot Standard", "spot", 4.0m, null, 39.00m);
+
+        var sut = CreateSut(clock);
+        await sut.RunTickAsync(CancellationToken.None);
+
+        _resultStore.StoreCount.Should().Be(1, "single daily period should be settled");
+    }
+
     // ── Test doubles ──
 
     internal sealed class StubCompletenessChecker : IMeteringCompletenessChecker

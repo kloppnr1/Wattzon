@@ -164,6 +164,7 @@ builder.Services.AddHostedService(sp =>
     new InvoicingService(
         connectionString,
         sp.GetRequiredService<IInvoiceService>(),
+        sp.GetRequiredService<IAcontoPaymentRepository>(),
         sp.GetRequiredService<IClock>(),
         sp.GetRequiredService<ILogger<InvoicingService>>()));
 

@@ -212,6 +212,7 @@ public class SignupValidationTests
     // ── Billing frequency validation ──
 
     [Theory]
+    [InlineData("daily")]
     [InlineData("weekly")]
     [InlineData("monthly")]
     [InlineData("quarterly")]
@@ -237,7 +238,6 @@ public class SignupValidationTests
     }
 
     [Theory]
-    [InlineData("daily")]
     [InlineData("yearly")]
     [InlineData("biweekly")]
     [InlineData("")]
@@ -316,7 +316,7 @@ public class SignupValidationTests
             string customerName, string customerCprCvr, string customerContactType,
             Guid productId, Guid processRequestId, string type, DateOnly effectiveDate,
             Guid? correctedFromId, SignupAddressInfo? addressInfo, string? mobile,
-            string billingFrequency, CancellationToken ct)
+            string billingFrequency, string paymentModel, CancellationToken ct)
             => Task.FromResult(new Signup(Guid.NewGuid(), signupNumber, darId, gsrn, null, productId, processRequestId, type, effectiveDate, "registered", null, correctedFromId));
 
         public Task<string> NextSignupNumberAsync(CancellationToken ct)
