@@ -117,12 +117,14 @@ public sealed class InvoicingService : BackgroundService
     {
         if (billingFrequency == "quarterly")
         {
-            // Quarter end: March 31, June 30, Sep 30, Dec 31
-            var quarterEnd = GetQuarterEnd(periodEnd);
+            // periodEnd is exclusive (day after last day), so subtract 1 to get the last actual day
+            // to determine which quarter the period belongs to.
+            var lastDay = periodEnd.AddDays(-1);
+            var quarterEnd = GetQuarterEnd(lastDay);
             return today > quarterEnd;
         }
 
-        // Weekly and monthly: due once the period has ended
+        // Weekly and monthly: due once the period has ended (periodEnd is exclusive)
         return periodEnd <= today;
     }
 

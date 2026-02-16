@@ -55,8 +55,8 @@ public class MoveInSettlementTests
 
         // The effective date is 7 days ago (max retroactive for BRS-009 move-in)
         var effectiveDate = new DateOnly(2025, 2, 8);
-        var settlementPeriodEnd = new DateOnly(2025, 2, 28); // monthly billing ends at calendar month end
-        // Today must be AFTER period end so the orchestration service considers the period closed
+        var settlementPeriodEnd = new DateOnly(2025, 3, 1); // monthly billing: exclusive end = first day of next month
+        // Today must be >= period end so the orchestration service considers the period closed
         var today = new DateOnly(2025, 3, 1);
         var clock = new TestClock { Today = today };
 

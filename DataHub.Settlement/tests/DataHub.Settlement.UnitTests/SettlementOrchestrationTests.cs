@@ -90,8 +90,8 @@ public class SettlementOrchestrationTests
     public async Task Weekly_billing_settles_multiple_closed_weeks()
     {
         // Effective date: Monday Jan 6 2025. Today: Jan 28 (Tue).
-        // Closed weekly periods: Jan 6–12, Jan 13–19, Jan 20–26 = 3 weeks.
-        // Jan 27–Feb 2 is still open (Jan 28 < Feb 2).
+        // Exclusive weekly periods: Jan 6–Jan 13, Jan 13–Jan 20, Jan 20–Jan 27 = 3 weeks.
+        // Jan 27–Feb 3 is still open (Feb 3 > Jan 28).
         var clock = new TestClock { Today = new DateOnly(2025, 1, 28) };
         var sm = new ProcessStateMachine(_processRepo, clock);
         var request = await sm.CreateRequestAsync("571313100000012345", "supplier_switch", new DateOnly(2025, 1, 6), CancellationToken.None);
@@ -113,8 +113,8 @@ public class SettlementOrchestrationTests
     public async Task Skips_already_settled_periods_and_settles_next()
     {
         // Effective date: Monday Jan 6. Today: Jan 21 (Tue).
-        // Week 1 (Jan 6–12) already settled, week 2 (Jan 13–19) not settled.
-        // Jan 20–26 still open.
+        // Week 1 (Jan 6–Jan 13 exclusive) already settled, week 2 (Jan 13–Jan 20) not settled.
+        // Jan 20–Jan 27 still open (Jan 27 > Jan 21).
         var clock = new TestClock { Today = new DateOnly(2025, 1, 21) };
         var sm = new ProcessStateMachine(_processRepo, clock);
         var request = await sm.CreateRequestAsync("571313100000012345", "supplier_switch", new DateOnly(2025, 1, 6), CancellationToken.None);
@@ -126,13 +126,103 @@ public class SettlementOrchestrationTests
         _portfolioRepo.Contract = new Contract(Guid.NewGuid(), Guid.NewGuid(), "571313100000012345", Guid.NewGuid(), "weekly", "post_payment", new DateOnly(2025, 1, 6));
         _portfolioRepo.Product = new Product(Guid.NewGuid(), "Spot Standard", "spot", 4.0m, null, 39.00m);
 
-        // Mark week 1 as already settled
-        _resultStore.SettledPeriods.Add(("571313100000012345", new DateOnly(2025, 1, 6), new DateOnly(2025, 1, 12)));
+        // Mark week 1 as already settled (exclusive end = Jan 13)
+        _resultStore.SettledPeriods.Add(("571313100000012345", new DateOnly(2025, 1, 6), new DateOnly(2025, 1, 13)));
 
         var sut = CreateSut(clock);
         await sut.RunTickAsync(CancellationToken.None);
 
         _resultStore.StoreCount.Should().Be(1, "only the unsettled week 2 should be settled");
+    }
+
+    [Fact]
+    public async Task Sunday_movein_single_day_weekly_period_settles()
+    {
+        // Effective date = Sunday Jan 5 2025, weekly billing.
+        // First period: Jan 5–Jan 6 (exclusive, 1 day). Today = Jan 6 (Monday).
+        // periodEnd > today → Jan 6 > Jan 6 → false → settle.
+        var clock = new TestClock { Today = new DateOnly(2025, 1, 6) };
+        var sm = new ProcessStateMachine(_processRepo, clock);
+        var request = await sm.CreateRequestAsync("571313100000012345", "supplier_switch", new DateOnly(2025, 1, 5), CancellationToken.None);
+        await sm.MarkSentAsync(request.Id, "corr-1", CancellationToken.None);
+        await sm.MarkAcknowledgedAsync(request.Id, CancellationToken.None);
+        await sm.MarkCompletedAsync(request.Id, CancellationToken.None);
+
+        _completenessChecker.Result = new MeteringCompleteness(24, 24, true);
+        _portfolioRepo.Contract = new Contract(Guid.NewGuid(), Guid.NewGuid(), "571313100000012345", Guid.NewGuid(), "weekly", "post_payment", new DateOnly(2025, 1, 5));
+        _portfolioRepo.Product = new Product(Guid.NewGuid(), "Spot Standard", "spot", 4.0m, null, 39.00m);
+
+        var sut = CreateSut(clock);
+        await sut.RunTickAsync(CancellationToken.None);
+
+        _resultStore.StoreCount.Should().Be(1, "single-day Sunday period should be settled");
+    }
+
+    [Fact]
+    public async Task Settles_when_period_end_equals_today()
+    {
+        // Effective date = Monday Jan 6 2025, weekly billing.
+        // First period: Jan 6–Jan 13 (exclusive). Today = Jan 13 (Monday = periodEnd).
+        // periodEnd > today → Jan 13 > Jan 13 → false → settle.
+        var clock = new TestClock { Today = new DateOnly(2025, 1, 13) };
+        var sm = new ProcessStateMachine(_processRepo, clock);
+        var request = await sm.CreateRequestAsync("571313100000012345", "supplier_switch", new DateOnly(2025, 1, 6), CancellationToken.None);
+        await sm.MarkSentAsync(request.Id, "corr-1", CancellationToken.None);
+        await sm.MarkAcknowledgedAsync(request.Id, CancellationToken.None);
+        await sm.MarkCompletedAsync(request.Id, CancellationToken.None);
+
+        _completenessChecker.Result = new MeteringCompleteness(168, 168, true);
+        _portfolioRepo.Contract = new Contract(Guid.NewGuid(), Guid.NewGuid(), "571313100000012345", Guid.NewGuid(), "weekly", "post_payment", new DateOnly(2025, 1, 6));
+        _portfolioRepo.Product = new Product(Guid.NewGuid(), "Spot Standard", "spot", 4.0m, null, 39.00m);
+
+        var sut = CreateSut(clock);
+        await sut.RunTickAsync(CancellationToken.None);
+
+        _resultStore.StoreCount.Should().Be(1, "period where periodEnd == today should be settled");
+    }
+
+    [Fact]
+    public async Task Month_end_start_single_day_monthly_period_settles()
+    {
+        // Effective date = Jan 31 2025, monthly billing.
+        // First period: Jan 31–Feb 1 (exclusive, 1 day). Today = Mar 1.
+        var clock = new TestClock { Today = new DateOnly(2025, 3, 1) };
+        var sm = new ProcessStateMachine(_processRepo, clock);
+        var request = await sm.CreateRequestAsync("571313100000012345", "supplier_switch", new DateOnly(2025, 1, 31), CancellationToken.None);
+        await sm.MarkSentAsync(request.Id, "corr-1", CancellationToken.None);
+        await sm.MarkAcknowledgedAsync(request.Id, CancellationToken.None);
+        await sm.MarkCompletedAsync(request.Id, CancellationToken.None);
+
+        _completenessChecker.Result = new MeteringCompleteness(24, 24, true);
+        _portfolioRepo.Contract = new Contract(Guid.NewGuid(), Guid.NewGuid(), "571313100000012345", Guid.NewGuid(), "monthly", "post_payment", new DateOnly(2025, 1, 31));
+        _portfolioRepo.Product = new Product(Guid.NewGuid(), "Spot Standard", "spot", 4.0m, null, 39.00m);
+
+        var sut = CreateSut(clock);
+        await sut.RunTickAsync(CancellationToken.None);
+
+        _resultStore.StoreCount.Should().BeGreaterThanOrEqualTo(1, "single-day Jan 31 monthly period should be settled");
+    }
+
+    [Fact]
+    public async Task Quarter_end_start_single_day_quarterly_period_settles()
+    {
+        // Effective date = Mar 31 2025, quarterly billing.
+        // First period: Mar 31–Apr 1 (exclusive, 1 day). Today = Apr 1.
+        var clock = new TestClock { Today = new DateOnly(2025, 4, 1) };
+        var sm = new ProcessStateMachine(_processRepo, clock);
+        var request = await sm.CreateRequestAsync("571313100000012345", "supplier_switch", new DateOnly(2025, 3, 31), CancellationToken.None);
+        await sm.MarkSentAsync(request.Id, "corr-1", CancellationToken.None);
+        await sm.MarkAcknowledgedAsync(request.Id, CancellationToken.None);
+        await sm.MarkCompletedAsync(request.Id, CancellationToken.None);
+
+        _completenessChecker.Result = new MeteringCompleteness(24, 24, true);
+        _portfolioRepo.Contract = new Contract(Guid.NewGuid(), Guid.NewGuid(), "571313100000012345", Guid.NewGuid(), "quarterly", "post_payment", new DateOnly(2025, 3, 31));
+        _portfolioRepo.Product = new Product(Guid.NewGuid(), "Spot Standard", "spot", 4.0m, null, 39.00m);
+
+        var sut = CreateSut(clock);
+        await sut.RunTickAsync(CancellationToken.None);
+
+        _resultStore.StoreCount.Should().BeGreaterThanOrEqualTo(1, "single-day Mar 31 quarterly period should be settled");
     }
 
     // ── Test doubles ──

@@ -110,13 +110,13 @@ public sealed class SettlementOrchestrationService : BackgroundService
             var periodEnd = BillingPeriodCalculator.GetFirstPeriodEnd(periodStart, contract.BillingFrequency);
 
             // Don't settle periods that haven't closed yet
-            if (periodEnd >= today)
+            if (periodEnd > today)
                 break;
 
             // Skip periods that already have a settlement run
             if (await _resultStore.HasSettlementRunAsync(process.Gsrn, periodStart, periodEnd, ct))
             {
-                periodStart = periodEnd.AddDays(1);
+                periodStart = periodEnd;
                 continue;
             }
 
@@ -154,7 +154,7 @@ public sealed class SettlementOrchestrationService : BackgroundService
             _logger.LogInformation("Settlement completed for GSRN {Gsrn}: {PeriodStart} to {PeriodEnd}, total {Total} DKK",
                 process.Gsrn, periodStart, periodEnd, result.Total);
 
-            periodStart = periodEnd.AddDays(1);
+            periodStart = periodEnd;
         }
     }
 }
