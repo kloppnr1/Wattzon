@@ -81,7 +81,8 @@ public record CustomerBillingPeriod(
     DateOnly PeriodStart,
     DateOnly PeriodEnd,
     decimal TotalAmount,
-    decimal TotalVat);
+    decimal TotalVat,
+    IReadOnlyList<string> GsrnList);
 
 public record AcontoPaymentInfo(
     Guid Id,

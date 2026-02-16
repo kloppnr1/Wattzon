@@ -289,6 +289,14 @@ public sealed class BillingRepository : IBillingRepository
             ORDER BY bp.period_start DESC
             """;
 
+        const string gsrnSql = """
+            SELECT DISTINCT sr.billing_period_id, sl.metering_point_id AS gsrn
+            FROM settlement.settlement_line sl
+            JOIN settlement.settlement_run sr ON sl.settlement_run_id = sr.id
+            JOIN portfolio.contract ct ON sl.metering_point_id = ct.gsrn
+            WHERE ct.customer_id = @CustomerId
+            """;
+
         const string acontoSql = """
             SELECT ap.id, ap.period_start, ap.period_end, ap.amount, ap.currency
             FROM billing.aconto_payment ap
@@ -303,12 +311,18 @@ public sealed class BillingRepository : IBillingRepository
             return null;
 
         var periods = await conn.QueryAsync<CustomerBillingPeriodRow>(periodsSql, new { CustomerId = customerId });
+        var gsrnRows = await conn.QueryAsync<(Guid BillingPeriodId, string Gsrn)>(gsrnSql, new { CustomerId = customerId });
+        var gsrnsByPeriod = gsrnRows
+            .GroupBy(r => r.BillingPeriodId)
+            .ToDictionary(g => g.Key, g => (IReadOnlyList<string>)g.Select(r => r.Gsrn).Distinct().OrderBy(s => s).ToList());
+
         var periodList = periods.Select(p => new CustomerBillingPeriod(
             p.BillingPeriodId,
             DateOnly.FromDateTime(p.PeriodStart),
             DateOnly.FromDateTime(p.PeriodEnd),
             p.TotalAmount,
-            p.TotalVat)).ToList();
+            p.TotalVat,
+            gsrnsByPeriod.GetValueOrDefault(p.BillingPeriodId, []))).ToList();
 
         var acontoRows = await conn.QueryAsync<AcontoPaymentRow>(acontoSql, new { CustomerId = customerId });
         var acontoList = acontoRows.Select(a => new AcontoPaymentInfo(
