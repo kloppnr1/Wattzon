@@ -25,15 +25,14 @@ using Xunit;
 namespace DataHub.Settlement.IntegrationTests;
 
 /// <summary>
-/// Integration tests for aconto/post_payment payment models, aconto reconciliation,
-/// and daily billing frequency — verifying end-to-end from portfolio setup through invoicing.
+/// Integration tests for aconto/post_payment payment models and aconto reconciliation —
+/// verifying end-to-end from portfolio setup through invoicing.
 /// </summary>
 [Collection("Database")]
 public class AcontoSettlementSyncTests
 {
     private const string GsrnPostPayment = "571313100000090001";
     private const string GsrnAconto = "571313100000090002";
-    private const string GsrnDaily = "571313100000090003";
     private const string CprCvr = "1234567890";
 
     private readonly PortfolioRepository _portfolio;
@@ -248,76 +247,9 @@ public class AcontoSettlementSyncTests
             "net = actual settlement total minus aconto paid");
     }
 
-    [Fact]
-    public async Task Daily_billing_settles_single_day()
-    {
-        var ct = CancellationToken.None;
-        var gsrn = GsrnDaily;
-        var effectiveDate = new DateOnly(2025, 3, 15);
-        var periodEnd = new DateOnly(2025, 3, 16); // exclusive, 1 day
-        var today = new DateOnly(2025, 3, 16);
-        var clock = new TestClock { Today = today };
-
-        await CleanupAsync(gsrn, ct);
-        await SeedTariffsAndPricesAsync(effectiveDate, periodEnd, ct);
-
-        // Arrange: customer, product, metering point, contract (daily, post_payment)
-        var customer = await _portfolio.CreateCustomerAsync("Daily Test", CprCvr, "private", null, ct);
-        var product = await _portfolio.CreateProductAsync("Spot Daily", "spot", 4.0m, null, 39.00m, ct);
-        var mp = new MeteringPoint(gsrn, "E17", "flex", "344", "5790000392261", "DK1", "connected");
-        try { await _portfolio.CreateMeteringPointAsync(mp, ct); } catch { }
-        await _portfolio.CreateContractAsync(customer.Id, gsrn, product.Id, "daily", "post_payment", effectiveDate, ct);
-
-        // Create and complete process
-        var sm = new ProcessStateMachine(_processRepo, clock);
-        var process = await sm.CreateRequestAsync(gsrn, "supplier_switch", effectiveDate, ct);
-        await sm.MarkSentAsync(process.Id, "corr-daily-1", ct);
-        await sm.MarkAcknowledgedAsync(process.Id, ct);
-        await sm.MarkCompletedAsync(process.Id, ct);
-
-        // Activate and store exactly 24 hours of metering data
-        await _portfolio.ActivateMeteringPointAsync(gsrn, effectiveDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc), ct);
-        try { await _portfolio.CreateSupplyPeriodAsync(gsrn, effectiveDate, ct); } catch { }
-        await StoreMeteringDataAsync(gsrn, effectiveDate, periodEnd, ct);
-
-        // Run settlement orchestration
-        var resultStore = new SettlementResultStore(TestDatabase.ConnectionString);
-        var orchestration = new SettlementOrchestrationService(
-            _processRepo, _portfolio,
-            new MeteringCompletenessChecker(TestDatabase.ConnectionString),
-            new SettlementDataLoader(_meteringRepo, _spotPriceRepo, _tariffRepo),
-            new SettlementEngine(), resultStore, clock,
-            NullLogger<SettlementOrchestrationService>.Instance);
-        await orchestration.RunTickAsync(ct);
-
-        // Assert: settlement_run exists with 1-day period
-        await using var conn = new NpgsqlConnection(TestDatabase.ConnectionString);
-        await conn.OpenAsync(ct);
-
-        var run = await conn.QuerySingleOrDefaultAsync<dynamic>(
-            """
-            SELECT sr.id, bp.period_start, bp.period_end, sr.status
-            FROM settlement.settlement_run sr
-            JOIN settlement.billing_period bp ON bp.id = sr.billing_period_id
-            WHERE sr.metering_point_id = @Gsrn
-            """,
-            new { Gsrn = gsrn });
-
-        ((object)run).Should().NotBeNull("settlement should have run for daily period");
-        ((string)run!.status).Should().Be("completed");
-        DateOnly.FromDateTime((DateTime)run.period_start).Should().Be(effectiveDate);
-        DateOnly.FromDateTime((DateTime)run.period_end).Should().Be(periodEnd);
-
-        // Assert: settlement lines exist with correct amounts for 24 hours
-        var lines = (await conn.QueryAsync<dynamic>(
-            "SELECT charge_type, total_kwh, total_amount FROM settlement.settlement_line WHERE settlement_run_id = @RunId",
-            new { RunId = (Guid)run.id })).ToList();
-
-        lines.Should().NotBeEmpty("settlement lines should exist");
-        var energyLine = lines.FirstOrDefault(l => (string)l.charge_type == "energy");
-        ((object)energyLine).Should().NotBeNull("energy line should exist");
-        ((decimal)energyLine!.total_kwh).Should().BeGreaterThan(0, "24 hours of consumption");
-    }
+    // Daily_billing_settles_single_day removed — daily is no longer a valid billing frequency.
+    // All 6 valid combinations (weekly/monthly/quarterly × post_payment/aconto)
+    // are tested in BillingCombinationTests.cs.
 
     // ── Helpers ──
 
