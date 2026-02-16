@@ -78,7 +78,7 @@ public class DatabaseSchemaTests : IClassFixture<TestDatabase>, IAsyncLifetime
             _connection);
 
         var count = (long)(await cmd.ExecuteScalarAsync())!;
-        count.Should().Be(34, "30 base tables + 4 invoice/payment tables (V004) requires exactly 34 tables");
+        count.Should().Be(33, "30 base tables + 4 invoice/payment tables (V004) − 1 dropped aconto_payment (V014) = 33 tables");
     }
 
     [Fact]
