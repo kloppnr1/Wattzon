@@ -535,7 +535,7 @@ export default function SignupNew() {
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-1.5">{t('signupNew.invoicingInterval')}</label>
               <select value={billingFrequency} onChange={(e) => setBillingFrequency(e.target.value)} className={INPUT}>
-                <option value="daily">{t('signupNew.intervalDaily') || 'Daglig'}</option>
+                <option value="daily">{t('signupNew.intervalDaily')}</option>
                 <option value="weekly">{t('signupNew.intervalWeekly')}</option>
                 <option value="monthly">{t('signupNew.intervalMonthly')}</option>
                 <option value="quarterly">{t('signupNew.intervalQuarterly')}</option>
@@ -544,10 +544,10 @@ export default function SignupNew() {
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-1.5">{t('signupNew.paymentModel') || 'Betalingsmodel'}</label>
+              <label className="block text-sm font-semibold text-slate-700 mb-1.5">{t('signupNew.paymentModel')}</label>
               <select value={paymentModel} onChange={(e) => setPaymentModel(e.target.value)} className={INPUT}>
-                <option value="post_payment">{t('signupNew.postPayment') || 'Efterbetaling'}</option>
-                <option value="aconto">{t('signupNew.aconto') || 'Aconto'}</option>
+                <option value="post_payment">{t('signupNew.postPayment')}</option>
+                <option value="aconto">{t('signupNew.aconto')}</option>
               </select>
             </div>
 
