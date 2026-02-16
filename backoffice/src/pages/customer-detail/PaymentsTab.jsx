@@ -19,7 +19,7 @@ const methodStyles = {
   refund: 'bg-rose-50 text-rose-700',
 };
 
-export default function PaymentsTab({ customerId }) {
+export default function PaymentsTab({ customerId, customerName }) {
   const { t } = useTranslation();
   const [data, setData] = useState(null);
   const [page, setPage] = useState(1);
@@ -67,7 +67,7 @@ export default function PaymentsTab({ customerId }) {
                 return (
                   <tr key={pay.id} className="hover:bg-slate-50 transition-colors">
                     <td className="px-4 py-2.5 whitespace-nowrap">
-                      <Link to={`/payments/${pay.id}?from=/customers/${customerId}`} className="text-sm text-teal-600 font-medium hover:text-teal-700">
+                      <Link to={`/payments/${pay.id}?from=${encodeURIComponent('/customers/' + customerId + '?tab=payments')}&fromLabel=${encodeURIComponent(customerName)}`} className="text-sm text-teal-600 font-medium hover:text-teal-700">
                         {pay.paymentReference || pay.id.slice(0, 8)}
                       </Link>
                     </td>

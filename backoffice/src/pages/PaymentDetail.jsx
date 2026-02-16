@@ -94,7 +94,7 @@ export default function PaymentDetail() {
             <div>
               <dt className="text-xs font-medium text-slate-500">{t('paymentDetail.customer')}</dt>
               <dd className="text-sm mt-0.5">
-                <Link to={`/customers/${payment.customerId}?from=/payments/${id}`} className="text-teal-600 hover:text-teal-700">{payment.customerId.substring(0, 8)}...</Link>
+                <Link to={`/customers/${payment.customerId}`} className="text-teal-600 hover:text-teal-700">{payment.customerId.substring(0, 8)}...</Link>
               </dd>
             </div>
           )}

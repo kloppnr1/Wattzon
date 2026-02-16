@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { api } from '../api';
 import { useTranslation } from '../i18n/LanguageContext';
+import Breadcrumb from '../components/Breadcrumb';
 import WattzonLoader from '../components/WattzonLoader';
 
 const statusStyles = {
@@ -53,12 +54,10 @@ export default function OutboundRequestDetail() {
 
   return (
     <div className="p-4 sm:p-8 max-w-6xl mx-auto">
-      {/* Breadcrumb */}
-      <div className="mb-4 flex items-center gap-2 text-sm text-slate-500">
-        <Link to="/datahub/messages" className="hover:text-teal-600">{t('outboundDetail.breadcrumbMessages')}</Link>
-        <span>/</span>
-        <span className="text-slate-900 font-medium">{t('outboundDetail.breadcrumbOutbound')}</span>
-      </div>
+      <Breadcrumb
+        fallback={[{ label: t('outboundDetail.breadcrumbMessages'), to: '/datahub/messages' }]}
+        current={t('outboundDetail.breadcrumbOutbound')}
+      />
 
       {/* Page header */}
       <div className="mb-6 animate-fade-in-up">

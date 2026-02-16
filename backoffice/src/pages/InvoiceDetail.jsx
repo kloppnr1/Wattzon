@@ -195,7 +195,7 @@ export default function InvoiceDetail() {
             <div>
               <dt className="text-xs font-medium text-slate-500">{t('invoiceDetail.customer')}</dt>
               <dd className="text-sm mt-0.5">
-                <Link to={`/customers/${invoice.customerId}?from=/invoices/${id}`} className="text-teal-600 hover:text-teal-700">{invoice.customerId.substring(0, 8)}...</Link>
+                <Link to={`/customers/${invoice.customerId}`} className="text-teal-600 hover:text-teal-700">{invoice.customerId.substring(0, 8)}...</Link>
               </dd>
             </div>
           )}

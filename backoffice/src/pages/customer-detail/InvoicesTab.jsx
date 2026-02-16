@@ -23,7 +23,7 @@ const typeStyles = {
   final_settlement: 'bg-amber-50 text-amber-700',
 };
 
-export default function InvoicesTab({ customerId }) {
+export default function InvoicesTab({ customerId, customerName }) {
   const { t } = useTranslation();
   const [data, setData] = useState(null);
   const [page, setPage] = useState(1);
@@ -71,7 +71,7 @@ export default function InvoicesTab({ customerId }) {
                 return (
                   <tr key={inv.id} className="hover:bg-slate-50 transition-colors">
                     <td className="px-4 py-2.5 whitespace-nowrap">
-                      <Link to={`/invoices/${inv.id}?from=${encodeURIComponent('/customers/' + customerId + '?tab=invoices')}`} className="text-sm text-teal-600 font-medium hover:text-teal-700">
+                      <Link to={`/invoices/${inv.id}?from=${encodeURIComponent('/customers/' + customerId + '?tab=invoices')}&fromLabel=${encodeURIComponent(customerName)}`} className="text-sm text-teal-600 font-medium hover:text-teal-700">
                         {inv.invoiceNumber || inv.id.slice(0, 8)}
                       </Link>
                     </td>

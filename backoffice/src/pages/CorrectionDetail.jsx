@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { api } from '../api';
 import { useTranslation } from '../i18n/LanguageContext';
+import Breadcrumb from '../components/Breadcrumb';
 import WattzonLoader from '../components/WattzonLoader';
 
 const statusStyles = {
@@ -60,12 +61,10 @@ export default function CorrectionDetail() {
 
   return (
     <div className="p-4 sm:p-8 max-w-6xl mx-auto">
-      {/* Breadcrumb */}
-      <div className="mb-4 flex items-center gap-2 text-sm text-slate-500">
-        <Link to="/settlement" className="hover:text-teal-600">{t('settlement.title')}</Link>
-        <span>/</span>
-        <span className="text-slate-900 font-medium">{t('correctionDetail.breadcrumbDetail')}</span>
-      </div>
+      <Breadcrumb
+        fallback={[{ label: t('settlement.title'), to: '/settlement' }]}
+        current={t('correctionDetail.breadcrumbDetail')}
+      />
 
       {/* Page header */}
       <div className="mb-6 animate-fade-in-up">

@@ -17,7 +17,7 @@ const processStatusStyles = {
   acknowledged_error: { dot: 'bg-rose-400', badge: 'bg-rose-50 text-rose-700' },
 };
 
-export default function ProcessesTab({ customerId }) {
+export default function ProcessesTab({ customerId, customerName }) {
   const { t } = useTranslation();
   const [processes, setProcesses] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -58,7 +58,7 @@ export default function ProcessesTab({ customerId }) {
                       <span className="text-[11px] font-mono text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">{p.gsrn}</span>
                     </td>
                     <td className="px-4 py-2.5 whitespace-nowrap">
-                      <Link to={`/datahub/processes/${p.id}?from=/customers/${customerId}`} className="text-sm text-teal-600 font-medium hover:text-teal-700">
+                      <Link to={`/datahub/processes/${p.id}?from=${encodeURIComponent('/customers/' + customerId + '?tab=processes')}&fromLabel=${encodeURIComponent(customerName)}`} className="text-sm text-teal-600 font-medium hover:text-teal-700">
                         {t(`processType.${p.processType}`)}
                       </Link>
                     </td>

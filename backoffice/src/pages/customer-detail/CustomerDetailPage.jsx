@@ -95,10 +95,10 @@ export default function CustomerDetailPage() {
       {/* Tab content */}
       {tab === 'overview' && <OverviewTab customer={customer} customerId={id} />}
       {tab === 'contracts' && <ContractsMeteringTab customer={customer} />}
-      {tab === 'invoices' && <InvoicesTab customerId={id} />}
-      {tab === 'payments' && <PaymentsTab customerId={id} />}
+      {tab === 'invoices' && <InvoicesTab customerId={id} customerName={customer.name} />}
+      {tab === 'payments' && <PaymentsTab customerId={id} customerName={customer.name} />}
       {tab === 'charges' && <ChargesTab customerId={id} customer={customer} />}
-      {tab === 'processes' && <ProcessesTab customerId={id} />}
+      {tab === 'processes' && <ProcessesTab customerId={id} customerName={customer.name} />}
       {tab === 'ledger' && <LedgerTab customerId={id} />}
     </div>
   );
