@@ -38,23 +38,25 @@ public class QueuePollerTests : IClassFixture<TestDatabase>
     private static string LoadRsm022Fixture() =>
         File.ReadAllText(Path.Combine("..", "..", "..", "..", "..", "fixtures", "rsm022-activation.json"));
 
+    private QueuePoller<TimeseriesMessageHandler> CreateTimeseriesPoller(FakeDataHubClient client)
+    {
+        var handler = new TimeseriesMessageHandler(
+            new CimJsonParser(), _meteringRepo,
+            NullLogger<TimeseriesMessageHandler>.Instance);
+        return new QueuePoller<TimeseriesMessageHandler>(
+            client, handler, _messageLog, new SettlementMetrics(),
+            NullLogger<QueuePoller<TimeseriesMessageHandler>>.Instance);
+    }
+
     [Fact]
     public async Task Processes_rsm012_message_end_to_end()
     {
         var client = new FakeDataHubClient();
-        var parser = new CimJsonParser();
-        var processRepo = new ProcessRepository(TestDatabase.ConnectionString);
-        var signupRepo = new SignupRepository(TestDatabase.ConnectionString);
-        var masterDataHandler = CreateNullMasterDataHandler(TestDatabase.ConnectionString, parser, processRepo, signupRepo);
-        var poller = new QueuePollerService(
-            client, parser, _meteringRepo, _portfolioRepo,
-            new Infrastructure.Tariff.TariffRepository(TestDatabase.ConnectionString),
-            _messageLog, masterDataHandler,
-            NullLogger<QueuePollerService>.Instance);
+        var poller = CreateTimeseriesPoller(client);
 
         client.Enqueue(QueueName.Timeseries, new DataHubMessage("msg-001", "RSM-012", null, LoadSingleDayFixture()));
 
-        var processed = await poller.PollQueueAsync(QueueName.Timeseries, CancellationToken.None);
+        var processed = await poller.PollQueueAsync(CancellationToken.None);
 
         processed.Should().BeTrue();
 
@@ -74,26 +76,18 @@ public class QueuePollerTests : IClassFixture<TestDatabase>
     public async Task Duplicate_message_is_skipped()
     {
         var client = new FakeDataHubClient();
-        var parser = new CimJsonParser();
-        var processRepo = new ProcessRepository(TestDatabase.ConnectionString);
-        var signupRepo = new SignupRepository(TestDatabase.ConnectionString);
-        var masterDataHandler = CreateNullMasterDataHandler(TestDatabase.ConnectionString, parser, processRepo, signupRepo);
-        var poller = new QueuePollerService(
-            client, parser, _meteringRepo, _portfolioRepo,
-            new Infrastructure.Tariff.TariffRepository(TestDatabase.ConnectionString),
-            _messageLog, masterDataHandler,
-            NullLogger<QueuePollerService>.Instance);
+        var poller = CreateTimeseriesPoller(client);
 
         client.Enqueue(QueueName.Timeseries, new DataHubMessage("msg-dup", "RSM-012", null, LoadSingleDayFixture()));
 
         // Process first time
-        await poller.PollQueueAsync(QueueName.Timeseries, CancellationToken.None);
+        await poller.PollQueueAsync(CancellationToken.None);
 
         // Enqueue again with same message ID
         client.Enqueue(QueueName.Timeseries, new DataHubMessage("msg-dup", "RSM-012", null, LoadSingleDayFixture()));
 
         // Process second time — should skip
-        var processed = await poller.PollQueueAsync(QueueName.Timeseries, CancellationToken.None);
+        var processed = await poller.PollQueueAsync(CancellationToken.None);
         processed.Should().BeTrue();
 
         // Message should still be dequeued (skip + dequeue)
@@ -105,19 +99,11 @@ public class QueuePollerTests : IClassFixture<TestDatabase>
     public async Task Malformed_message_is_dead_lettered()
     {
         var client = new FakeDataHubClient();
-        var parser = new CimJsonParser();
-        var processRepo = new ProcessRepository(TestDatabase.ConnectionString);
-        var signupRepo = new SignupRepository(TestDatabase.ConnectionString);
-        var masterDataHandler = CreateNullMasterDataHandler(TestDatabase.ConnectionString, parser, processRepo, signupRepo);
-        var poller = new QueuePollerService(
-            client, parser, _meteringRepo, _portfolioRepo,
-            new Infrastructure.Tariff.TariffRepository(TestDatabase.ConnectionString),
-            _messageLog, masterDataHandler,
-            NullLogger<QueuePollerService>.Instance);
+        var poller = CreateTimeseriesPoller(client);
 
         client.Enqueue(QueueName.Timeseries, new DataHubMessage("msg-bad", "RSM-012", null, "{ invalid json payload }"));
 
-        var processed = await poller.PollQueueAsync(QueueName.Timeseries, CancellationToken.None);
+        var processed = await poller.PollQueueAsync(CancellationToken.None);
 
         processed.Should().BeTrue();
 
@@ -155,7 +141,6 @@ public class QueuePollerTests : IClassFixture<TestDatabase>
 
         // 1. Set up repositories and services
         var client = new FakeDataHubClient();
-        var parser = new CimJsonParser();
         var processRepo = new ProcessRepository(TestDatabase.ConnectionString);
         var signupRepo = new SignupRepository(TestDatabase.ConnectionString);
         // Set clock to early December to allow 15 business days notice for Jan 1 effective date (accounting for Christmas holidays)
@@ -176,16 +161,15 @@ public class QueuePollerTests : IClassFixture<TestDatabase>
             clock,
             NullLogger<EffectuationService>.Instance);
 
-        var masterDataHandler = new MasterDataMessageHandler(
-            parser, _portfolioRepo, processRepo, signupRepo,
+        var handler = new MasterDataMessageHandler(
+            new CimJsonParser(), _portfolioRepo, processRepo, signupRepo,
             onboardingService, new Infrastructure.Tariff.TariffRepository(TestDatabase.ConnectionString),
             clock, effectuationService,
             NullLogger<MasterDataMessageHandler>.Instance);
-        var poller = new QueuePollerService(
-            client, parser, _meteringRepo, _portfolioRepo,
-            new Infrastructure.Tariff.TariffRepository(TestDatabase.ConnectionString),
-            _messageLog, masterDataHandler,
-            NullLogger<QueuePollerService>.Instance);
+
+        var poller = new QueuePoller<MasterDataMessageHandler>(
+            client, handler, _messageLog, new SettlementMetrics(),
+            NullLogger<QueuePoller<MasterDataMessageHandler>>.Instance);
 
         // 2. Ensure grid area exists (required for RSM-022)
         await _portfolioRepo.EnsureGridAreaAsync("344", "5790000392261", "N1 A/S", "DK1", ct);
@@ -234,7 +218,7 @@ public class QueuePollerTests : IClassFixture<TestDatabase>
         client.Enqueue(QueueName.MasterData,
             new DataHubMessage("msg-rsm022-test", "RSM-022", "corr-rsm022-test", LoadRsm022Fixture()));
 
-        var processed = await poller.PollQueueAsync(QueueName.MasterData, ct);
+        var processed = await poller.PollQueueAsync(ct);
 
         // ──── ASSERT ────
 
@@ -277,24 +261,6 @@ public class QueuePollerTests : IClassFixture<TestDatabase>
         var peek = await client.PeekAsync(QueueName.MasterData, ct);
         peek.Should().BeNull("message should be dequeued after processing");
     }
-
-    private static EffectuationService CreateNullEffectuationService(string connectionString) =>
-        new(connectionString,
-            NullOnboardingService.Instance,
-            new NullInvoiceService(),
-            new FakeDataHubClient(),
-            new Infrastructure.DataHub.BrsRequestBuilder(),
-            new NullMessageRepository(),
-            new TestClock(),
-            NullLogger<EffectuationService>.Instance);
-
-    private static MasterDataMessageHandler CreateNullMasterDataHandler(
-        string connectionString, CimJsonParser parser,
-        ProcessRepository processRepo, SignupRepository signupRepo) =>
-        new(parser, new PortfolioRepository(connectionString), processRepo, signupRepo,
-            NullOnboardingService.Instance, new Infrastructure.Tariff.TariffRepository(connectionString),
-            new TestClock(), CreateNullEffectuationService(connectionString),
-            NullLogger<MasterDataMessageHandler>.Instance);
 
     /// <summary>
     /// Stub address lookup that returns the GSRN used in RSM-022 fixture

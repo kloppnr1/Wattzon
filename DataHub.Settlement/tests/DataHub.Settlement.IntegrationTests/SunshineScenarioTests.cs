@@ -145,21 +145,13 @@ public class SunshineScenarioTests : IClassFixture<TestDatabase>
         var rsm012Json = File.ReadAllText(Path.Combine("..", "..", "..", "..", "..", "fixtures", "rsm012-multi-day.json"));
         fakeClient.Enqueue(QueueName.Timeseries, new DataHubMessage("msg-rsm012", "RSM-012", null, rsm012Json));
 
-        var nullEffectuation = new EffectuationService(
-            TestDatabase.ConnectionString, NullOnboardingService.Instance, new NullInvoiceService(),
-            fakeClient, new Infrastructure.DataHub.BrsRequestBuilder(), new NullMessageRepository(),
-            new TestClock(), NullLogger<EffectuationService>.Instance);
-        var masterDataHandler = new MasterDataMessageHandler(
-            parser, _portfolio, _processRepo, new SignupRepository(TestDatabase.ConnectionString),
-            NullOnboardingService.Instance, new TariffRepository(TestDatabase.ConnectionString),
-            new TestClock(), nullEffectuation,
-            NullLogger<MasterDataMessageHandler>.Instance);
-        var poller = new QueuePollerService(
-            fakeClient, parser, _meteringRepo, _portfolio,
-            new TariffRepository(TestDatabase.ConnectionString),
-            _messageLog, masterDataHandler,
-            NullLogger<QueuePollerService>.Instance);
-        await poller.PollQueueAsync(QueueName.Timeseries, ct);
+        var timeseriesHandler = new TimeseriesMessageHandler(
+            parser, _meteringRepo,
+            NullLogger<TimeseriesMessageHandler>.Instance);
+        var poller = new QueuePoller<TimeseriesMessageHandler>(
+            fakeClient, timeseriesHandler, _messageLog, new SettlementMetrics(),
+            NullLogger<QueuePoller<TimeseriesMessageHandler>>.Instance);
+        await poller.PollQueueAsync(ct);
 
         // ──── 9. ASSERT: 744 rows stored ────
         var consumption = await _meteringRepo.GetConsumptionAsync(Gsrn,

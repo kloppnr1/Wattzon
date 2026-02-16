@@ -104,7 +104,7 @@ builder.Services.AddSingleton<ISettlementDataLoader>(new SettlementDataLoader(
     new TariffRepository(connectionString)));
 builder.Services.AddSingleton<IMeteringCompletenessChecker>(new MeteringCompletenessChecker(connectionString));
 
-// Services needed for dead-letter retry (reprocessing messages through QueuePollerService)
+// Services needed for dead-letter retry (reprocessing messages through handlers)
 builder.Services.AddSingleton<ICimParser, CimJsonParser>();
 builder.Services.AddSingleton<IMessageLog>(new MessageLog(connectionString));
 builder.Services.AddSingleton<SettlementMetrics>();
@@ -118,8 +118,37 @@ builder.Services.AddSingleton<EffectuationService>(sp =>
         sp.GetRequiredService<IMessageRepository>(),
         sp.GetRequiredService<IClock>(),
         sp.GetRequiredService<ILogger<EffectuationService>>()));
+
+// Per-queue message handlers + pollers (not hosted — API only uses them for dead-letter retry)
+builder.Services.AddSingleton(sp => new TimeseriesMessageHandler(
+    sp.GetRequiredService<ICimParser>(),
+    sp.GetRequiredService<IMeteringDataRepository>(),
+    sp.GetRequiredService<ILogger<TimeseriesMessageHandler>>()));
 builder.Services.AddSingleton<MasterDataMessageHandler>();
-builder.Services.AddSingleton<QueuePollerService>();
+builder.Services.AddSingleton<ChargesMessageHandler>();
+builder.Services.AddSingleton<AggregationsMessageHandler>();
+
+builder.Services.AddSingleton(sp =>
+{
+    var registry = new MessageHandlerRegistry();
+    var client = sp.GetRequiredService<IDataHubClient>();
+    var messageLog = sp.GetRequiredService<IMessageLog>();
+    var metrics = sp.GetRequiredService<SettlementMetrics>();
+
+    Register(sp.GetRequiredService<TimeseriesMessageHandler>());
+    Register(sp.GetRequiredService<MasterDataMessageHandler>());
+    Register(sp.GetRequiredService<ChargesMessageHandler>());
+    Register(sp.GetRequiredService<AggregationsMessageHandler>());
+
+    return registry;
+
+    void Register<THandler>(THandler handler) where THandler : class, IMessageHandler
+    {
+        var logger = sp.GetRequiredService<ILogger<QueuePoller<THandler>>>();
+        var poller = new QueuePoller<THandler>(client, handler, messageLog, metrics, logger);
+        registry.Register(handler, poller);
+    }
+});
 
 var app = builder.Build();
 
@@ -738,7 +767,7 @@ app.MapPost("/api/messages/dead-letters/{id:guid}/retry", async (
     Guid id,
     IMessageRepository messageRepo,
     IMessageLog messageLog,
-    QueuePollerService poller,
+    MessageHandlerRegistry handlerRegistry,
     ILogger<Program> logger,
     CancellationToken ct) =>
 {
@@ -788,7 +817,7 @@ app.MapPost("/api/messages/dead-letters/{id:guid}/retry", async (
 
     try
     {
-        await poller.ReprocessMessageAsync(message, queue, ct);
+        await handlerRegistry.ReprocessMessageAsync(message, queue, ct);
 
         // Success: resolve the dead letter and update inbound status
         await messageRepo.ResolveDeadLetterAsync(id, "retry", ct);

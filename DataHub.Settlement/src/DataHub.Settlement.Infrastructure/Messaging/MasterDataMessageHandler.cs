@@ -1,5 +1,6 @@
 using DataHub.Settlement.Application.DataHub;
 using DataHub.Settlement.Application.Lifecycle;
+using DataHub.Settlement.Application.Messaging;
 using DataHub.Settlement.Application.Onboarding;
 using DataHub.Settlement.Application.Parsing;
 using DataHub.Settlement.Application.Portfolio;
@@ -12,9 +13,9 @@ namespace DataHub.Settlement.Infrastructure.Messaging;
 
 /// <summary>
 /// Handles all inbound messages from the MasterData queue.
-/// Extracted from QueuePollerService for readability — each RSM handler is a focused method.
+/// Each RSM handler is a focused method routed via switch expression.
 /// </summary>
-public sealed class MasterDataMessageHandler
+public sealed class MasterDataMessageHandler : IMessageHandler
 {
     private readonly ICimParser _parser;
     private readonly IPortfolioRepository _portfolioRepo;
@@ -48,11 +49,15 @@ public sealed class MasterDataMessageHandler
         _logger = logger;
     }
 
+    public QueueName Queue => QueueName.MasterData;
+
     /// <summary>
     /// Routes a MasterData message to the appropriate handler based on normalized message type.
     /// </summary>
-    public Task HandleAsync(DataHubMessage message, string normalizedType, CancellationToken ct)
+    public Task HandleAsync(DataHubMessage message, CancellationToken ct)
     {
+        var normalizedType = RsmMessageTypes.Normalize(message.MessageType);
+
         return normalizedType switch
         {
             RsmMessageTypes.MasterData => HandleActivationAsync(message, ct),

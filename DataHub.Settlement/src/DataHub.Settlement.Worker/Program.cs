@@ -157,11 +157,11 @@ builder.Services.AddSingleton<EffectuationService>(sp =>
 // Settlement trigger (shared between QueuePoller and SettlementOrchestration)
 builder.Services.AddSingleton<SettlementTriggerService>();
 
-// Message handlers (extracted from QueuePollerService for readability)
-builder.Services.AddSingleton<MasterDataMessageHandler>();
-
-// Background services
-builder.Services.AddHostedService<QueuePollerService>();
+// Queue pollers — one per queue with priority-based intervals
+builder.Services.AddQueuePoller<TimeseriesMessageHandler>(TimeSpan.FromSeconds(1));
+builder.Services.AddQueuePoller<MasterDataMessageHandler>(TimeSpan.FromMilliseconds(500));
+builder.Services.AddQueuePoller<ChargesMessageHandler>(TimeSpan.FromSeconds(5));
+builder.Services.AddQueuePoller<AggregationsMessageHandler>(TimeSpan.FromSeconds(30));
 builder.Services.AddHostedService<ProcessSchedulerService>();
 builder.Services.AddHostedService<SettlementOrchestrationService>();
 builder.Services.AddHostedService<SpotPriceFetchingService>();

@@ -4,7 +4,6 @@ using DataHub.Settlement.Application.DataHub;
 using DataHub.Settlement.Application.Lifecycle;
 using DataHub.Settlement.Application.Onboarding;
 using DataHub.Settlement.Infrastructure.Lifecycle;
-using DataHub.Settlement.Infrastructure.Metering;
 using DataHub.Settlement.Infrastructure.Messaging;
 using DataHub.Settlement.Infrastructure.Onboarding;
 using DataHub.Settlement.Infrastructure.Parsing;
@@ -18,7 +17,7 @@ using Xunit;
 namespace DataHub.Settlement.IntegrationTests;
 
 /// <summary>
-/// Tests for the RSM-024 cancel flow and RSM-004/D11 auto-cancel via QueuePollerService.
+/// Tests for the RSM-024 cancel flow and RSM-004/D11 auto-cancel via MasterDataMessageHandler.
 /// </summary>
 [Collection("Database")]
 public class CancelFlowTests : IClassFixture<TestDatabase>
@@ -28,7 +27,6 @@ public class CancelFlowTests : IClassFixture<TestDatabase>
     private readonly PortfolioRepository _portfolio;
     private readonly ProcessRepository _processRepo;
     private readonly SignupRepository _signupRepo;
-    private readonly MeteringDataRepository _meteringRepo;
     private readonly MessageLog _messageLog;
 
     public CancelFlowTests(TestDatabase db)
@@ -36,7 +34,6 @@ public class CancelFlowTests : IClassFixture<TestDatabase>
         _portfolio = new PortfolioRepository(TestDatabase.ConnectionString);
         _processRepo = new ProcessRepository(TestDatabase.ConnectionString);
         _signupRepo = new SignupRepository(TestDatabase.ConnectionString);
-        _meteringRepo = new MeteringDataRepository(TestDatabase.ConnectionString);
         _messageLog = new MessageLog(TestDatabase.ConnectionString);
     }
 
@@ -104,20 +101,18 @@ public class CancelFlowTests : IClassFixture<TestDatabase>
             fakeClient, new Infrastructure.DataHub.BrsRequestBuilder(),
             new NullMessageRepository(), clock, NullLogger<EffectuationService>.Instance);
 
-        var parser = new CimJsonParser();
-        var masterDataHandler = new MasterDataMessageHandler(
-            parser, _portfolio, _processRepo, _signupRepo,
+        var handler = new MasterDataMessageHandler(
+            new CimJsonParser(), _portfolio, _processRepo, _signupRepo,
             onboardingService,
             new Infrastructure.Tariff.TariffRepository(TestDatabase.ConnectionString),
             clock, effectuationService,
             NullLogger<MasterDataMessageHandler>.Instance);
-        var poller = new QueuePollerService(
-            fakeClient, parser, _meteringRepo, _portfolio,
-            new Infrastructure.Tariff.TariffRepository(TestDatabase.ConnectionString),
-            _messageLog, masterDataHandler,
-            NullLogger<QueuePollerService>.Instance);
 
-        var processed = await poller.PollQueueAsync(QueueName.MasterData, ct);
+        var poller = new QueuePoller<MasterDataMessageHandler>(
+            fakeClient, handler, _messageLog, new SettlementMetrics(),
+            NullLogger<QueuePoller<MasterDataMessageHandler>>.Instance);
+
+        var processed = await poller.PollQueueAsync(ct);
         processed.Should().BeTrue();
 
         // ──── 5. ASSERT: process cancelled ────
@@ -187,20 +182,18 @@ public class CancelFlowTests : IClassFixture<TestDatabase>
             fakeClient, new Infrastructure.DataHub.BrsRequestBuilder(),
             new NullMessageRepository(), clock, NullLogger<EffectuationService>.Instance);
 
-        var parser = new CimJsonParser();
-        var masterDataHandler = new MasterDataMessageHandler(
-            parser, _portfolio, _processRepo, _signupRepo,
+        var handler = new MasterDataMessageHandler(
+            new CimJsonParser(), _portfolio, _processRepo, _signupRepo,
             onboardingService,
             new Infrastructure.Tariff.TariffRepository(TestDatabase.ConnectionString),
             clock, effectuationService,
             NullLogger<MasterDataMessageHandler>.Instance);
-        var poller = new QueuePollerService(
-            fakeClient, parser, _meteringRepo, _portfolio,
-            new Infrastructure.Tariff.TariffRepository(TestDatabase.ConnectionString),
-            _messageLog, masterDataHandler,
-            NullLogger<QueuePollerService>.Instance);
 
-        var processed = await poller.PollQueueAsync(QueueName.MasterData, ct);
+        var poller = new QueuePoller<MasterDataMessageHandler>(
+            fakeClient, handler, _messageLog, new SettlementMetrics(),
+            NullLogger<QueuePoller<MasterDataMessageHandler>>.Instance);
+
+        var processed = await poller.PollQueueAsync(ct);
         processed.Should().BeTrue();
 
         // ──── 4. ASSERT: process cancelled (bypasses cancellation_pending) ────

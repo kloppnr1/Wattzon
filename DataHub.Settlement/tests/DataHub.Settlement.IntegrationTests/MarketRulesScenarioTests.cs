@@ -322,23 +322,13 @@ public sealed class MarketRulesScenarioTests : IClassFixture<WebApplicationFacto
         // Process RSM-012 through the poller into DB
         var messageLog = new MessageLog(Conn);
         var meteringRepo = new MeteringDataRepository(Conn);
-        var processRepo = new ProcessRepository(Conn);
-        var signupRepo = new SignupRepository(Conn);
-        var nullEffectuation = new EffectuationService(
-            Conn, NullOnboardingService.Instance, new NullInvoiceService(),
-            _datahub, new Infrastructure.DataHub.BrsRequestBuilder(), new NullMessageRepository(),
-            new TestClock(), NullLogger<EffectuationService>.Instance);
-        var masterDataHandler = new MasterDataMessageHandler(
-            parser, _portfolio, processRepo, signupRepo,
-            NullOnboardingService.Instance, new TariffRepository(Conn),
-            new TestClock(), nullEffectuation,
-            NullLogger<MasterDataMessageHandler>.Instance);
-        var poller = new QueuePollerService(
-            _datahub, parser, meteringRepo, _portfolio,
-            new TariffRepository(Conn),
-            messageLog, masterDataHandler,
-            NullLogger<QueuePollerService>.Instance);
-        await poller.PollQueueAsync(QueueName.Timeseries, ct);
+        var timeseriesHandler = new TimeseriesMessageHandler(
+            parser, meteringRepo,
+            NullLogger<TimeseriesMessageHandler>.Instance);
+        var poller = new QueuePoller<TimeseriesMessageHandler>(
+            _datahub, timeseriesHandler, messageLog, new SettlementMetrics(),
+            NullLogger<QueuePoller<TimeseriesMessageHandler>>.Instance);
+        await poller.PollQueueAsync(ct);
 
         // Verify metering data landed in DB
         var consumption = await meteringRepo.GetConsumptionAsync(gsrn,

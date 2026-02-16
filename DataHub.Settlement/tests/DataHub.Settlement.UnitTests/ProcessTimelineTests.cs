@@ -203,7 +203,7 @@ public class ProcessTimelineTests
         _dataHubClient.Enqueue(QueueName.MasterData,
             new DataHubMessage("msg-rsm001-001", "RSM-001", "corr-poller-001", "{}"));
 
-        await poller.PollQueueAsync(QueueName.MasterData, ct);
+        await poller.PollQueueAsync(ct);
 
         var process = await _processRepo.GetAsync(request.Id, ct);
         process!.Status.Should().Be("effectuation_pending");
@@ -232,7 +232,7 @@ public class ProcessTimelineTests
         _dataHubClient.Enqueue(QueueName.MasterData,
             new DataHubMessage("msg-rsm001-002", "RSM-001", "corr-poller-002", "{}"));
 
-        await poller.PollQueueAsync(QueueName.MasterData, ct);
+        await poller.PollQueueAsync(ct);
 
         var process = await _processRepo.GetAsync(request.Id, ct);
         process!.Status.Should().Be("rejected");
@@ -266,7 +266,7 @@ public class ProcessTimelineTests
         _dataHubClient.Enqueue(QueueName.MasterData,
             new DataHubMessage("msg-rsm001-cancel", "RSM-001", "corr-poller-003", "{}"));
 
-        await poller.PollQueueAsync(QueueName.MasterData, ct);
+        await poller.PollQueueAsync(ct);
 
         var process = await _processRepo.GetAsync(request.Id, ct);
         process!.Status.Should().Be("cancelled");
@@ -332,7 +332,7 @@ public class ProcessTimelineTests
         _dataHubClient.Enqueue(QueueName.MasterData,
             new DataHubMessage("msg-rsm001-cancel-reject", "RSM-001", "corr-poller-004", "{}"));
 
-        await poller.PollQueueAsync(QueueName.MasterData, ct);
+        await poller.PollQueueAsync(ct);
 
         var process = await _processRepo.GetAsync(request.Id, ct);
         process!.Status.Should().Be("effectuation_pending");
@@ -343,12 +343,12 @@ public class ProcessTimelineTests
     }
 
     // ══════════════════════════════════════════════════════════════
-    //  Helpers — QueuePollerService wiring with no-op stubs
+    //  Helpers — QueuePoller wiring with no-op stubs
     // ══════════════════════════════════════════════════════════════
 
-    private QueuePollerService CreatePoller(ICimParser parser)
+    private QueuePoller<MasterDataMessageHandler> CreatePoller(ICimParser parser)
     {
-        var masterDataHandler = new MasterDataMessageHandler(
+        var handler = new MasterDataMessageHandler(
             parser,
             new ThrowPortfolioRepo(),
             _processRepo,
@@ -361,15 +361,9 @@ public class ProcessTimelineTests
                 _dataHubClient, new ThrowBrsBuilder(), new ThrowMessageRepo(),
                 _clock, NullLogger<EffectuationService>.Instance),
             NullLogger<MasterDataMessageHandler>.Instance);
-
-        return new QueuePollerService(
-            _dataHubClient, parser,
-            new ThrowMeteringRepo(),
-            new ThrowPortfolioRepo(),
-            new ThrowTariffRepo(),
-            new NullMessageLog(),
-            masterDataHandler,
-            NullLogger<QueuePollerService>.Instance);
+        return new QueuePoller<MasterDataMessageHandler>(
+            _dataHubClient, handler, new NullMessageLog(), new SettlementMetrics(),
+            NullLogger<QueuePoller<MasterDataMessageHandler>>.Instance);
     }
 
     /// <summary>Stub parser that returns a preconfigured RSM-001 result.</summary>
@@ -397,15 +391,6 @@ public class ProcessTimelineTests
         public Task MarkInboundStatusAsync(string messageId, string status, string? errorDetails, CancellationToken ct) => Task.CompletedTask;
         public Task DeadLetterAsync(string messageId, string queueName, string errorReason, string rawPayload, CancellationToken ct) => Task.CompletedTask;
         public Task ClearClaimAsync(string messageId, CancellationToken ct) => Task.CompletedTask;
-    }
-
-    /// <summary>Throws on all methods — QueuePoller RSM-001 path never touches metering.</summary>
-    private sealed class ThrowMeteringRepo : IMeteringDataRepository
-    {
-        public Task StoreTimeSeriesAsync(string gsrn, IReadOnlyList<MeteringDataRow> rows, CancellationToken ct) => throw new NotImplementedException();
-        public Task<int> StoreTimeSeriesWithHistoryAsync(string gsrn, IReadOnlyList<MeteringDataRow> rows, CancellationToken ct) => throw new NotImplementedException();
-        public Task<IReadOnlyList<MeteringDataRow>> GetConsumptionAsync(string gsrn, DateTime from, DateTime to, CancellationToken ct) => throw new NotImplementedException();
-        public Task<IReadOnlyList<MeteringDataChange>> GetChangesAsync(string gsrn, DateTime from, DateTime to, CancellationToken ct) => throw new NotImplementedException();
     }
 
     /// <summary>Throws on all methods — QueuePoller RSM-001 path never touches portfolio.</summary>
