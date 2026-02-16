@@ -147,17 +147,20 @@ public sealed class SpotPriceRepository : ISpotPriceRepository
         var row = await conn.QuerySingleAsync<(DateTime? LatestTs, DateTime? LastFetchedAt)>(
             new CommandDefinition(sql, cancellationToken: ct));
 
-        var now = DateTime.UtcNow;
-        var tomorrow = DateOnly.FromDateTime(now).AddDays(1);
+        var danishZone = TimeZoneInfo.FindSystemTimeZoneById("Europe/Copenhagen");
+        var nowDanish = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, danishZone);
+        var tomorrow = DateOnly.FromDateTime(nowDanish).AddDays(1);
         var latestDate = row.LatestTs.HasValue ? DateOnly.FromDateTime(row.LatestTs.Value) : (DateOnly?)null;
         var hasTomorrow = latestDate.HasValue && latestDate.Value >= tomorrow;
 
-        // CET is UTC+1 (or UTC+2 in summer). Use 14:00 UTC as a rough proxy for 15:00 CET.
+        var danishTime = TimeOnly.FromDateTime(nowDanish);
         var status = hasTomorrow
             ? "ok"
-            : now.Hour >= 14
+            : danishTime >= new TimeOnly(14, 0)
                 ? "alert"
-                : "warning";
+                : danishTime >= new TimeOnly(13, 15)
+                    ? "warning"
+                    : "ok";
 
         return new SpotPriceStatus(latestDate, row.LastFetchedAt, hasTomorrow, status);
     }

@@ -19,12 +19,6 @@ function defaultTo() {
   return formatDate(d);
 }
 
-function isBefore1315CET() {
-  const now = new Date();
-  const cet = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Copenhagen' }));
-  return cet.getHours() < 13 || (cet.getHours() === 13 && cet.getMinutes() < 15);
-}
-
 function StatusIndicator({ status, t, lang }) {
   if (!status || !status.latestDate) {
     return (
@@ -41,11 +35,7 @@ function StatusIndicator({ status, t, lang }) {
     alert: { dot: 'bg-rose-500', bg: 'bg-rose-50', border: 'border-rose-200', text: 'text-rose-700' },
   };
 
-  // Don't warn about missing tomorrow prices before 13:15 CET (Nordpool publishes ~13:00)
-  const suppressTomorrowWarning = !status.hasTomorrow && isBefore1315CET();
-  const effectiveStatus = suppressTomorrowWarning ? 'ok' : status.status;
-
-  const cfg = statusConfig[effectiveStatus] || statusConfig.warning;
+  const cfg = statusConfig[status.status] || statusConfig.warning;
   const lastFetch = status.lastFetchedAt
     ? new Date(status.lastFetchedAt).toLocaleString(lang === 'da' ? 'da-DK' : 'en-GB', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
     : '—';
@@ -58,7 +48,7 @@ function StatusIndicator({ status, t, lang }) {
           {t(`spotPrices.monitor.dataThrough`, { date: status.latestDate })}
         </span>
       </span>
-      {!suppressTomorrowWarning && (
+      {status.status !== 'ok' && (
         <>
           <span className="text-slate-400">|</span>
           <span className={cfg.text}>
