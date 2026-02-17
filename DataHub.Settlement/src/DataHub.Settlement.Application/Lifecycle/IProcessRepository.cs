@@ -1,3 +1,5 @@
+using DataHub.Settlement.Application.Common;
+
 namespace DataHub.Settlement.Application.Lifecycle;
 
 public interface IProcessRepository
@@ -27,4 +29,8 @@ public interface IProcessRepository
     Task<IReadOnlyList<ProcessRequest>> GetByCustomerIdAsync(Guid customerId, CancellationToken ct);
 
     Task<ProcessRequest?> GetCompletedByGsrnAsync(string gsrn, CancellationToken ct);
+
+    Task<PagedResult<ProcessListItem>> GetProcessesPagedAsync(
+        string? status, string? processType, string? search,
+        int page, int pageSize, CancellationToken ct);
 }

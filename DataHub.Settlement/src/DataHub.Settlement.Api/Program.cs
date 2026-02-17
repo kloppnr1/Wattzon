@@ -419,6 +419,52 @@ app.MapGet("/api/customers/{id:guid}/processes", async (Guid id, IProcessReposit
     }));
 });
 
+// GET /api/customers/{id}/metering-summary — metering data overview per GSRN
+app.MapGet("/api/customers/{id:guid}/metering-summary", async (Guid id, CancellationToken ct) =>
+{
+    using var conn = new Npgsql.NpgsqlConnection(
+        app.Configuration.GetConnectionString("SettlementDb")
+        ?? Environment.GetEnvironmentVariable("SETTLEMENT_DB_CONNECTION_STRING")!);
+    await conn.OpenAsync(ct);
+
+    var rows = await Dapper.SqlMapper.QueryAsync<MeteringSummaryRow>(conn,
+        @"SELECT c.gsrn,
+                 sp.start_date AS supply_start,
+                 sp.end_date AS supply_end,
+                 MIN(md.timestamp) AS first_reading,
+                 MAX(md.timestamp) AS last_reading,
+                 COUNT(md.timestamp)::int AS reading_count,
+                 COALESCE(SUM(md.quantity_kwh), 0) AS total_kwh
+          FROM portfolio.contract c
+          LEFT JOIN portfolio.supply_period sp ON sp.gsrn = c.gsrn
+          LEFT JOIN metering.metering_data md ON md.metering_point_id = c.gsrn
+              AND md.timestamp >= sp.start_date::timestamp
+              AND (sp.end_date IS NULL OR md.timestamp < sp.end_date::timestamp)
+          WHERE c.customer_id = @CustomerId
+          GROUP BY c.gsrn, sp.start_date, sp.end_date
+          ORDER BY c.gsrn",
+        new { CustomerId = id });
+
+    return Results.Ok(rows.Select(r =>
+    {
+        var supplyEnd = r.SupplyEnd ?? DateOnly.FromDateTime(DateTime.UtcNow);
+        var expectedHours = (int)(supplyEnd.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc)
+            - r.SupplyStart.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc)).TotalHours;
+
+        return new
+        {
+            r.Gsrn,
+            supplyStart = r.SupplyStart,
+            supplyEnd = r.SupplyEnd,
+            firstReading = r.FirstReading,
+            lastReading = r.LastReading,
+            readingCount = r.ReadingCount,
+            expectedReadings = Math.Max(expectedHours, 0),
+            totalKwh = r.TotalKwh,
+        };
+    }));
+});
+
 // PUT /api/customers/{id}/billing-address — update customer billing address
 app.MapPut("/api/customers/{id:guid}/billing-address", async (Guid id, Address address, IPortfolioRepository repo, CancellationToken ct) =>
 {
@@ -1099,27 +1145,16 @@ app.MapGet("/api/billing/outstanding", async (IInvoiceRepository repo, Cancellat
 
 // --- Processes ---
 
-// GET /api/processes — processes by status
-app.MapGet("/api/processes", async (string? status, IProcessRepository repo, CancellationToken ct) =>
+// GET /api/processes — paginated processes with optional filters
+app.MapGet("/api/processes", async (
+    string? status, string? processType, string? search,
+    int? page, int? pageSize,
+    IProcessRepository repo, CancellationToken ct) =>
 {
-    if (string.IsNullOrEmpty(status))
-        return Results.BadRequest(new { error = "Status filter is required." });
-
-    var processes = await repo.GetByStatusAsync(status, ct);
-    return Results.Ok(new
-    {
-        status,
-        count = processes.Count,
-        processes = processes.Select(p => new
-        {
-            p.Id,
-            p.ProcessType,
-            p.Gsrn,
-            p.Status,
-            p.EffectiveDate,
-            p.DatahubCorrelationId,
-        }),
-    });
+    var p = Math.Max(page ?? 1, 1);
+    var ps = Math.Clamp(pageSize ?? 50, 1, 200);
+    var result = await repo.GetProcessesPagedAsync(status, processType, search, p, ps, ct);
+    return Results.Ok(result);
 });
 
 // GET /api/processes/{id} — process detail with expected message checklist
@@ -1192,4 +1227,15 @@ class InboundMessageInfoRow
     public string MessageType { get; set; } = null!;
     public string? CorrelationId { get; set; }
     public string QueueName { get; set; } = null!;
+}
+
+class MeteringSummaryRow
+{
+    public string Gsrn { get; set; } = null!;
+    public DateOnly SupplyStart { get; set; }
+    public DateOnly? SupplyEnd { get; set; }
+    public DateTime? FirstReading { get; set; }
+    public DateTime? LastReading { get; set; }
+    public int ReadingCount { get; set; }
+    public decimal TotalKwh { get; set; }
 }

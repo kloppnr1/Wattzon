@@ -1,4 +1,5 @@
 using Dapper;
+using DataHub.Settlement.Application.Common;
 using DataHub.Settlement.Application.Lifecycle;
 using Npgsql;
 
@@ -369,6 +370,56 @@ public sealed class ProcessRepository : IProcessRepository
         await conn.OpenAsync(ct);
         return await conn.QuerySingleOrDefaultAsync<ProcessRequest>(
             new CommandDefinition(sql, new { Gsrn = gsrn }, cancellationToken: ct));
+    }
+
+    public async Task<PagedResult<ProcessListItem>> GetProcessesPagedAsync(
+        string? status, string? processType, string? search,
+        int page, int pageSize, CancellationToken ct)
+    {
+        var conditions = new List<string>();
+        if (!string.IsNullOrEmpty(status))
+            conditions.Add("pr.status = @Status");
+        if (!string.IsNullOrEmpty(processType))
+            conditions.Add("pr.process_type = @ProcessType");
+        if (!string.IsNullOrEmpty(search))
+            conditions.Add("pr.gsrn LIKE @Search || '%'");
+
+        var whereClause = conditions.Count > 0
+            ? "WHERE " + string.Join(" AND ", conditions)
+            : "";
+
+        var countSql = $"SELECT COUNT(*) FROM lifecycle.process_request pr {whereClause}";
+
+        var dataSql = $"""
+            SELECT pr.id, pr.process_type, pr.gsrn, pr.status, pr.effective_date,
+                   pr.datahub_correlation_id, pr.created_at,
+                   c.name AS customer_name, ct.customer_id
+            FROM lifecycle.process_request pr
+            LEFT JOIN portfolio.contract ct ON ct.gsrn = pr.gsrn AND ct.end_date IS NULL
+            LEFT JOIN portfolio.customer c ON c.id = ct.customer_id
+            {whereClause}
+            ORDER BY pr.created_at DESC
+            LIMIT @PageSize OFFSET @Offset
+            """;
+
+        var parameters = new
+        {
+            Status = status,
+            ProcessType = processType,
+            Search = search,
+            PageSize = pageSize,
+            Offset = (page - 1) * pageSize
+        };
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+        await conn.OpenAsync(ct);
+
+        var totalCount = await conn.ExecuteScalarAsync<int>(
+            new CommandDefinition(countSql, parameters, cancellationToken: ct));
+        var items = await conn.QueryAsync<ProcessListItem>(
+            new CommandDefinition(dataSql, parameters, cancellationToken: ct));
+
+        return new PagedResult<ProcessListItem>(items.ToList(), totalCount, page, pageSize);
     }
 
     private sealed class ProcessDetailRow

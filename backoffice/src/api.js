@@ -101,10 +101,11 @@ export const api = {
 
   // Customer Processes
   getCustomerProcesses: (customerId) => request(`/customers/${customerId}/processes`),
+  getCustomerMeteringSummary: (customerId) => request(`/customers/${customerId}/metering-summary`),
 
   // Processes
-  getProcesses: ({ status } = {}) =>
-    request(`/processes${qs({ status })}`),
+  getProcesses: ({ status, processType, search, page, pageSize } = {}) =>
+    request(`/processes${qs({ status, processType, search, page, pageSize })}`),
   getProcessDetail: (id) => request(`/processes/${id}`),
   getProcessEvents: (id) =>
     request(`/processes/${id}/events`),

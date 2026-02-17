@@ -340,6 +340,9 @@ public class SignupValidationTests
         public Task<ProcessDetail?> GetDetailWithChecklistAsync(Guid id, CancellationToken ct) => Task.FromResult<ProcessDetail?>(null);
         public Task<IReadOnlyList<ProcessRequest>> GetByCustomerIdAsync(Guid customerId, CancellationToken ct) => Task.FromResult<IReadOnlyList<ProcessRequest>>(Array.Empty<ProcessRequest>());
         public Task<ProcessRequest?> GetCompletedByGsrnAsync(string gsrn, CancellationToken ct) => Task.FromResult<ProcessRequest?>(null);
+        public Task<Application.Common.PagedResult<ProcessListItem>> GetProcessesPagedAsync(
+            string? status, string? processType, string? search, int page, int pageSize, CancellationToken ct)
+            => Task.FromResult(new Application.Common.PagedResult<ProcessListItem>(Array.Empty<ProcessListItem>(), 0, page, pageSize));
     }
 
     private sealed class InMemorySignupRepo : ISignupRepository

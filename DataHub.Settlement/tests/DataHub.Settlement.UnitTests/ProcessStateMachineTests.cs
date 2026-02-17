@@ -301,5 +301,9 @@ public class ProcessStateMachineTests
                 .FirstOrDefault();
             return Task.FromResult(request);
         }
+
+        public Task<Application.Common.PagedResult<ProcessListItem>> GetProcessesPagedAsync(
+            string? status, string? processType, string? search, int page, int pageSize, CancellationToken ct)
+            => Task.FromResult(new Application.Common.PagedResult<ProcessListItem>(Array.Empty<ProcessListItem>(), 0, page, pageSize));
     }
 }

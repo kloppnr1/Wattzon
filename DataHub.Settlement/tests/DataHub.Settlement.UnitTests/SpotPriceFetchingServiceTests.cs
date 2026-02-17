@@ -57,7 +57,8 @@ public class SpotPriceFetchingServiceTests
         _provider.Calls.Should().HaveCount(2);
         foreach (var call in _provider.Calls)
         {
-            call.From.Should().Be(threeDaysAgo);
+            // Latest data is threeDaysAgo, so incremental fetch starts from the next day
+            call.From.Should().Be(threeDaysAgo.AddDays(1));
             call.To.Should().Be(today.AddDays(2));
         }
     }

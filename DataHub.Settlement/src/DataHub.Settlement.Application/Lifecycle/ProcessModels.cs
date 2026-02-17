@@ -20,6 +20,11 @@ public record ProcessEvent(
 
 public record ExpectedMessageItem(string MessageType, bool Received, DateTime? ReceivedAt, string? Status);
 
+public record ProcessListItem(
+    Guid Id, string ProcessType, string Gsrn, string Status,
+    DateOnly? EffectiveDate, string? DatahubCorrelationId,
+    DateTime CreatedAt, string? CustomerName, Guid? CustomerId);
+
 public record ProcessDetail(
     Guid Id, string ProcessType, string Gsrn, string Status,
     DateOnly? EffectiveDate, string? DatahubCorrelationId,
