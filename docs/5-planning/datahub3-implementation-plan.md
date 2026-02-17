@@ -1,5 +1,7 @@
 # Implementation Plan
 
+> **Status: Phases 1–3 largely COMPLETED** (as of 2026-02-17). The system has progressed well beyond what these original phases described. Phase 4 (production) items remain. For the current state and remaining gaps, see [next-phase-plan.md](next-phase-plan.md). This document is preserved for historical context.
+
 An agile, phase-driven plan for building Wattzon. Each phase delivers a working, demonstrable result — not a layer of infrastructure. Testing against DataHub is the biggest technical risk, so the DataHub simulator grows incrementally alongside each phase.
 
 ---

@@ -1,5 +1,7 @@
 # Phase 1: Sunshine Scenario — Implementation Plan
 
+> **Status: ✅ COMPLETED.** All Phase 1 deliverables are implemented and tested. This document is preserved for historical context. For current state, see [next-phase-plan.md](next-phase-plan.md).
+
 Prove the entire sunshine path works end-to-end — from customer signup, through supplier switch (BRS-001), metering data reception, to a verifiable settlement result. Happy path only: no rejections, no cancellations, no offboarding.
 
 **Delivered outcome:** A customer is signed up, the switch is accepted, master data and metering data arrive, and the settlement run produces an invoice that matches a hand-calculated golden master.

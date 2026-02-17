@@ -1,8 +1,9 @@
 # Proposed Architecture: Wattzon Settlement System for DataHub 3
 
-> **📋 Note:** This is the original architecture proposal created before Phase 1 implementation.
+> **📋 Note:** This is the original architecture proposal created before implementation began.
 > For the **current, as-built architecture**, see [ARCHITECTURE.md](../../DataHub.Settlement/ARCHITECTURE.md).
-> This document is preserved for historical context and to show the evolution of design decisions.
+> For remaining work, see [next-phase-plan.md](next-phase-plan.md).
+> This document is preserved for historical context.
 
 Overall architecture for an open source settlement system operating as an electricity supplier (DDQ) in Energinet DataHub 3. The examples below are sized for ~80,000 customers.
 
