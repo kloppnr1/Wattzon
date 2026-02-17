@@ -1,3 +1,4 @@
+using System;
 using Dapper;
 using DataHub.Settlement.Application.Settlement;
 using DataHub.Settlement.Infrastructure.Database;
@@ -170,6 +171,54 @@ public sealed class SettlementResultStore : ISettlementResultStore
         }
 
         return vatAmounts;
+    }
+
+    public async Task StoreFailedRunAsync(string gsrn, string gridAreaCode, DateOnly periodStart, DateOnly periodEnd, string errorDetails, CancellationToken ct)
+    {
+        await using var conn = new NpgsqlConnection(_connectionString);
+        await conn.OpenAsync(ct);
+
+        await using var tx = await conn.BeginTransactionAsync(ct);
+        try
+        {
+            // Create or find the billing period
+            var billingPeriodId = await conn.QuerySingleAsync<Guid>(
+                new CommandDefinition("""
+                    INSERT INTO settlement.billing_period (period_start, period_end, frequency)
+                    VALUES (@PeriodStart, @PeriodEnd, 'monthly')
+                    ON CONFLICT (period_start, period_end) DO UPDATE SET frequency = EXCLUDED.frequency
+                    RETURNING id
+                    """,
+                    new { PeriodStart = periodStart, PeriodEnd = periodEnd },
+                    transaction: tx, cancellationToken: ct));
+
+            // Insert failed settlement run
+            await conn.ExecuteAsync(
+                new CommandDefinition("""
+                    INSERT INTO settlement.settlement_run (billing_period_id, grid_area_code, metering_point_id, version, status, executed_at, error_details, metering_points_count)
+                    VALUES (
+                        @BillingPeriodId, @GridAreaCode, @MeteringPointId,
+                        COALESCE((SELECT MAX(version) FROM settlement.settlement_run
+                                  WHERE metering_point_id = @MeteringPointId AND billing_period_id = @BillingPeriodId), 0) + 1,
+                        'failed', @ExecutedAt, @ErrorDetails, 1)
+                    """,
+                    new 
+                    { 
+                        BillingPeriodId = billingPeriodId, 
+                        GridAreaCode = gridAreaCode, 
+                        MeteringPointId = gsrn, 
+                        ExecutedAt = DateTime.UtcNow,
+                        ErrorDetails = errorDetails
+                    },
+                    transaction: tx, cancellationToken: ct));
+
+            await tx.CommitAsync(ct);
+        }
+        catch
+        {
+            await tx.RollbackAsync(ct);
+            throw;
+        }
     }
 }
 

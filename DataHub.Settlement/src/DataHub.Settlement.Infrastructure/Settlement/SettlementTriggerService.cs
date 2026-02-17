@@ -1,3 +1,4 @@
+using System;
 using DataHub.Settlement.Application.Lifecycle;
 using DataHub.Settlement.Application.Portfolio;
 using DataHub.Settlement.Application.Settlement;
@@ -97,26 +98,39 @@ public sealed class SettlementTriggerService
                 break;
             }
 
-            var input = await _dataLoader.LoadAsync(
-                process.Gsrn, mp.GridAreaCode, mp.PriceArea,
-                periodStart, periodEnd,
-                product.MarginOrePerKwh / 100m,
-                (product.SupplementOrePerKwh ?? 0m) / 100m,
-                product.SubscriptionKrPerMonth,
-                ct);
+            try
+            {
+                var input = await _dataLoader.LoadAsync(
+                    process.Gsrn, mp.GridAreaCode, mp.PriceArea,
+                    periodStart, periodEnd,
+                    product.MarginOrePerKwh / 100m,
+                    (product.SupplementOrePerKwh ?? 0m) / 100m,
+                    product.SubscriptionKrPerMonth,
+                    ct);
 
-            var request = new SettlementRequest(
-                input.MeteringPointId, input.PeriodStart, input.PeriodEnd,
-                input.Consumption, input.SpotPrices, input.GridTariffRates,
-                input.SystemTariffRate, input.TransmissionTariffRate, input.ElectricityTaxRate,
-                input.GridSubscriptionPerMonth, input.MarginPerKwh, input.SupplementPerKwh,
-                input.SupplierSubscriptionPerMonth, input.Elvarme);
+                var request = new SettlementRequest(
+                    input.MeteringPointId, input.PeriodStart, input.PeriodEnd,
+                    input.Consumption, input.SpotPrices, input.GridTariffRates,
+                    input.SystemTariffRate, input.TransmissionTariffRate, input.ElectricityTaxRate,
+                    input.GridSubscriptionPerMonth, input.MarginPerKwh, input.SupplementPerKwh,
+                    input.SupplierSubscriptionPerMonth, input.Elvarme);
 
-            var result = _engine.Calculate(request);
-            await _resultStore.StoreAsync(process.Gsrn, mp.GridAreaCode, result, contract.BillingFrequency, ct);
+                var result = _engine.Calculate(request);
+                await _resultStore.StoreAsync(process.Gsrn, mp.GridAreaCode, result, contract.BillingFrequency, ct);
 
-            _logger.LogInformation("Settlement completed for GSRN {Gsrn}: {PeriodStart} to {PeriodEnd}, total {Total} DKK",
-                process.Gsrn, periodStart, periodEnd, result.Total);
+                _logger.LogInformation("Settlement completed for GSRN {Gsrn}: {PeriodStart} to {PeriodEnd}, total {Total} DKK",
+                    process.Gsrn, periodStart, periodEnd, result.Total);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Settlement failed for GSRN {Gsrn}: {PeriodStart} to {PeriodEnd}",
+                    process.Gsrn, periodStart, periodEnd);
+
+                await _resultStore.StoreFailedRunAsync(process.Gsrn, mp.GridAreaCode, periodStart, periodEnd, ex.Message, ct);
+                
+                // Don't rethrow - we've persisted the failure, so we can continue with the next period
+                break;
+            }
 
             periodStart = periodEnd;
         }
