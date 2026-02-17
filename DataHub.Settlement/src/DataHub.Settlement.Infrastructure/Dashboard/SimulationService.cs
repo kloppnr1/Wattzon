@@ -52,6 +52,16 @@ public sealed class SimulationService
         _clock = clock ?? new SystemClock();
     }
 
+    /// <summary>
+    /// Converts a dynamic DB value (DateOnly from Npgsql 9.0+ or DateTime from older versions) to DateOnly.
+    /// </summary>
+    private static DateOnly ToDateOnly(object value) => value switch
+    {
+        DateOnly d => d,
+        DateTime dt => DateOnly.FromDateTime(dt),
+        _ => DateOnly.FromDateTime(Convert.ToDateTime(value)),
+    };
+
     public async Task<MeteringPointSummary?> GetMeteringPointSummaryAsync(string gsrn, CancellationToken ct)
     {
         await using var conn = new NpgsqlConnection(_connectionString);
@@ -72,14 +82,14 @@ public sealed class SimulationService
             new { Gsrn = gsrn });
         var processes = processRows.Select(r => new MeteringPointSummary.ProcessInfo(
             (Guid)r.id, (string)r.process_type, (string)r.status,
-            r.effective_date is null ? null : DateOnly.FromDateTime((DateTime)r.effective_date))).ToList();
+            r.effective_date is null ? null : ToDateOnly(r.effective_date))).ToList();
 
         var spRows = await conn.QueryAsync<dynamic>(
             "SELECT start_date, end_date, end_reason FROM portfolio.supply_period WHERE gsrn = @Gsrn ORDER BY start_date",
             new { Gsrn = gsrn });
         var supplyPeriods = spRows.Select(r => new MeteringPointSummary.SupplyInfo(
-            DateOnly.FromDateTime((DateTime)r.start_date),
-            r.end_date is null ? null : DateOnly.FromDateTime((DateTime)r.end_date),
+            ToDateOnly(r.start_date),
+            r.end_date is null ? null : ToDateOnly(r.end_date),
             (string?)r.end_reason)).ToList();
 
         var mRow = await conn.QuerySingleAsync<dynamic>(
@@ -102,8 +112,8 @@ public sealed class SimulationService
             ORDER BY bp.period_start
             """, new { Gsrn = gsrn });
         var settlements = sRows.Select(r => new MeteringPointSummary.SettlementInfo(
-            DateOnly.FromDateTime((DateTime)r.period_start),
-            DateOnly.FromDateTime((DateTime)r.period_end),
+            ToDateOnly(r.period_start),
+            ToDateOnly(r.period_end),
             (decimal)r.total_amount, (decimal)r.vat_amount, (string)r.status)).ToList();
 
         var aRows = await conn.QueryAsync<dynamic>(
@@ -117,8 +127,8 @@ public sealed class SimulationService
             """,
             new { Gsrn = gsrn });
         var acontoPayments = aRows.Select(r => new MeteringPointSummary.AcontoInfo(
-            DateOnly.FromDateTime((DateTime)r.period_start),
-            DateOnly.FromDateTime((DateTime)r.period_end),
+            ToDateOnly(r.period_start),
+            ToDateOnly(r.period_end),
             (decimal)r.amount)).ToList();
 
         return new MeteringPointSummary(

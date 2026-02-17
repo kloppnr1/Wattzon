@@ -45,8 +45,8 @@ public sealed class BillingRepository : IBillingRepository
         var totalCount = rowList.FirstOrDefault()?.TotalCount ?? 0;
         var items = rowList.Select(r => new BillingPeriodSummary(
             r.Id,
-            DateOnly.FromDateTime(r.PeriodStart),
-            DateOnly.FromDateTime(r.PeriodEnd),
+            r.PeriodStart,
+            r.PeriodEnd,
             r.Frequency,
             r.SettlementRunCount,
             r.CreatedAt)).ToList();
@@ -82,8 +82,8 @@ public sealed class BillingRepository : IBillingRepository
         var runList = runs.Select(r => new SettlementRunSummary(
             r.Id,
             r.BillingPeriodId,
-            DateOnly.FromDateTime(r.PeriodStart),
-            DateOnly.FromDateTime(r.PeriodEnd),
+            r.PeriodStart,
+            r.PeriodEnd,
             r.GridAreaCode,
             r.Version,
             r.Status,
@@ -94,8 +94,8 @@ public sealed class BillingRepository : IBillingRepository
 
         return new BillingPeriodDetail(
             period.Id,
-            DateOnly.FromDateTime(period.PeriodStart),
-            DateOnly.FromDateTime(period.PeriodEnd),
+            period.PeriodStart,
+            period.PeriodEnd,
             period.Frequency,
             period.CreatedAt,
             runList);
@@ -157,8 +157,8 @@ public sealed class BillingRepository : IBillingRepository
         var items = rowList.Select(r => new SettlementRunSummary(
             r.Id,
             r.BillingPeriodId,
-            DateOnly.FromDateTime(r.PeriodStart),
-            DateOnly.FromDateTime(r.PeriodEnd),
+            r.PeriodStart,
+            r.PeriodEnd,
             r.GridAreaCode,
             r.Version,
             r.Status,
@@ -191,8 +191,8 @@ public sealed class BillingRepository : IBillingRepository
         return new SettlementRunDetail(
             row.Id,
             row.BillingPeriodId,
-            DateOnly.FromDateTime(row.PeriodStart),
-            DateOnly.FromDateTime(row.PeriodEnd),
+            row.PeriodStart,
+            row.PeriodEnd,
             row.GridAreaCode,
             row.Version,
             row.Status,
@@ -264,8 +264,8 @@ public sealed class BillingRepository : IBillingRepository
             r.MeteringPointGsrn,
             r.CustomerName,
             r.ChargeType,
-            DateOnly.FromDateTime(r.PeriodStart),
-            DateOnly.FromDateTime(r.PeriodEnd),
+            r.PeriodStart,
+            r.PeriodEnd,
             r.TotalKwh,
             r.TotalAmount,
             r.VatAmount,
@@ -322,8 +322,8 @@ public sealed class BillingRepository : IBillingRepository
 
         var periodList = periods.Select(p => new CustomerBillingPeriod(
             p.BillingPeriodId,
-            DateOnly.FromDateTime(p.PeriodStart),
-            DateOnly.FromDateTime(p.PeriodEnd),
+            p.PeriodStart,
+            p.PeriodEnd,
             p.TotalAmount,
             p.TotalVat,
             gsrnsByPeriod.GetValueOrDefault(p.BillingPeriodId, []))).ToList();
@@ -332,8 +332,8 @@ public sealed class BillingRepository : IBillingRepository
         var acontoList = acontoRows.Select(a => new AcontoPrepaymentInfo(
             a.InvoiceId,
             a.InvoiceNumber,
-            DateOnly.FromDateTime(a.PeriodStart),
-            DateOnly.FromDateTime(a.PeriodEnd),
+            a.PeriodStart,
+            a.PeriodEnd,
             a.Amount,
             a.Currency)).ToList();
 
@@ -351,12 +351,12 @@ public sealed class BillingRepository : IBillingRepository
 
 }
 
-// DTOs for Dapper mapping (using DateTime for DATE columns)
+// DTOs for Dapper mapping (DateOnly for PostgreSQL DATE columns, Npgsql 9.0+ returns DateOnly by default)
 internal class BillingPeriodRow
 {
     public Guid Id { get; set; }
-    public DateTime PeriodStart { get; set; }
-    public DateTime PeriodEnd { get; set; }
+    public DateOnly PeriodStart { get; set; }
+    public DateOnly PeriodEnd { get; set; }
     public string Frequency { get; set; } = null!;
     public DateTime CreatedAt { get; set; }
     public int TotalCount { get; set; }
@@ -367,8 +367,8 @@ internal class SettlementRunRow
 {
     public Guid Id { get; set; }
     public Guid BillingPeriodId { get; set; }
-    public DateTime PeriodStart { get; set; }
-    public DateTime PeriodEnd { get; set; }
+    public DateOnly PeriodStart { get; set; }
+    public DateOnly PeriodEnd { get; set; }
     public string GridAreaCode { get; set; } = null!;
     public int Version { get; set; }
     public string Status { get; set; } = null!;
@@ -383,8 +383,8 @@ internal class SettlementRunDetailRow
 {
     public Guid Id { get; set; }
     public Guid BillingPeriodId { get; set; }
-    public DateTime PeriodStart { get; set; }
-    public DateTime PeriodEnd { get; set; }
+    public DateOnly PeriodStart { get; set; }
+    public DateOnly PeriodEnd { get; set; }
     public string GridAreaCode { get; set; } = null!;
     public int Version { get; set; }
     public string Status { get; set; } = null!;
@@ -417,8 +417,8 @@ internal class SettlementLineDetailRow
     public string MeteringPointGsrn { get; set; } = null!;
     public string CustomerName { get; set; } = null!;
     public string ChargeType { get; set; } = null!;
-    public DateTime PeriodStart { get; set; }
-    public DateTime PeriodEnd { get; set; }
+    public DateOnly PeriodStart { get; set; }
+    public DateOnly PeriodEnd { get; set; }
     public decimal TotalKwh { get; set; }
     public decimal TotalAmount { get; set; }
     public decimal VatAmount { get; set; }
@@ -428,8 +428,8 @@ internal class SettlementLineDetailRow
 internal class CustomerBillingPeriodRow
 {
     public Guid BillingPeriodId { get; set; }
-    public DateTime PeriodStart { get; set; }
-    public DateTime PeriodEnd { get; set; }
+    public DateOnly PeriodStart { get; set; }
+    public DateOnly PeriodEnd { get; set; }
     public decimal TotalAmount { get; set; }
     public decimal TotalVat { get; set; }
 }
@@ -438,8 +438,8 @@ internal class AcontoPrepaymentRow
 {
     public Guid InvoiceId { get; set; }
     public string? InvoiceNumber { get; set; }
-    public DateTime PeriodStart { get; set; }
-    public DateTime PeriodEnd { get; set; }
+    public DateOnly PeriodStart { get; set; }
+    public DateOnly PeriodEnd { get; set; }
     public decimal Amount { get; set; }
     public string Currency { get; set; } = null!;
 }

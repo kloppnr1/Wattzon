@@ -118,8 +118,8 @@ public sealed class CorrectionRepository : ICorrectionRepository
         var items = rowList.Select(r => new CorrectionBatchSummary(
             r.CorrectionBatchId,
             r.MeteringPointId,
-            DateOnly.FromDateTime(r.PeriodStart),
-            DateOnly.FromDateTime(r.PeriodEnd),
+            r.PeriodStart,
+            r.PeriodEnd,
             r.OriginalRunId,
             r.TotalDeltaKwh,
             r.Subtotal,
@@ -156,8 +156,8 @@ public sealed class CorrectionRepository : ICorrectionRepository
         return new CorrectionBatchDetail(
             first.CorrectionBatchId,
             first.MeteringPointId,
-            DateOnly.FromDateTime(first.PeriodStart),
-            DateOnly.FromDateTime(first.PeriodEnd),
+            first.PeriodStart,
+            first.PeriodEnd,
             first.OriginalRunId,
             first.DeltaKwh,
             lines.Sum(l => l.DeltaAmount),
@@ -198,8 +198,8 @@ public sealed class CorrectionRepository : ICorrectionRepository
         return rows.Select(r => new CorrectionBatchSummary(
             r.CorrectionBatchId,
             r.MeteringPointId,
-            DateOnly.FromDateTime(r.PeriodStart),
-            DateOnly.FromDateTime(r.PeriodEnd),
+            r.PeriodStart,
+            r.PeriodEnd,
             r.OriginalRunId,
             r.TotalDeltaKwh,
             r.Subtotal,
@@ -216,8 +216,8 @@ internal class CorrectionBatchRow
 {
     public Guid CorrectionBatchId { get; set; }
     public string MeteringPointId { get; set; } = null!;
-    public DateTime PeriodStart { get; set; }
-    public DateTime PeriodEnd { get; set; }
+    public DateOnly PeriodStart { get; set; }
+    public DateOnly PeriodEnd { get; set; }
     public Guid? OriginalRunId { get; set; }
     public decimal TotalDeltaKwh { get; set; }
     public decimal Subtotal { get; set; }
@@ -235,8 +235,8 @@ internal class CorrectionLineRow
     public Guid Id { get; set; }
     public Guid CorrectionBatchId { get; set; }
     public string MeteringPointId { get; set; } = null!;
-    public DateTime PeriodStart { get; set; }
-    public DateTime PeriodEnd { get; set; }
+    public DateOnly PeriodStart { get; set; }
+    public DateOnly PeriodEnd { get; set; }
     public Guid? OriginalRunId { get; set; }
     public decimal DeltaKwh { get; set; }
     public string ChargeType { get; set; } = null!;
