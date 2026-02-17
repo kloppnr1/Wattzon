@@ -334,21 +334,20 @@ public sealed class MasterDataMessageHandler : IMessageHandler
                 // Forced transfer (D31) or stop of supply by other supplier (E01): end supply period + contract
                 var effectiveDate = DateOnly.FromDateTime(change.EffectiveDate.UtcDateTime);
                 var endReason = change.ReasonCode == Rsm004ReasonCodes.ForcedTransfer ? "forced_transfer" : "other_supplier_takeover";
-                await _portfolioRepo.EndSupplyPeriodAsync(change.Gsrn, effectiveDate, endReason, ct);
-                await _portfolioRepo.EndContractAsync(change.Gsrn, effectiveDate, ct);
+                await EndSupplyAndStartOffboardingAsync(change.Gsrn, effectiveDate, endReason, ct);
 
-                _logger.LogWarning("RSM-004/{ReasonCode}: Ended supply for {Gsrn}, effective {Date}",
+                _logger.LogWarning("RSM-004/{ReasonCode}: Ended supply for {Gsrn}, effective {Date} — offboarding started",
                     change.ReasonCode, change.Gsrn, effectiveDate);
                 break;
             }
             case Rsm004ReasonCodes.StopOfSupply:
             {
-                // Stop of supply notification
+                // RSM-004/E03: We are the LOSING supplier in a BRS-001 supplier switch
+                // DataHub informs us that supply will stop on the effective date
                 var effectiveDate = DateOnly.FromDateTime(change.EffectiveDate.UtcDateTime);
-                await _portfolioRepo.EndSupplyPeriodAsync(change.Gsrn, effectiveDate, "stop_of_supply", ct);
-                await _portfolioRepo.EndContractAsync(change.Gsrn, effectiveDate, ct);
+                await EndSupplyAndStartOffboardingAsync(change.Gsrn, effectiveDate, "stop_of_supply", ct);
 
-                _logger.LogInformation("RSM-004/E03: Stop of supply for {Gsrn}, effective {Date}",
+                _logger.LogInformation("RSM-004/E03: Stop of supply for {Gsrn}, effective {Date} — offboarding started",
                     change.Gsrn, effectiveDate);
                 break;
             }
@@ -359,8 +358,16 @@ public sealed class MasterDataMessageHandler : IMessageHandler
                 _logger.LogWarning("RSM-004/D35: Correction rejected for {Gsrn}", change.Gsrn);
                 break;
             case Rsm004ReasonCodes.EndOfSupplyStop:
-                _logger.LogInformation("RSM-004/E20: End of supply stop notification for {Gsrn}", change.Gsrn);
+            {
+                // RSM-004/E20: End of supply stop — our BRS-002 end of supply is being stopped
+                // (e.g., a new supplier did a BRS-001 before our end of supply took effect)
+                var effectiveDate = DateOnly.FromDateTime(change.EffectiveDate.UtcDateTime);
+                await EndSupplyAndStartOffboardingAsync(change.Gsrn, effectiveDate, "end_of_supply_stop", ct);
+
+                _logger.LogInformation("RSM-004/E20: End of supply stop for {Gsrn}, effective {Date} — offboarding started",
+                    change.Gsrn, effectiveDate);
                 break;
+            }
             case Rsm004ReasonCodes.SpecialRules:
                 _logger.LogInformation(
                     "RSM-004/D46: Special rules for start of supply on {Gsrn}, effective {Date}",
@@ -385,6 +392,46 @@ public sealed class MasterDataMessageHandler : IMessageHandler
 
                 break;
             }
+        }
+    }
+
+    /// <summary>
+    /// Ends supply period + contract and transitions the completed process to offboarding.
+    /// Called when we are the LOSING supplier (RSM-004 E03/E01/D31/E20).
+    /// The offboarding state signals that final settlement + final invoice are needed.
+    /// </summary>
+    private async Task EndSupplyAndStartOffboardingAsync(string gsrn, DateOnly effectiveDate, string endReason, CancellationToken ct)
+    {
+        await _portfolioRepo.EndSupplyPeriodAsync(gsrn, effectiveDate, endReason, ct);
+        await _portfolioRepo.EndContractAsync(gsrn, effectiveDate, ct);
+
+        // Find the completed process for this GSRN and transition to offboarding
+        var process = await _processRepo.GetCompletedByGsrnAsync(gsrn, ct);
+        if (process is not null)
+        {
+            try
+            {
+                var stateMachine = new ProcessStateMachine(_processRepo, _clock);
+                await stateMachine.MarkOffboardingAsync(process.Id, ct);
+                await _onboardingService.SyncFromProcessAsync(process.Id, "offboarding", null, ct);
+
+                _logger.LogInformation(
+                    "Offboarding started for process {ProcessId} on {Gsrn}, effective {Date}",
+                    process.Id, gsrn, effectiveDate);
+            }
+            catch (InvalidOperationException ex)
+            {
+                // Process might not be in 'completed' state (e.g. already offboarding)
+                _logger.LogWarning(ex,
+                    "Could not transition process {ProcessId} to offboarding for {Gsrn}",
+                    process.Id, gsrn);
+            }
+        }
+        else
+        {
+            _logger.LogWarning(
+                "No completed process found for {Gsrn} — supply ended but no offboarding process created",
+                gsrn);
         }
     }
 

@@ -216,7 +216,11 @@ internal sealed class RecordingProcessRepository : IProcessRepository
 
     public Task<ProcessDetail?> GetDetailWithChecklistAsync(Guid id, CancellationToken ct) => Task.FromResult<ProcessDetail?>(null);
     public Task<IReadOnlyList<ProcessRequest>> GetByCustomerIdAsync(Guid customerId, CancellationToken ct) => Task.FromResult<IReadOnlyList<ProcessRequest>>(Array.Empty<ProcessRequest>());
-    public Task<ProcessRequest?> GetCompletedByGsrnAsync(string gsrn, CancellationToken ct) => Task.FromResult<ProcessRequest?>(null);
+    public Task<ProcessRequest?> GetCompletedByGsrnAsync(string gsrn, CancellationToken ct)
+    {
+        var r = _requests.Values.FirstOrDefault(x => x.Gsrn == gsrn && x.Status == "completed");
+        return Task.FromResult(r);
+    }
     public Task<Application.Common.PagedResult<ProcessListItem>> GetProcessesPagedAsync(string? status, string? processType, string? search, int page, int pageSize, CancellationToken ct)
         => Task.FromResult(new Application.Common.PagedResult<ProcessListItem>(Array.Empty<ProcessListItem>(), 0, page, pageSize));
 }
@@ -778,6 +782,100 @@ public class MasterDataMessageHandlerTests
         _portfolioRepo.EndedSupplyPeriods.Should().BeEmpty();
         _portfolioRepo.EndedContracts.Should().BeEmpty();
         _portfolioRepo.UpdatedGridAreas.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task RSM004_stop_of_supply_transitions_completed_process_to_offboarding()
+    {
+        // Seed a completed process for the GSRN (we are the losing supplier)
+        var process = _processRepo.Seed("supplier_switch", "GSRN-OFF-1", "completed", new DateOnly(2025, 1, 1), "corr-off-1");
+
+        _parser.LastRsm004Result = new Rsm004Result("GSRN-OFF-1", null, null, null,
+            new DateTimeOffset(2025, 8, 1, 0, 0, 0, TimeSpan.Zero), Rsm004ReasonCodes.StopOfSupply);
+
+        var sut = CreateSut();
+        await sut.HandleAsync(new DataHubMessage("msg-off-1", "RSM-004", null, "{}"), CancellationToken.None);
+
+        // Supply ended
+        _portfolioRepo.EndedSupplyPeriods.Should().ContainSingle()
+            .Which.Reason.Should().Be("stop_of_supply");
+
+        // Process transitioned to offboarding
+        var updated = await _processRepo.GetAsync(process.Id, CancellationToken.None);
+        updated!.Status.Should().Be("offboarding");
+
+        // Onboarding service notified
+        _onboardingService.SyncCalls.Should().ContainSingle()
+            .Which.Status.Should().Be("offboarding");
+    }
+
+    [Fact]
+    public async Task RSM004_forced_transfer_transitions_completed_process_to_offboarding()
+    {
+        var process = _processRepo.Seed("supplier_switch", "GSRN-OFF-2", "completed", new DateOnly(2025, 1, 1), "corr-off-2");
+
+        _parser.LastRsm004Result = new Rsm004Result("GSRN-OFF-2", null, null, null,
+            new DateTimeOffset(2025, 6, 1, 0, 0, 0, TimeSpan.Zero), Rsm004ReasonCodes.ForcedTransfer);
+
+        var sut = CreateSut();
+        await sut.HandleAsync(new DataHubMessage("msg-off-2", "RSM-004", null, "{}"), CancellationToken.None);
+
+        var updated = await _processRepo.GetAsync(process.Id, CancellationToken.None);
+        updated!.Status.Should().Be("offboarding");
+    }
+
+    [Fact]
+    public async Task RSM004_other_supplier_takeover_transitions_completed_process_to_offboarding()
+    {
+        var process = _processRepo.Seed("move_in", "GSRN-OFF-3", "completed", new DateOnly(2025, 1, 1), "corr-off-3");
+
+        _parser.LastRsm004Result = new Rsm004Result("GSRN-OFF-3", null, null, null,
+            new DateTimeOffset(2025, 7, 1, 0, 0, 0, TimeSpan.Zero), Rsm004ReasonCodes.StopOfSupplyByOtherSupplier);
+
+        var sut = CreateSut();
+        await sut.HandleAsync(new DataHubMessage("msg-off-3", "RSM-004", null, "{}"), CancellationToken.None);
+
+        var updated = await _processRepo.GetAsync(process.Id, CancellationToken.None);
+        updated!.Status.Should().Be("offboarding");
+
+        _portfolioRepo.EndedSupplyPeriods.Should().ContainSingle()
+            .Which.Reason.Should().Be("other_supplier_takeover");
+    }
+
+    [Fact]
+    public async Task RSM004_stop_of_supply_without_completed_process_still_ends_supply()
+    {
+        // No completed process seeded — should still end supply, just no offboarding transition
+        _parser.LastRsm004Result = new Rsm004Result("GSRN-OFF-4", null, null, null,
+            new DateTimeOffset(2025, 8, 1, 0, 0, 0, TimeSpan.Zero), Rsm004ReasonCodes.StopOfSupply);
+
+        var sut = CreateSut();
+        await sut.HandleAsync(new DataHubMessage("msg-off-4", "RSM-004", null, "{}"), CancellationToken.None);
+
+        _portfolioRepo.EndedSupplyPeriods.Should().ContainSingle()
+            .Which.Reason.Should().Be("stop_of_supply");
+        _portfolioRepo.EndedContracts.Should().ContainSingle();
+
+        // No offboarding sync since no process found
+        _onboardingService.SyncCalls.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task RSM004_end_of_supply_stop_transitions_to_offboarding()
+    {
+        var process = _processRepo.Seed("end_of_supply", "GSRN-OFF-5", "completed", new DateOnly(2025, 1, 1), "corr-off-5");
+
+        _parser.LastRsm004Result = new Rsm004Result("GSRN-OFF-5", null, null, null,
+            new DateTimeOffset(2025, 9, 1, 0, 0, 0, TimeSpan.Zero), Rsm004ReasonCodes.EndOfSupplyStop);
+
+        var sut = CreateSut();
+        await sut.HandleAsync(new DataHubMessage("msg-off-5", "RSM-004", null, "{}"), CancellationToken.None);
+
+        _portfolioRepo.EndedSupplyPeriods.Should().ContainSingle()
+            .Which.Reason.Should().Be("end_of_supply_stop");
+
+        var updated = await _processRepo.GetAsync(process.Id, CancellationToken.None);
+        updated!.Status.Should().Be("offboarding");
     }
 
     #endregion
