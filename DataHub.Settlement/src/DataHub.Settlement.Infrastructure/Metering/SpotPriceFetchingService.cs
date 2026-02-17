@@ -196,6 +196,8 @@ public sealed class SpotPriceFetchingService : BackgroundService
             }
         }
 
-        return latest.Value;
+        // latest.Value is a DateOnly from the MAX timestamp — we already have that day's data,
+        // so start from the next day to avoid re-fetching 96 quarter-hourly records on every startup.
+        return latest.Value.AddDays(1);
     }
 }

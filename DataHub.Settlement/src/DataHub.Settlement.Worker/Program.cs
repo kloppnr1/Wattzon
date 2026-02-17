@@ -158,10 +158,10 @@ builder.Services.AddSingleton<EffectuationService>(sp =>
 builder.Services.AddSingleton<SettlementTriggerService>();
 
 // Queue pollers — one per queue with priority-based intervals
-builder.Services.AddQueuePoller<TimeseriesMessageHandler>(TimeSpan.FromSeconds(1));
-builder.Services.AddQueuePoller<MasterDataMessageHandler>(TimeSpan.FromMilliseconds(500));
-builder.Services.AddQueuePoller<ChargesMessageHandler>(TimeSpan.FromSeconds(5));
-builder.Services.AddQueuePoller<AggregationsMessageHandler>(TimeSpan.FromSeconds(30));
+builder.Services.AddQueuePoller<TimeseriesMessageHandler>(TimeSpan.FromSeconds(10));
+builder.Services.AddQueuePoller<MasterDataMessageHandler>(TimeSpan.FromSeconds(10));
+builder.Services.AddQueuePoller<ChargesMessageHandler>(TimeSpan.FromSeconds(30));
+builder.Services.AddQueuePoller<AggregationsMessageHandler>(TimeSpan.FromSeconds(60));
 builder.Services.AddHostedService<ProcessSchedulerService>();
 builder.Services.AddHostedService<SettlementOrchestrationService>();
 builder.Services.AddHostedService<SpotPriceFetchingService>();
