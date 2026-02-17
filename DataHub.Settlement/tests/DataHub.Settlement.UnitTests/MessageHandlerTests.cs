@@ -85,6 +85,7 @@ internal sealed class RecordingPortfolioRepository : IPortfolioRepository
     public Task<Product> CreateProductAsync(string name, string energyModel, decimal marginOrePerKwh, decimal? supplementOrePerKwh, decimal subscriptionKrPerMonth, CancellationToken ct) => throw new NotImplementedException();
     public Task<Contract> CreateContractAsync(Guid customerId, string gsrn, Guid productId, string billingFrequency, string paymentModel, DateOnly startDate, CancellationToken ct) => throw new NotImplementedException();
     public Task<Contract?> GetActiveContractAsync(string gsrn, CancellationToken ct) => Task.FromResult<Contract?>(null);
+    public Task<Contract?> GetLatestContractByGsrnAsync(string gsrn, CancellationToken ct) => Task.FromResult<Contract?>(null);
     public Task<Product?> GetProductAsync(Guid productId, CancellationToken ct) => Task.FromResult<Product?>(null);
     public Task DeactivateMeteringPointAsync(string gsrn, DateTime deactivatedAtUtc, CancellationToken ct) => Task.CompletedTask;
     public Task<IReadOnlyList<SupplyPeriod>> GetSupplyPeriodsAsync(string gsrn, CancellationToken ct) => Task.FromResult<IReadOnlyList<SupplyPeriod>>(Array.Empty<SupplyPeriod>());

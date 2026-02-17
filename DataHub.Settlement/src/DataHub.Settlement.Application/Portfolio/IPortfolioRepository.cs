@@ -10,6 +10,8 @@ public interface IPortfolioRepository
     Task<SupplyPeriod> CreateSupplyPeriodAsync(string gsrn, DateOnly startDate, CancellationToken ct);
     Task ActivateMeteringPointAsync(string gsrn, DateTime activatedAtUtc, CancellationToken ct);
     Task<Contract?> GetActiveContractAsync(string gsrn, CancellationToken ct);
+    /// <summary>Returns the most recent contract for a GSRN (including ended contracts). Used for final settlement.</summary>
+    Task<Contract?> GetLatestContractByGsrnAsync(string gsrn, CancellationToken ct);
     Task<Product?> GetProductAsync(Guid productId, CancellationToken ct);
     Task EnsureGridAreaAsync(string code, string gridOperatorGln, string gridOperatorName, string priceArea, CancellationToken ct);
     Task DeactivateMeteringPointAsync(string gsrn, DateTime deactivatedAtUtc, CancellationToken ct);

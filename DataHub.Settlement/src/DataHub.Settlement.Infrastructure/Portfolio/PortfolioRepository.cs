@@ -196,6 +196,22 @@ public sealed class PortfolioRepository : IPortfolioRepository
             new CommandDefinition(sql, new { Gsrn = gsrn }, cancellationToken: ct));
     }
 
+    public async Task<Contract?> GetLatestContractByGsrnAsync(string gsrn, CancellationToken ct)
+    {
+        const string sql = """
+            SELECT id, customer_id, gsrn, product_id, billing_frequency, payment_model, start_date, payer_id
+            FROM portfolio.contract
+            WHERE gsrn = @Gsrn
+            ORDER BY start_date DESC
+            LIMIT 1
+            """;
+
+        await using var conn = new NpgsqlConnection(_connectionString);
+        await conn.OpenAsync(ct);
+        return await conn.QuerySingleOrDefaultAsync<Contract>(
+            new CommandDefinition(sql, new { Gsrn = gsrn }, cancellationToken: ct));
+    }
+
     public async Task<Product?> GetProductAsync(Guid productId, CancellationToken ct)
     {
         const string sql = """

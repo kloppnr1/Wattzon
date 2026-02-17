@@ -301,6 +301,7 @@ public class SettlementOrchestrationTests
         public MeteringPoint? MeteringPoint { get; set; } = new("571313100000012345", "E17", "D01", "344", "5790001089030", "DK1", "D03");
 
         public Task<Contract?> GetActiveContractAsync(string gsrn, CancellationToken ct) => Task.FromResult(Contract);
+        public Task<Contract?> GetLatestContractByGsrnAsync(string gsrn, CancellationToken ct) => Task.FromResult(Contract);
         public Task<Product?> GetProductAsync(Guid productId, CancellationToken ct) => Task.FromResult(Product);
         public Task<MeteringPoint?> GetMeteringPointByGsrnAsync(string gsrn, CancellationToken ct) => Task.FromResult(MeteringPoint);
 

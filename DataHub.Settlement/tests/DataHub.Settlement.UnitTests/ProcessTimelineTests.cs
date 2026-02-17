@@ -404,6 +404,7 @@ public class ProcessTimelineTests
         public Task<SupplyPeriod> CreateSupplyPeriodAsync(string gsrn, DateOnly startDate, CancellationToken ct) => throw new NotImplementedException();
         public Task ActivateMeteringPointAsync(string gsrn, DateTime activatedAtUtc, CancellationToken ct) => throw new NotImplementedException();
         public Task<Contract?> GetActiveContractAsync(string gsrn, CancellationToken ct) => throw new NotImplementedException();
+        public Task<Contract?> GetLatestContractByGsrnAsync(string gsrn, CancellationToken ct) => throw new NotImplementedException();
         public Task<Product?> GetProductAsync(Guid productId, CancellationToken ct) => throw new NotImplementedException();
         public Task EnsureGridAreaAsync(string code, string gridOperatorGln, string gridOperatorName, string priceArea, CancellationToken ct) => throw new NotImplementedException();
         public Task DeactivateMeteringPointAsync(string gsrn, DateTime deactivatedAtUtc, CancellationToken ct) => throw new NotImplementedException();

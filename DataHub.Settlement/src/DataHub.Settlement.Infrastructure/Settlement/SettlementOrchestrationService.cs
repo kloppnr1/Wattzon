@@ -41,8 +41,8 @@ public sealed class SettlementOrchestrationService : BackgroundService
 
     internal async Task RunTickAsync(CancellationToken ct)
     {
+        // Regular settlement for active supply periods
         var completedProcesses = await _processRepo.GetByStatusAsync("completed", ct);
-
         foreach (var process in completedProcesses)
         {
             try
@@ -52,6 +52,21 @@ public sealed class SettlementOrchestrationService : BackgroundService
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 _logger.LogError(ex, "Failed to settle process {ProcessId} for GSRN {Gsrn}", process.Id, process.Gsrn);
+            }
+        }
+
+        // Final settlement for offboarding processes (supply ended, settle remaining periods)
+        var offboardingProcesses = await _processRepo.GetByStatusAsync("offboarding", ct);
+        foreach (var process in offboardingProcesses)
+        {
+            try
+            {
+                await _trigger.TryFinalSettleAsync(process, ct);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                _logger.LogError(ex, "Final settlement failed for offboarding process {ProcessId}, GSRN {Gsrn}",
+                    process.Id, process.Gsrn);
             }
         }
     }
