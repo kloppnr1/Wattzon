@@ -378,5 +378,8 @@ public class SettlementOrchestrationTests
 
         public Task<IReadOnlyList<AffectedSettlementPeriod>> GetAffectedSettlementPeriodsAsync(string gsrn, DateTime fromUtc, DateTime toUtc, CancellationToken ct)
             => Task.FromResult<IReadOnlyList<AffectedSettlementPeriod>>(Array.Empty<AffectedSettlementPeriod>());
+
+        public Task StoreFailedRunAsync(string gsrn, string gridAreaCode, DateOnly periodStart, DateOnly periodEnd, string errorDetails, CancellationToken ct)
+            => Task.CompletedTask;
     }
 }
