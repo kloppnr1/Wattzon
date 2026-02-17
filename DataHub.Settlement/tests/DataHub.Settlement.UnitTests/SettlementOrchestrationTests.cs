@@ -285,6 +285,214 @@ public class SettlementOrchestrationTests
         _resultStore.StoreCount.Should().Be(0);
     }
 
+    // ── Final settlement on offboarding ──
+
+    private async Task<ProcessRequest> CreateOffboardingProcessAsync(ProcessStateMachine sm, string gsrn, DateOnly effectiveDate)
+    {
+        var request = await sm.CreateRequestAsync(gsrn, ProcessTypes.SupplierSwitch, effectiveDate, CancellationToken.None);
+        await sm.MarkSentAsync(request.Id, "corr-1", CancellationToken.None);
+        await sm.MarkAcknowledgedAsync(request.Id, CancellationToken.None);
+        await sm.MarkCompletedAsync(request.Id, CancellationToken.None);
+        await sm.MarkOffboardingAsync(request.Id, CancellationToken.None);
+        return (await _processRepo.GetAsync(request.Id, CancellationToken.None))!;
+    }
+
+    [Fact]
+    public async Task FinalSettle_settles_partial_period_and_transitions_to_final_settled()
+    {
+        // Supply started Jan 15, monthly billing. Supply ended Feb 10.
+        // Normal period would be Jan 15–Feb 1, Feb 1–Mar 1.
+        // Final period should be capped: Feb 1–Feb 10 (partial).
+        var gsrn = "571313100000012345";
+        var clock = new TestClock { Today = new DateOnly(2025, 2, 15) };
+        var sm = new ProcessStateMachine(_processRepo, clock);
+        var process = await CreateOffboardingProcessAsync(sm, gsrn, new DateOnly(2025, 1, 15));
+
+        _completenessChecker.Result = new MeteringCompleteness(240, 240, true);
+        _portfolioRepo.Contract = new Contract(Guid.NewGuid(), Guid.NewGuid(), gsrn, Guid.NewGuid(), "monthly", "post_payment", new DateOnly(2025, 1, 15));
+        _portfolioRepo.Product = new Product(Guid.NewGuid(), "Spot Standard", "spot", 4.0m, null, 39.00m);
+        _portfolioRepo.SupplyPeriods = new List<SupplyPeriod>
+        {
+            new(Guid.NewGuid(), gsrn, new DateOnly(2025, 1, 15), new DateOnly(2025, 2, 10))
+        };
+
+        var sut = CreateSut(clock);
+        await sut.RunTickAsync(CancellationToken.None);
+
+        // Should settle 2 periods: Jan 15–Feb 1, Feb 1–Feb 10 (partial)
+        _resultStore.StoreCount.Should().Be(2);
+
+        // Process should now be final_settled
+        var updated = await _processRepo.GetAsync(process.Id, CancellationToken.None);
+        updated!.Status.Should().Be("final_settled");
+    }
+
+    [Fact]
+    public async Task FinalSettle_skips_already_settled_periods()
+    {
+        var gsrn = "571313100000012345";
+        var clock = new TestClock { Today = new DateOnly(2025, 2, 15) };
+        var sm = new ProcessStateMachine(_processRepo, clock);
+        var process = await CreateOffboardingProcessAsync(sm, gsrn, new DateOnly(2025, 1, 15));
+
+        _completenessChecker.Result = new MeteringCompleteness(240, 240, true);
+        _portfolioRepo.Contract = new Contract(Guid.NewGuid(), Guid.NewGuid(), gsrn, Guid.NewGuid(), "monthly", "post_payment", new DateOnly(2025, 1, 15));
+        _portfolioRepo.Product = new Product(Guid.NewGuid(), "Spot Standard", "spot", 4.0m, null, 39.00m);
+        _portfolioRepo.SupplyPeriods = new List<SupplyPeriod>
+        {
+            new(Guid.NewGuid(), gsrn, new DateOnly(2025, 1, 15), new DateOnly(2025, 2, 10))
+        };
+
+        // First period already settled
+        _resultStore.SettledPeriods.Add((gsrn, new DateOnly(2025, 1, 15), new DateOnly(2025, 2, 1)));
+
+        var sut = CreateSut(clock);
+        await sut.RunTickAsync(CancellationToken.None);
+
+        // Only the partial final period should be settled
+        _resultStore.StoreCount.Should().Be(1);
+        var updated = await _processRepo.GetAsync(process.Id, CancellationToken.None);
+        updated!.Status.Should().Be("final_settled");
+    }
+
+    [Fact]
+    public async Task FinalSettle_waits_when_metering_incomplete()
+    {
+        var gsrn = "571313100000012345";
+        var clock = new TestClock { Today = new DateOnly(2025, 2, 15) };
+        var sm = new ProcessStateMachine(_processRepo, clock);
+        var process = await CreateOffboardingProcessAsync(sm, gsrn, new DateOnly(2025, 1, 15));
+
+        _completenessChecker.Result = new MeteringCompleteness(240, 100, false); // incomplete
+        _portfolioRepo.Contract = new Contract(Guid.NewGuid(), Guid.NewGuid(), gsrn, Guid.NewGuid(), "monthly", "post_payment", new DateOnly(2025, 1, 15));
+        _portfolioRepo.Product = new Product(Guid.NewGuid(), "Spot Standard", "spot", 4.0m, null, 39.00m);
+        _portfolioRepo.SupplyPeriods = new List<SupplyPeriod>
+        {
+            new(Guid.NewGuid(), gsrn, new DateOnly(2025, 1, 15), new DateOnly(2025, 2, 10))
+        };
+
+        var sut = CreateSut(clock);
+        await sut.RunTickAsync(CancellationToken.None);
+
+        _resultStore.StoreCount.Should().Be(0);
+        // Should stay in offboarding — not transitioned yet
+        var updated = await _processRepo.GetAsync(process.Id, CancellationToken.None);
+        updated!.Status.Should().Be("offboarding");
+    }
+
+    [Fact]
+    public async Task FinalSettle_skips_when_no_ended_supply_period()
+    {
+        var gsrn = "571313100000012345";
+        var clock = new TestClock { Today = new DateOnly(2025, 2, 15) };
+        var sm = new ProcessStateMachine(_processRepo, clock);
+        var process = await CreateOffboardingProcessAsync(sm, gsrn, new DateOnly(2025, 1, 15));
+
+        _portfolioRepo.Contract = new Contract(Guid.NewGuid(), Guid.NewGuid(), gsrn, Guid.NewGuid(), "monthly", "post_payment", new DateOnly(2025, 1, 15));
+        _portfolioRepo.Product = new Product(Guid.NewGuid(), "Spot Standard", "spot", 4.0m, null, 39.00m);
+        // No ended supply period (EndDate is null)
+        _portfolioRepo.SupplyPeriods = new List<SupplyPeriod>
+        {
+            new(Guid.NewGuid(), gsrn, new DateOnly(2025, 1, 15), null)
+        };
+
+        var sut = CreateSut(clock);
+        await sut.RunTickAsync(CancellationToken.None);
+
+        _resultStore.StoreCount.Should().Be(0);
+        var updated = await _processRepo.GetAsync(process.Id, CancellationToken.None);
+        updated!.Status.Should().Be("offboarding");
+    }
+
+    [Fact]
+    public async Task FinalSettle_weekly_with_mid_week_end()
+    {
+        // Weekly billing, supply ends Wed Jan 15 (mid-week).
+        // Periods: Jan 6–Jan 13, Jan 13–Jan 15 (partial, capped at supply end).
+        var gsrn = "571313100000012345";
+        var clock = new TestClock { Today = new DateOnly(2025, 1, 20) };
+        var sm = new ProcessStateMachine(_processRepo, clock);
+        var process = await CreateOffboardingProcessAsync(sm, gsrn, new DateOnly(2025, 1, 6));
+
+        _completenessChecker.Result = new MeteringCompleteness(48, 48, true);
+        _portfolioRepo.Contract = new Contract(Guid.NewGuid(), Guid.NewGuid(), gsrn, Guid.NewGuid(), "weekly", "post_payment", new DateOnly(2025, 1, 6));
+        _portfolioRepo.Product = new Product(Guid.NewGuid(), "Spot Standard", "spot", 4.0m, null, 39.00m);
+        _portfolioRepo.SupplyPeriods = new List<SupplyPeriod>
+        {
+            new(Guid.NewGuid(), gsrn, new DateOnly(2025, 1, 6), new DateOnly(2025, 1, 15))
+        };
+
+        var sut = CreateSut(clock);
+        await sut.RunTickAsync(CancellationToken.None);
+
+        // Jan 6–Jan 13 (full week) + Jan 13–Jan 15 (partial)
+        _resultStore.StoreCount.Should().Be(2);
+        var updated = await _processRepo.GetAsync(process.Id, CancellationToken.None);
+        updated!.Status.Should().Be("final_settled");
+    }
+
+    [Fact]
+    public async Task FinalSettle_uses_latest_contract_when_active_contract_null()
+    {
+        // During offboarding the contract may already be ended (no active contract).
+        // TryFinalSettleAsync should fall back to GetLatestContractByGsrnAsync.
+        var gsrn = "571313100000012345";
+        var clock = new TestClock { Today = new DateOnly(2025, 2, 15) };
+        var sm = new ProcessStateMachine(_processRepo, clock);
+        var process = await CreateOffboardingProcessAsync(sm, gsrn, new DateOnly(2025, 2, 1));
+
+        _completenessChecker.Result = new MeteringCompleteness(120, 120, true);
+        // No active contract — simulate ended contract via GetLatestContractByGsrnAsync
+        var latestContract = new Contract(Guid.NewGuid(), Guid.NewGuid(), gsrn, Guid.NewGuid(), "monthly", "post_payment", new DateOnly(2025, 2, 1));
+        _portfolioRepo.Contract = latestContract; // Both GetActive and GetLatest return this; set active to null below
+        _portfolioRepo.Product = new Product(Guid.NewGuid(), "Spot Standard", "spot", 4.0m, null, 39.00m);
+        _portfolioRepo.SupplyPeriods = new List<SupplyPeriod>
+        {
+            new(Guid.NewGuid(), gsrn, new DateOnly(2025, 2, 1), new DateOnly(2025, 2, 5))
+        };
+
+        // Override: active contract is null, but latest returns the ended contract
+        _portfolioRepo.ActiveContractReturnsNull = true;
+
+        var sut = CreateSut(clock);
+        await sut.RunTickAsync(CancellationToken.None);
+
+        // Feb 1–Feb 5 single partial period
+        _resultStore.StoreCount.Should().Be(1);
+        var updated = await _processRepo.GetAsync(process.Id, CancellationToken.None);
+        updated!.Status.Should().Be("final_settled");
+    }
+
+    [Fact]
+    public async Task Orchestration_tick_handles_both_completed_and_offboarding()
+    {
+        var clock = new TestClock { Today = new DateOnly(2025, 2, 15) };
+        var sm = new ProcessStateMachine(_processRepo, clock);
+
+        // Completed process (regular settlement)
+        var completed = await sm.CreateRequestAsync("571313100000011111", ProcessTypes.SupplierSwitch, new DateOnly(2025, 1, 1), CancellationToken.None);
+        await sm.MarkSentAsync(completed.Id, "corr-1", CancellationToken.None);
+        await sm.MarkAcknowledgedAsync(completed.Id, CancellationToken.None);
+        await sm.MarkCompletedAsync(completed.Id, CancellationToken.None);
+
+        // Offboarding process (final settlement)
+        var offboarding = await CreateOffboardingProcessAsync(sm, "571313100000022222", new DateOnly(2025, 2, 1));
+
+        _completenessChecker.Result = new MeteringCompleteness(744, 744, true);
+        _portfolioRepo.Contract = new Contract(Guid.NewGuid(), Guid.NewGuid(), "any", Guid.NewGuid(), "monthly", "post_payment", new DateOnly(2025, 1, 1));
+        _portfolioRepo.Product = new Product(Guid.NewGuid(), "Spot Standard", "spot", 4.0m, null, 39.00m);
+        _portfolioRepo.SupplyPeriods = new List<SupplyPeriod>
+        {
+            new(Guid.NewGuid(), "571313100000022222", new DateOnly(2025, 2, 1), new DateOnly(2025, 2, 10))
+        };
+
+        var sut = CreateSut(clock);
+        await sut.RunTickAsync(CancellationToken.None);
+
+        // Both should have been processed
+        _resultStore.StoreCount.Should().BeGreaterThanOrEqualTo(2);
+    }
+
     // ── Test doubles ──
 
     internal sealed class StubCompletenessChecker : IMeteringCompletenessChecker
@@ -299,8 +507,10 @@ public class SettlementOrchestrationTests
         public Contract? Contract { get; set; }
         public Product? Product { get; set; }
         public MeteringPoint? MeteringPoint { get; set; } = new("571313100000012345", "E17", "D01", "344", "5790001089030", "DK1", "D03");
+        public List<SupplyPeriod> SupplyPeriods { get; set; } = new();
+        public bool ActiveContractReturnsNull { get; set; }
 
-        public Task<Contract?> GetActiveContractAsync(string gsrn, CancellationToken ct) => Task.FromResult(Contract);
+        public Task<Contract?> GetActiveContractAsync(string gsrn, CancellationToken ct) => Task.FromResult(ActiveContractReturnsNull ? null : Contract);
         public Task<Contract?> GetLatestContractByGsrnAsync(string gsrn, CancellationToken ct) => Task.FromResult(Contract);
         public Task<Product?> GetProductAsync(Guid productId, CancellationToken ct) => Task.FromResult(Product);
         public Task<MeteringPoint?> GetMeteringPointByGsrnAsync(string gsrn, CancellationToken ct) => Task.FromResult(MeteringPoint);
@@ -317,7 +527,7 @@ public class SettlementOrchestrationTests
         public Task DeactivateMeteringPointAsync(string gsrn, DateTime deactivatedAtUtc, CancellationToken ct) => throw new NotImplementedException();
         public Task EndSupplyPeriodAsync(string gsrn, DateOnly endDate, string endReason, CancellationToken ct) => throw new NotImplementedException();
         public Task EndContractAsync(string gsrn, DateOnly endDate, CancellationToken ct) => throw new NotImplementedException();
-        public Task<IReadOnlyList<SupplyPeriod>> GetSupplyPeriodsAsync(string gsrn, CancellationToken ct) => throw new NotImplementedException();
+        public Task<IReadOnlyList<SupplyPeriod>> GetSupplyPeriodsAsync(string gsrn, CancellationToken ct) => Task.FromResult<IReadOnlyList<SupplyPeriod>>(SupplyPeriods);
         public Task UpdateMeteringPointGridAreaAsync(string gsrn, string newGridAreaCode, string newPriceArea, CancellationToken ct) => throw new NotImplementedException();
         public Task<IReadOnlyList<Product>> GetActiveProductsAsync(CancellationToken ct) => throw new NotImplementedException();
         public Task<Customer?> GetCustomerAsync(Guid id, CancellationToken ct) => throw new NotImplementedException();
