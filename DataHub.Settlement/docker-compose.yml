@@ -10,6 +10,11 @@ services:
       - "5432:5432"
     volumes:
       - timescaledb-data:/var/lib/postgresql/data
+    command: >
+      postgres
+      -c synchronous_commit=off
+      -c fsync=off
+      -c full_page_writes=off
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U settlement -d datahub_settlement"]
       interval: 5s
