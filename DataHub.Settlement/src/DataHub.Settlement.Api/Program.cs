@@ -1224,11 +1224,14 @@ app.MapPost("/api/simulator/correction-data", async (SimulatorCorrectionRequest 
     var start = new DateTimeOffset(day.Year, day.Month, day.Day, 6, 0, 0, TimeSpan.Zero);
     var end = start.AddHours(10);
 
+    // Use different quantity than original (0.650) to trigger correction detection
+    var correctedQuantity = 0.750m;
     var points = new List<object>();
     for (var i = 1; i <= 10; i++)
-        points.Add(new { position = i, quantity = 0.650m, quality = "A01" });
+        points.Add(new { position = i, quantity = correctedQuantity, quality = "A01" });
 
-    var registrationTime = end.AddHours(12).ToString("O");
+    // Registration timestamp must be newer than the original bulk delivery to win the upsert
+    var registrationTime = DateTimeOffset.UtcNow.AddHours(1).ToString("O");
 
     var payload = new
     {

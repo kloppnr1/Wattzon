@@ -191,7 +191,8 @@ app.MapPost("/v1.0/cim/requestcustomerdataupdate", async (HttpRequest request) =
 // ── BRS-044: Forced supplier switch (admin-initiated) ──
 app.MapPost("/admin/brs044", async (HttpRequest request) =>
 {
-    var body = await JsonSerializer.DeserializeAsync<Brs044Request>(request.Body);
+    var jsonOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+    var body = await JsonSerializer.DeserializeAsync<Brs044Request>(request.Body, jsonOptions);
     if (body is null)
         return Results.BadRequest("Invalid request body");
 
@@ -244,8 +245,9 @@ app.MapPost("/admin/brs044", async (HttpRequest request) =>
 // ── Admin endpoints ──
 app.MapPost("/admin/enqueue", async (HttpRequest request) =>
 {
-    var body = await JsonSerializer.DeserializeAsync<EnqueueRequest>(request.Body);
-    if (body is null)
+    var jsonOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+    var body = await JsonSerializer.DeserializeAsync<EnqueueRequest>(request.Body, jsonOptions);
+    if (body is null || body.Queue is null || body.Payload is null)
         return Results.BadRequest("Invalid request body");
 
     var messageId = state.EnqueueMessage(body.Queue, body.MessageType, body.CorrelationId, body.Payload);

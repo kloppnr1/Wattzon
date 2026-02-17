@@ -129,6 +129,12 @@ builder.Services.AddSingleton<IMeteringCompletenessChecker>(new MeteringComplete
 builder.Services.AddSingleton<ISettlementDataLoader, SettlementDataLoader>();
 builder.Services.AddSingleton<ISettlementResultStore>(new SettlementResultStore(connectionString));
 
+// Billing + Correction services (auto-correction on corrected timeseries)
+builder.Services.AddSingleton<IBillingRepository>(new BillingRepository(connectionString));
+builder.Services.AddSingleton<CorrectionEngine>();
+builder.Services.AddSingleton<ICorrectionRepository>(new CorrectionRepository(connectionString));
+builder.Services.AddSingleton<ICorrectionService, CorrectionService>();
+
 // Spot price fetching from Energi Data Service (energidataservice.dk)
 builder.Services.AddHttpClient<EnergiDataServiceClient>();
 builder.Services.AddSingleton<ISpotPriceProvider>(sp =>
@@ -171,7 +177,8 @@ builder.Services.AddHostedService(sp =>
         connectionString,
         sp.GetRequiredService<IInvoiceService>(),
         sp.GetRequiredService<IClock>(),
-        sp.GetRequiredService<ILogger<InvoicingService>>()));
+        sp.GetRequiredService<ILogger<InvoicingService>>(),
+        pollInterval: TimeSpan.FromSeconds(15)));
 
 var host = builder.Build();
 
